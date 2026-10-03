@@ -1,0 +1,129 @@
+# Green CI on main → bump frontend/package.json, tag vX.Y.Z, GitHub release, publish the API image.
+# Instances pin both: "@trainpaths/cms": "github:trainpaths/cms#vX.Y.Z&path:/frontend" + ghcr.io/trainpaths/cms-api:X.Y.Z.
+# Bump from Conventional Commits since the last tag (merge commits ignored), like nb-ui:
+#   `type!:` or a `BREAKING CHANGE:` footer → major, `feat` → minor, anything else → patch.
+#   Only docs/chore/ci/test/style/build commits → no release.
+# Manual run (Actions → Release → Run workflow) can force the bump.
+name: Release
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version bump
+        type: choice
+        options: [auto, patch, minor, major]
+        default: auto
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    # a CI run of a push to main (not a PR), and only when it passed
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # exactly the commit CI tested; a newer main makes the push below fail, its own CI run releases it
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0 # tags + history for the bump
+
+      - name: Determine version
+        id: version
+        env:
+          FORCED: ${{ inputs.bump || 'auto' }}
+        run: |
+          last=$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || echo v0.0.0)
+          range=$([ "$last" = v0.0.0 ] && echo HEAD || echo "$last..HEAD")
+
+          bump=$FORCED
+          if [ "$bump" = auto ]; then
+            bump=none
+            # one record per commit: subject line, then full body
+            while IFS= read -r -d $'\x1e' msg; do
+              msg=${msg#$'\n'}
+              subject=${msg%%$'\n'*}
+              if grep -qE '^[a-z]+(\([^)]*\))?!:' <<<"$subject" || grep -qE '^BREAKING[ -]CHANGE:' <<<"$msg"; then
+                bump=major
+              elif grep -qE '^feat(\([^)]*\))?:' <<<"$subject"; then
+                [ "$bump" != major ] && bump=minor
+              elif ! grep -qE '^(docs|chore|ci|test|style|build)(\([^)]*\))?:' <<<"$subject"; then
+                [ "$bump" = none ] && bump=patch
+              fi
+            done < <(git log "$range" --no-merges --format='%B%x1e')
+          fi
+
+          if [ "$bump" = none ]; then
+            echo "No releasable commits since $last"
+            echo "next=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          IFS=. read -r major minor patch <<<"${last#v}"
+          case $bump in
+            major) next="$((major + 1)).0.0" ;;
+            minor) next="$major.$((minor + 1)).0" ;;
+            patch) next="$major.$minor.$((patch + 1))" ;;
+          esac
+          echo "$last → v$next ($bump)"
+          echo "next=$next" >> "$GITHUB_OUTPUT"
+          echo "minor=${next%.*}" >> "$GITHUB_OUTPUT"
+
+      - name: Bump, tag, release
+        if: steps.version.outputs.next != ''
+        env:
+          NEXT: ${{ steps.version.outputs.next }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # keeps package.json's tab indentation
+          (cd frontend && npm version "$NEXT" --no-git-tag-version)
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -am "chore(release): v$NEXT"
+          git tag "v$NEXT"
+          # GITHUB_TOKEN pushes don't trigger workflows, so no release loop
+          git push --atomic origin HEAD:main "v$NEXT"
+          gh release create "v$NEXT" --generate-notes --title "v$NEXT"
+
+      - uses: docker/setup-qemu-action@v3
+        if: steps.version.outputs.next != ''
+
+      - uses: docker/setup-buildx-action@v3
+        if: steps.version.outputs.next != ''
+
+      - uses: docker/login-action@v3
+        if: steps.version.outputs.next != ''
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      # the API image instances run (Dockerfile target `api`: no instance config, no frontend)
+      - name: Build and push the API image
+        if: steps.version.outputs.next != ''
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: api
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/trainpaths/cms-api:${{ steps.version.outputs.next }}
+            ghcr.io/trainpaths/cms-api:${{ steps.version.outputs.minor }}
+            ghcr.io/trainpaths/cms-api:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/trainpaths/cms
+            org.opencontainers.image.version=${{ steps.version.outputs.next }}
+            org.opencontainers.image.licenses=MIT

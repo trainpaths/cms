@@ -1,0 +1,31 @@
+{
+	"name": "cms-playground",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "vue-tsc -b && vite build && pnpm build:ssr",
+		"build:ssr": "vite build --ssr src/entry-server.ts --outDir dist-ssr",
+		"render-server": "node node_modules/@trainpaths/cms/server/render-server.js",
+		"preview": "vite preview",
+		"typecheck": "vue-tsc -b",
+		"test:e2e": "playwright test --config=e2e/playwright.config.ts",
+		"test:e2e:ui": "playwright test --config=e2e/playwright.config.ts --ui",
+		"test:e2e:debug": "playwright test --config=e2e/playwright.config.ts --debug"
+	},
+	"dependencies": {
+		"@trainpaths/cms": "workspace:*",
+		"@trainpaths/nb-ui": "github:trainpaths/nb-ui#v0.4.0",
+		"pinia": "^4.0.3",
+		"vue": "^3.5.43",
+		"vue-router": "^5.3.1"
+	},
+	"devDependencies": {
+		"@playwright/test": "^1.63.0",
+		"@types/node": "^26.6.2",
+		"tailwindcss": "^4.3.3",
+		"typescript": "~6.0.3",
+		"vite": "^8.3.1",
+		"vue-tsc": "^3.3.11"
+	}
+}

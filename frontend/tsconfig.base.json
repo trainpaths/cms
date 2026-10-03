@@ -1,0 +1,12 @@
+{
+	"$comment": "Compiler options the package source is written for; instance apps extend it (`@trainpaths/cms/tsconfig.json`), since their vue-tsc also checks the package source they import",
+	"extends": "@vue/tsconfig/tsconfig.dom.json",
+	"compilerOptions": {
+		"types": ["vite/client"],
+
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"erasableSyntaxOnly": true,
+		"noFallthroughCasesInSwitch": true
+	}
+}

@@ -1,0 +1,12 @@
+{
+	"name": "list-item",
+	"title": "List Item",
+	"category": "text",
+	"description": "Add an item to a list",
+	"parent": ["list"],
+	"supports": {
+		"width": false,
+		"backgroundColor": false,
+		"textColor": false
+	}
+}

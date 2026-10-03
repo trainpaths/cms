@@ -1,0 +1,11 @@
+{
+	"name": "heading",
+	"title": "Heading",
+	"category": "text",
+	"description": "Add a heading",
+	"supports": {
+		"width": true,
+		"backgroundColor": true,
+		"textColor": true
+	}
+}

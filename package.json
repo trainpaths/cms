@@ -1,0 +1,23 @@
+{
+	"name": "cms",
+	"private": true,
+	"type": "module",
+	"packageManager": "pnpm@12.6.0",
+	"scripts": {
+		"dev": "pnpm --filter cms-playground dev",
+		"build": "pnpm --filter cms-playground build",
+		"typecheck": "pnpm -r typecheck",
+		"lint": "eslint .",
+		"test": "pnpm --filter @trainpaths/cms test",
+		"test:e2e": "pnpm --filter cms-playground test:e2e",
+		"gen-api": "pnpm --filter @trainpaths/cms gen-api"
+	},
+	"devDependencies": {
+		"@vue/eslint-config-typescript": "^14.9.0",
+		"eslint": "^10.11.0",
+		"eslint-config-prettier": "^10.1.8",
+		"eslint-plugin-vue": "^10.11.1",
+		"typescript": "~6.0.3",
+		"typescript-eslint": "^8.71.0"
+	}
+}

@@ -1,0 +1,19 @@
+.env
+.git
+.vscode
+.idea
+
+# .NET build artifacts
+**/bin
+**/obj
+*.nupkg
+api-backend/Tests/
+
+# Node / frontend build artifacts
+**/node_modules
+**/dist
+**/dist-ssr
+**/playwright-report
+**/test-results
+*.local
+*.log

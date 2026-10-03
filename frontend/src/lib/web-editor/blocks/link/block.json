@@ -1,0 +1,11 @@
+{
+	"name": "link",
+	"title": "Link",
+	"category": "embeds",
+	"description": "Add a link",
+	"supports": {
+		"width": false,
+		"backgroundColor": false,
+		"textColor": true
+	}
+}

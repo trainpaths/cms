@@ -1,0 +1,16 @@
+// Block authoring, edit side: an instance's src/blocks/<name>/index.ts, *Edit.vue, *Settings.vue.
+// Pulls in editor code: block views, templates and overrides import from `@trainpaths/cms/site` instead.
+export { defineBlock } from './lib/web-editor/core/defineBlock'
+export { useBlockAttribute } from './lib/web-editor/composables/useBlockAttribute'
+export { useAutoResize } from './lib/web-editor/composables/useAutoResize'
+export { useSelection } from './lib/web-editor/composables/useSelection'
+export { default as InlineToolbar } from './lib/web-editor/editor/InlineToolbar.vue'
+export { default as ToolbarDropdown } from './lib/web-editor/editor/ToolbarDropdown.vue'
+export { default as SettingsSection } from './lib/web-editor/editor/SettingsSection.vue'
+export { default as BlockList } from './lib/web-editor/editor/BlockList.vue'
+export { default as MediaActions } from './lib/web-editor/media/MediaActions.vue'
+export { default as MediaField } from './lib/web-editor/media/MediaField.vue'
+export { assignMedia } from './lib/web-editor/media/assignMedia'
+export { useMediaImage } from './lib/web-editor/media/useMediaImage'
+export { useEditorStore } from './stores/editor'
+export type { BlockInstance, BlockType, BlockCategory } from './lib/web-editor/core/types'

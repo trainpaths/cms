@@ -1,0 +1,138 @@
+{
+	"$schema": "./node_modules/@trainpaths/cms/cms.config.schema.json",
+	"publicAuth": true,
+	"site": {
+		"lang": "en"
+	},
+	"siteConfig": {
+		"fields": [
+			{
+				"key": "vatId",
+				"label": "VAT ID"
+			}
+		],
+		"groups": [
+			{
+				"key": "socials",
+				"label": "Social media",
+				"allowCustom": false,
+				"presets": [
+					{
+						"key": "instagram",
+						"label": "Instagram",
+						"type": "link"
+					},
+					{
+						"key": "linkedin",
+						"label": "LinkedIn",
+						"type": "link"
+					},
+					{
+						"key": "facebook",
+						"label": "Facebook",
+						"type": "link"
+					}
+				]
+			}
+		]
+	},
+	"pages": [
+		{
+			"slug": "home",
+			"title": "Home",
+			"blocks": [
+				{
+					"id": "home-h",
+					"name": "heading",
+					"attributes": {
+						"text": "Welcome",
+						"level": 2
+					}
+				},
+				{
+					"id": "home-p",
+					"name": "paragraph",
+					"attributes": {
+						"text": "This is your new website. Every page is built from blocks: headings, paragraphs, images, lists, cards and links."
+					}
+				},
+				{
+					"id": "home-card",
+					"name": "card",
+					"attributes": {
+						"title": "Getting started",
+						"description": "Log in and open Pages in the admin area to edit this page or add new ones."
+					},
+					"innerBlocks": [
+						{
+							"id": "home-link",
+							"name": "link",
+							"attributes": {
+								"label": "Open the admin area",
+								"url": "/admin/pages"
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"slug": "privacy-policy",
+			"title": "Privacy Policy",
+			"footer": true,
+			"blocks": [
+				{
+					"id": "privacy-h",
+					"name": "heading",
+					"attributes": {
+						"text": "Privacy Policy",
+						"level": 2
+					}
+				},
+				{
+					"id": "privacy-p",
+					"name": "paragraph",
+					"attributes": {
+						"text": "Explain here which personal data this website collects (e.g. contact forms, server logs, cookies), why and on what legal basis, how long it is kept, who it is shared with, and how visitors can exercise their rights (access, correction, deletion). Replace this text with your own privacy policy."
+					}
+				}
+			]
+		},
+		{
+			"slug": "legal",
+			"title": "Legal",
+			"footer": true,
+			"blocks": [
+				{
+					"id": "legal-h",
+					"name": "heading",
+					"attributes": {
+						"text": "Legal Notice",
+						"level": 2
+					}
+				},
+				{
+					"id": "legal-p",
+					"name": "paragraph",
+					"attributes": {
+						"text": "State here who is responsible for this website: name or company, postal address, contact details and, where required, registration and VAT numbers. Replace this text with your own legal notice (imprint)."
+					}
+				}
+			]
+		},
+		{
+			"slug": "imprint",
+			"title": "Imprint",
+			"template": "imprint",
+			"blocks": [
+				{
+					"id": "imprint-p",
+					"name": "paragraph",
+					"attributes": {
+						"text": "Responsible for the content of this website:"
+					}
+				}
+			]
+		}
+	]
+}

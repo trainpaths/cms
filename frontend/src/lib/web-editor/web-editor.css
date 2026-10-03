@@ -1,0 +1,57 @@
+/* Shared block-editor classes. Imported by src/style.css to join the Tailwind build. */
+
+@layer components {
+	.input-field {
+		@apply mt-2 rounded border border-gray-300 px-8 py-4 font-sans text-sm;
+	}
+
+	.field-label {
+		@apply flex flex-col text-xs text-gray-500;
+	}
+
+	.block-toolbar {
+		@apply flex items-center justify-between border-b border-gray-200 bg-gray-100 px-8 py-4;
+	}
+
+	.block-toolbar-label {
+		@apply text-xs font-semibold tracking-wide text-gray-700 uppercase;
+	}
+
+	.inner-blocks-container {
+		@apply mt-12 rounded border border-dashed border-gray-300 p-8;
+	}
+
+	.inner-blocks-label {
+		@apply text-[11px] tracking-wide text-gray-400 uppercase;
+	}
+
+	.toolbar-input {
+		@apply rounded border-none bg-gray-800 px-10 py-6 text-sm text-white outline-hidden placeholder:text-gray-500;
+	}
+}
+
+@utility scrollbar-stable {
+	scrollbar-gutter: stable;
+}
+
+@utility scrollbar-thin {
+	scrollbar-width: thin;
+	scrollbar-color: color-mix(in oklab, var(--color-gray-400) 50%, transparent) transparent;
+
+	&::-webkit-scrollbar {
+		width: 6px;
+	}
+
+	&::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	&::-webkit-scrollbar-thumb {
+		background-color: color-mix(in oklab, var(--color-gray-400) 50%, transparent);
+		border-radius: var(--radius-sm);
+	}
+
+	&::-webkit-scrollbar-thumb:hover {
+		background-color: color-mix(in oklab, var(--color-gray-400) 80%, transparent);
+	}
+}

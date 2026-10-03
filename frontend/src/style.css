@@ -1,0 +1,52 @@
+/*
+ * The CMS stylesheet, `@trainpaths/cms/style.css`: the instance's own stylesheet (src/style.css) imports it and adds
+ * its site theme; the instance entry stubs import that one.
+ */
+@import 'tailwindcss';
+@import './lib/web-editor/web-editor.css';
+
+/* nb-ui tokens (colours, px spacing, font) + component class scanning; override tokens in a @theme below */
+@import '@trainpaths/nb-ui/theme.css';
+
+/* the package's own sources: Tailwind only auto-scans the instance app's root (and skips node_modules) */
+@source '.';
+@source not './api';
+
+/*
+ * Admin look for editor chrome inside the canvas (selection ring, drop lines, toolbars). The canvas and the public
+ * site carry `.site-theme`, where an instance's stylesheet overrides tokens (--color-primary, --font-sans...) for its
+ * site theme; these resolve at :root, before that override, so `ring-cms-primary` / `font-cms` keep the CMS values.
+ */
+@theme {
+	--color-cms-primary: var(--color-primary);
+	--font-cms: var(--font-sans);
+}
+
+/*
+ * Tailwind v3 defaults the ported block editor relies on (v4 changed them):
+ * gray-200 default border colour, gray-400 placeholders, pointer cursor on buttons.
+ */
+@layer base {
+	*,
+	::after,
+	::before,
+	::backdrop,
+	::file-selector-button {
+		border-color: var(--color-gray-200, currentColor);
+	}
+
+	input::placeholder,
+	textarea::placeholder {
+		color: var(--color-gray-400);
+	}
+
+	button:not(:disabled),
+	[role='button']:not(:disabled) {
+		cursor: pointer;
+	}
+
+	body {
+		margin: 0;
+		@apply bg-white font-sans text-black antialiased;
+	}
+}

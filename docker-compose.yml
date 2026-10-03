@@ -1,0 +1,133 @@
+# Dev-only credentials — production uses managed services.
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: cms-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/18/docker
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  # Media blob store (S3 API on :8333). Not published to the host: only the api talks to it.
+  # Entrypoint drops to the unprivileged `seaweed` user after fixing /data ownership.
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.47
+    container_name: cms-seaweedfs
+    restart: unless-stopped
+    command: server -s3 -ip.bind=0.0.0.0
+    environment:
+      # creates the admin S3 identity; anonymous requests are denied
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:?Set S3_ACCESS_KEY in .env}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:?Set S3_SECRET_KEY in .env (openssl rand -hex 32)}
+    volumes:
+      - seaweed-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8333/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+  api:
+    build:
+      target: api
+    container_name: cms-api
+    ports:
+      - "${API_PORT}:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}"
+      Jwt__SigningKey: ${API_JWT_KEY:?Set API_JWT_KEY in .env (openssl rand -base64 48)}
+      Jwt__Issuer: ${API_JWT_ISSUER:-website-template}
+      Jwt__Audience: ${API_JWT_AUDIENCE:-website-template-clients}
+      Jwt__AccessTokenMinutes: ${API_JWT_ACCESS_MINUTES:-15}
+      Jwt__RefreshTokenDays: ${API_JWT_REFRESH_DAYS:-30}
+      Cors__Origins: ${CORS_ORIGINS:-http://localhost:5173}
+      RateLimiting__PermitLimit: ${RATE_LIMIT_PERMIT:-10}
+      RateLimiting__WindowSeconds: ${RATE_LIMIT_WINDOW_SECONDS:-60}
+      RateLimiting__QueueLimit: ${RATE_LIMIT_QUEUE:-0}
+      RateLimiting__General__PermitLimit: ${RATE_LIMIT_GENERAL_PERMIT:-120}
+      RateLimiting__General__WindowSeconds: ${RATE_LIMIT_GENERAL_WINDOW_SECONDS:-60}
+      RateLimiting__Pages__PermitLimit: ${RATE_LIMIT_PAGES_PERMIT:-600}
+      RateLimiting__Pages__WindowSeconds: ${RATE_LIMIT_PAGES_WINDOW_SECONDS:-60}
+      # trust X-Forwarded-For from nginx on compose network
+      ForwardedHeaders__KnownNetworks: ${FORWARDED_KNOWN_NETWORKS:-172.16.0.0/12}
+      Auth__SecureCookie: ${AUTH_SECURE_COOKIE:-true}
+      Bootstrap__SuperAdminEmail: ${BOOTSTRAP_SUPERADMIN_EMAIL:-}
+      Bootstrap__SuperAdminPassword: ${BOOTSTRAP_SUPERADMIN_PASSWORD:-}
+      Email__Host: ${SMTP_HOST}
+      Email__Port: ${SMTP_PORT:-587}
+      Email__User: ${SMTP_USER}
+      Email__Password: ${SMTP_PASSWORD}
+      Email__From: ${EMAIL_FROM:-no-reply@example.com}
+      Email__FromName: ${EMAIL_FROM_NAME:-Website Template}
+      Email__LinkBaseUrl: ${APP_BASE_URL:-http://localhost:5173}
+      Storage__S3__ServiceUrl: http://seaweedfs:8333
+      Storage__S3__AccessKey: ${S3_ACCESS_KEY}
+      Storage__S3__SecretKey: ${S3_SECRET_KEY}
+      Storage__S3__Bucket: ${S3_BUCKET:-media}
+      # public pages are pre-rendered by the renderer service (frontend/server/render-server.ts)
+      Renderer__BaseUrl: http://renderer:8080
+      Renderer__PublicBaseUrl: ${APP_BASE_URL:-http://localhost:5173}
+    # instance config of the playground (an instance's own api image COPYs its cms.config.json to /app instead)
+    volumes:
+      - ./playground/cms.config.json:/app/cms.config.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      seaweedfs:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "dotnet", "api-backend.dll", "--healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+  # Renders public pages to HTML for the api (POST /render). Not published: only the api talks to it.
+  renderer:
+    build:
+      target: renderer
+    container_name: cms-renderer
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  # API is compiled in build stage, swagger.json is emitted there, frontend build consumes it.
+  frontend:
+    build:
+      target: frontend
+    container_name: cms-frontend
+    ports:
+      - "${FRONTEND_PORT:-5173}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  # Uncomment when Redis is actually needed (cache / sessions / queue).
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: redis
+  #   restart: unless-stopped
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis-data:/data
+
+volumes:
+  pgdata:
+  seaweed-data:
+  # redis-data:
