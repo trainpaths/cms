@@ -97,7 +97,7 @@ jobs:
           git push --atomic origin HEAD:main "v$NEXT"
           gh release create "v$NEXT" --generate-notes --title "v$NEXT"
 
-      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-qemu-action@v4
         if: steps.version.outputs.next != ''
 
       - uses: docker/setup-buildx-action@v3
