@@ -113,7 +113,7 @@ jobs:
       # the API image instances run (Dockerfile target `api`: no instance config, no frontend)
       - name: Build and push the API image
         if: steps.version.outputs.next != ''
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           target: api
