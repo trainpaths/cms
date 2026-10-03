@@ -1,0 +1,18 @@
+packages:
+  - frontend
+  - playground
+minimumReleaseAgeExclude:
+  - '@types/node@24.19.0'
+# Security overrides for vulnerable transitive dependencies (see `pnpm audit`).
+# Drop an entry once every direct dependency pulls a patched version on its own.
+overrides:
+  postcss: ^8.5.28
+  js-yaml@4: ^4.3.2
+  brace-expansion@>=4: ^5.0.12
+  nanoid@3: ^3.3.19
+  postcss-selector-parser@7: ^7.1.6
+# Unpatched advisories, dev-only paths. Drop once a fix ships.
+auditConfig:
+  ignoreGhsas:
+    # braces DoS on nested patterns, via eslint-config → fast-glob; globs are ours, not user input
+    - GHSA-vfj7-8cjw-p6xm

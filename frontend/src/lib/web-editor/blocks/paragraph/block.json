@@ -1,0 +1,11 @@
+{
+	"name": "paragraph",
+	"title": "Paragraph",
+	"category": "text",
+	"description": "Add a block of text",
+	"supports": {
+		"width": true,
+		"backgroundColor": true,
+		"textColor": true
+	}
+}

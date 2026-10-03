@@ -1,0 +1,34 @@
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /api-backend
+    schedule:
+      interval: weekly
+    groups:
+      dotnet:
+        patterns: ["*"]
+
+  # pnpm workspace root: covers frontend/ (package) + playground/
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      frontend:
+        patterns: ["*"]
+    ignore:
+      # TS 7 (native port) has no JS API yet; openapi-ts / vue-tsc / typescript-eslint need it
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      # git-tag dependency: Dependabot misorders the tags (offers v0.1.x over v0.4.0); bumped by hand
+      - dependency-name: "@trainpaths/nb-ui"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly

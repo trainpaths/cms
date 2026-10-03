@@ -1,0 +1,75 @@
+{
+	"name": "@trainpaths/cms",
+	"version": "0.0.0",
+	"description": "Block-based CMS (admin SPA, block editor, server-rendered public site), shipped as source to instance apps",
+	"license": "MIT",
+	"type": "module",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/trainpaths/cms.git",
+		"directory": "frontend"
+	},
+	"exports": {
+		"./admin": "./src/main.ts",
+		"./public/client": "./src/public/entry-client.ts",
+		"./public/server": "./src/public/entry-server.ts",
+		"./editor": "./src/editor.ts",
+		"./site": "./src/site.ts",
+		"./style.css": "./src/style.css",
+		"./ui": "./src/ui.ts",
+		"./vite": {
+			"types": "./vite-plugin.d.ts",
+			"default": "./vite-plugin.js"
+		},
+		"./tsconfig.json": "./tsconfig.base.json",
+		"./nginx.conf": "./nginx.conf",
+		"./server/*": "./server/*",
+		"./src/*": "./src/*",
+		"./package.json": "./package.json",
+		"./cms.config.schema.json": "./cms.config.schema.json"
+	},
+	"files": [
+		"src",
+		"server",
+		"public",
+		"nginx.conf",
+		"cms.config.schema.json",
+		"vite-plugin.js",
+		"vite-plugin.d.ts",
+		"tsconfig.base.json",
+		"CLAUDE.md",
+		"docs"
+	],
+	"scripts": {
+		"gen-api": "openapi-ts",
+		"typecheck": "vue-tsc -b",
+		"test": "vitest run --dir src"
+	},
+	"peerDependencies": {
+		"@trainpaths/nb-ui": "github:trainpaths/nb-ui#v0.4.0",
+		"pinia": "^4.0.3",
+		"tailwindcss": "^4.3.3",
+		"vite": "^8.3.1",
+		"vue": "^3.5.43",
+		"vue-router": "^5.3.1"
+	},
+	"dependencies": {
+		"@tailwindcss/vite": "^4.3.3",
+		"@vitejs/plugin-vue": "^6.0.9",
+		"@vue/tsconfig": "^0.9.1",
+		"nanoid": "^6.0.1"
+	},
+	"devDependencies": {
+		"@hey-api/openapi-ts": "0.99.0",
+		"@trainpaths/nb-ui": "github:trainpaths/nb-ui#v0.4.0",
+		"@types/node": "^26.6.2",
+		"pinia": "^4.0.3",
+		"tailwindcss": "^4.3.3",
+		"typescript": "~6.0.3",
+		"vite": "^8.3.1",
+		"vitest": "^5.0.3",
+		"vue": "^3.5.43",
+		"vue-router": "^5.3.1",
+		"vue-tsc": "^3.3.11"
+	}
+}

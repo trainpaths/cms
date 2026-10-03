@@ -1,0 +1,9 @@
+{
+	"name": "callout",
+	"title": "Callout",
+	"category": "text",
+	"description": "Highlighted note (instance block of the playground)",
+	"supports": {
+		"width": true
+	}
+}

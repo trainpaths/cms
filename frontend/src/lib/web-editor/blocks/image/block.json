@@ -1,0 +1,11 @@
+{
+	"name": "image",
+	"title": "Image",
+	"category": "media",
+	"description": "Insert an image",
+	"supports": {
+		"width": true,
+		"backgroundColor": false,
+		"textColor": false
+	}
+}

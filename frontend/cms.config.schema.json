@@ -1,0 +1,267 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://github.com/trainpaths/cms/frontend/cms.config.schema.json",
+	"title": "CMS instance config",
+	"description": "cms.config.json of a CMS instance (client site). Read and validated by the API on startup (unknown keys fail); mirrors api-backend/Services/Cms/CmsConfig.cs.",
+	"type": "object",
+	"additionalProperties": false,
+	"properties": {
+		"$schema": {
+			"type": "string"
+		},
+		"publicAuth": {
+			"description": "Customer accounts (register / login at /login). Off: the customer auth API answers 404 and the screens are gone.",
+			"type": "boolean",
+			"default": false
+		},
+		"site": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"lang": {
+					"description": "<html lang> of the site (BCP 47 tag, e.g. de, en-GB). Set at frontend build time by the cms() Vite plugin: rebuild after changing it.",
+					"type": "string",
+					"pattern": "^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$",
+					"default": "en"
+				}
+			}
+		},
+		"blocks": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"exclude": {
+					"description": "Built-in block names hidden from the editor's inserters (existing content still renders and edits).",
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/name"
+					},
+					"uniqueItems": true
+				}
+			}
+		},
+		"pages": {
+			"description": "Pages the CMS seeds, published: all on a fresh install, locked/template pages on every start when missing. Omitted: Home, Privacy Policy, Legal.",
+			"type": "array",
+			"items": {
+				"$ref": "#/$defs/page"
+			}
+		},
+		"siteConfig": {
+			"description": "Shape of the owner's site config (admin Configuration): fixed fields and groups of entries, added to the core ones (field firmName, group contact; same key replaces them). Instance code reads config.fields.<key> / config.groups.<key>.",
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"fields": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/configField"
+					}
+				},
+				"groups": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/configGroup"
+					}
+				}
+			}
+		}
+	},
+	"$defs": {
+		"name": {
+			"type": "string",
+			"pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+		},
+		"page": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"slug",
+				"title"
+			],
+			"properties": {
+				"slug": {
+					"description": "Kebab-case, 1-100 characters; `home` is served at /. Not a reserved app route (login, admin, ...).",
+					"type": "string",
+					"pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+					"maxLength": 100
+				},
+				"title": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 200
+				},
+				"template": {
+					"description": "Template that renders the page: src/templates/<template>.vue in the instance app (props: page, config). Implies locked.",
+					"$ref": "#/$defs/name"
+				},
+				"locked": {
+					"description": "Slug fixed and page undeletable (the site's code relies on it).",
+					"type": "boolean",
+					"default": false
+				},
+				"editable": {
+					"description": "false: the template renders everything and the owner can't edit blocks (requires a template).",
+					"type": "boolean",
+					"default": true
+				},
+				"footer": {
+					"description": "Linked in the public footer while published, in config order.",
+					"type": "boolean",
+					"default": false
+				},
+				"blocks": {
+					"description": "Initial content (block tree), seeded once. Attributes: string, number or boolean values.",
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/block"
+					}
+				}
+			}
+		},
+		"block": {
+			"type": "object",
+			"required": [
+				"id",
+				"name"
+			],
+			"properties": {
+				"id": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 64
+				},
+				"name": {
+					"type": "string",
+					"pattern": "^[a-z0-9-]+$"
+				},
+				"attributes": {
+					"type": "object",
+					"additionalProperties": {
+						"type": [
+							"string",
+							"number",
+							"boolean"
+						]
+					}
+				},
+				"innerBlocks": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/block"
+					}
+				}
+			}
+		},
+		"identifier": {
+			"type": "string",
+			"pattern": "^[a-z][a-zA-Z0-9]*$",
+			"maxLength": 50
+		},
+		"fieldType": {
+			"enum": [
+				"text",
+				"email",
+				"phone",
+				"link",
+				"address"
+			]
+		},
+		"configField": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"key",
+				"label"
+			],
+			"properties": {
+				"key": {
+					"$ref": "#/$defs/identifier"
+				},
+				"label": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 100
+				},
+				"type": {
+					"description": "Rendering hint (input type, mailto/tel/link). Not address.",
+					"enum": [
+						"text",
+						"email",
+						"phone",
+						"link"
+					],
+					"default": "text"
+				},
+				"required": {
+					"description": "Can't be saved empty.",
+					"type": "boolean",
+					"default": false
+				}
+			}
+		},
+		"configGroup": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"key",
+				"label"
+			],
+			"properties": {
+				"key": {
+					"$ref": "#/$defs/identifier"
+				},
+				"label": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 100
+				},
+				"presets": {
+					"description": "Entries the owner picks from; key and type fixed.",
+					"type": "array",
+					"items": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": [
+							"key",
+							"label"
+						],
+						"properties": {
+							"key": {
+								"$ref": "#/$defs/identifier"
+							},
+							"label": {
+								"type": "string",
+								"minLength": 1,
+								"maxLength": 100
+							},
+							"type": {
+								"$ref": "#/$defs/fieldType",
+								"default": "text"
+							}
+						}
+					}
+				},
+				"defaults": {
+					"description": "Preset keys a fresh config starts with.",
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"required": {
+					"description": "Preset keys that can't be removed.",
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"allowCustom": {
+					"description": "Owner may add entries with their own name and type.",
+					"type": "boolean",
+					"default": true
+				}
+			}
+		}
+	}
+}

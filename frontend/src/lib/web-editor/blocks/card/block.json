@@ -1,0 +1,11 @@
+{
+	"name": "card",
+	"title": "Card",
+	"category": "containers",
+	"description": "Group content in a card",
+	"supports": {
+		"width": true,
+		"backgroundColor": true,
+		"textColor": true
+	}
+}

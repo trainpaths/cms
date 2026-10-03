@@ -1,0 +1,11 @@
+{
+	"name": "list",
+	"title": "List",
+	"category": "text",
+	"description": "Create a bulleted or numbered list",
+	"supports": {
+		"width": true,
+		"backgroundColor": false,
+		"textColor": false
+	}
+}
