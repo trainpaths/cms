@@ -20,7 +20,8 @@ watch(
 	<!-- @container: blocks use container-query variants (@md:), same classes as in the editor canvas.
 		w-full: containment drops content-based width, and mx-auto in a flex column would collapse it to 0 -->
 	<article class="@container mx-auto w-full max-w-3xl px-24 py-48 font-sans">
-		<h1 class="hidden">{{ title }}</h1>
+		<!-- sr-only not hidden: visually gone, still the page h1 for a11y/SEO -->
+		<h1 class="sr-only">{{ title }}</h1>
 		<!-- templates (src/templates/) add content around the owner's blocks -->
 		<slot name="before" />
 		<div class="flex flex-col gap-10">
