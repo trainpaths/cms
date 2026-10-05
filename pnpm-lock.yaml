@@ -211,8 +211,8 @@ importers:
         specifier: 0.99.0
         version: 0.99.0(typescript@6.0.3)
       '@trainpaths/nb-ui':
-        specifier: github:trainpaths/nb-ui#v0.4.0
-        version: https://codeload.github.com/trainpaths/nb-ui/tar.gz/e2d1e4cd7d49a06f3cf5f82928d2322ea37a2f0a(tailwindcss@4.3.3)(vite@8.3.1(@types/node@26.6.3)(jiti@2.7.0))(vue-router@5.3.1(@vue/compiler-sfc@3.5.43)(pinia@4.0.3(@vue/devtools-api@8.2.1)(typescript@6.0.3)(vue@3.5.43(typescript@6.0.3)))(rolldown@1.2.11)(vite@8.3.1(@types/node@26.6.3)(jiti@2.7.0))(vue@3.5.43(typescript@6.0.3)))(vue@3.5.43(typescript@6.0.3))
+        specifier: github:trainpaths/nb-ui#v0.5.0
+        version: https://codeload.github.com/trainpaths/nb-ui/tar.gz/7d812ece35681baf043a4f3f232fa6afca07234d(tailwindcss@4.3.3)(vite@8.3.1(@types/node@26.6.3)(jiti@2.7.0))(vue-router@5.3.1(@vue/compiler-sfc@3.5.43)(pinia@4.0.3(@vue/devtools-api@8.2.1)(typescript@6.0.3)(vue@3.5.43(typescript@6.0.3)))(rolldown@1.2.11)(vite@8.3.1(@types/node@26.6.3)(jiti@2.7.0))(vue@3.5.43(typescript@6.0.3)))(vue@3.5.43(typescript@6.0.3))
       '@types/node':
         specifier: ^26.6.2
         version: 26.6.3
@@ -247,8 +247,8 @@ importers:
         specifier: workspace:*
         version: link:../frontend
       '@trainpaths/nb-ui':
-        specifier: github:trainpaths/nb-ui#v0.4.0
-        version: https://codeload.github.com/trainpaths/nb-ui/tar.gz/e2d1e4cd7d49a06f3cf5f82928d2322ea37a2f0a(tailwindcss@4.3.3)(vite@8.3.1(@types/node@26.6.3)(jiti@2.7.0))(vue-router@5.3.1(@vue/compiler-sfc@3.5.43)(pinia@4.0.3(@vue/devtools-api@8.2.1)(typescript@6.0.3)(vue@3.5.43(typescript@6.0.3)))(rolldown@1.2.11)(vite@8.3.1(@types/node@26.6.3)(jiti@2.7.0))(vue@3.5.43(typescript@6.0.3)))(vue@3.5.43(typescript@6.0.3))
+        specifier: github:trainpaths/nb-ui#v0.5.0
+        version: https://codeload.github.com/trainpaths/nb-ui/tar.gz/7d812ece35681baf043a4f3f232fa6afca07234d(tailwindcss@4.3.3)(vite@8.3.1(@types/node@26.6.3)(jiti@2.7.0))(vue-router@5.3.1(@vue/compiler-sfc@3.5.43)(pinia@4.0.3(@vue/devtools-api@8.2.1)(typescript@6.0.3)(vue@3.5.43(typescript@6.0.3)))(rolldown@1.2.11)(vite@8.3.1(@types/node@26.6.3)(jiti@2.7.0))(vue@3.5.43(typescript@6.0.3)))(vue@3.5.43(typescript@6.0.3))
       pinia:
         specifier: ^4.0.3
         version: 4.0.3(@vue/devtools-api@8.2.1)(typescript@6.0.3)(vue@3.5.43(typescript@6.0.3))
@@ -626,9 +626,9 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7 || ^8
 
-  '@trainpaths/nb-ui@https://codeload.github.com/trainpaths/nb-ui/tar.gz/e2d1e4cd7d49a06f3cf5f82928d2322ea37a2f0a':
-    resolution: {gitHosted: true, integrity: sha512-a0gFNkPZkrYnaK6RR73HaU3AnDVRA2wIIb2k7NNkf74Nu8ApcfZszB6Tp2D6JGICiicRlHO/9q0z56CATDqIvg==, tarball: https://codeload.github.com/trainpaths/nb-ui/tar.gz/e2d1e4cd7d49a06f3cf5f82928d2322ea37a2f0a}
-    version: 0.4.0
+  '@trainpaths/nb-ui@https://codeload.github.com/trainpaths/nb-ui/tar.gz/7d812ece35681baf043a4f3f232fa6afca07234d':
+    resolution: {gitHosted: true, integrity: sha512-QlLAqx0Nc4rLvOn0wZCi/Efsmwo41iRD6LK+RJiFfFxzW1v7SerIfexsmEjs8tCjPxPsT4aRdfMbzxjZfEh55w==, tarball: https://codeload.github.com/trainpaths/nb-ui/tar.gz/7d812ece35681baf043a4f3f232fa6afca07234d}
+    version: 0.5.0
     peerDependencies:
       tailwindcss: ^4
       vite: '>=6'
@@ -2151,7 +2151,7 @@ snapshots:
       tailwindcss: 4.3.3
       vite: 8.3.1(@types/node@26.6.3)(jiti@2.7.0)
 
-  '@trainpaths/nb-ui@https://codeload.github.com/trainpaths/nb-ui/tar.gz/e2d1e4cd7d49a06f3cf5f82928d2322ea37a2f0a(tailwindcss@4.3.3)(vite@8.3.1(@types/node@26.6.3)(jiti@2.7.0))(vue-router@5.3.1(@vue/compiler-sfc@3.5.43)(pinia@4.0.3(@vue/devtools-api@8.2.1)(typescript@6.0.3)(vue@3.5.43(typescript@6.0.3)))(rolldown@1.2.11)(vite@8.3.1(@types/node@26.6.3)(jiti@2.7.0))(vue@3.5.43(typescript@6.0.3)))(vue@3.5.43(typescript@6.0.3))':
+  '@trainpaths/nb-ui@https://codeload.github.com/trainpaths/nb-ui/tar.gz/7d812ece35681baf043a4f3f232fa6afca07234d(tailwindcss@4.3.3)(vite@8.3.1(@types/node@26.6.3)(jiti@2.7.0))(vue-router@5.3.1(@vue/compiler-sfc@3.5.43)(pinia@4.0.3(@vue/devtools-api@8.2.1)(typescript@6.0.3)(vue@3.5.43(typescript@6.0.3)))(rolldown@1.2.11)(vite@8.3.1(@types/node@26.6.3)(jiti@2.7.0))(vue@3.5.43(typescript@6.0.3)))(vue@3.5.43(typescript@6.0.3))':
     dependencies:
       '@fontsource-variable/roboto': 5.3.0
       tailwindcss: 4.3.3
