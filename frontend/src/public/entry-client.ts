@@ -1,5 +1,6 @@
 import { createWebHistory } from 'vue-router'
 import { client } from '../api/client.gen'
+import { toApiError } from '../api-error'
 import { getApiPublicMenusByHandle, getApiPublicPagesBySlug, getApiPublicSiteConfig } from '../api/sdk.gen'
 import { createPublicApp } from './createPublicApp'
 import { headTags } from './head'
@@ -40,6 +41,8 @@ async function fetchState(): Promise<PublicState> {
  */
 export async function hydratePublic(): Promise<void> {
 	client.setConfig({ baseUrl: '' })
+	// same ApiError as the admin (auth store logout from the admin bar)
+	client.interceptors.error.use(toApiError)
 	const embedded = embeddedState()
 	const state = embedded ?? (await fetchState())
 	const { app, router } = createPublicApp(state, createWebHistory(), !!embedded)

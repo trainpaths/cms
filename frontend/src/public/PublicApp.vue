@@ -6,6 +6,7 @@ import PageView from '../views/PageView.vue'
 import NotFound from '../views/NotFound.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import SiteHeader from '../components/SiteHeader.vue'
+import AdminBar from '../components/AdminBar.vue'
 
 /** Root of the server-rendered public site: one layout, the routes only switch the page in the store. */
 const store = usePublicPageStore()
@@ -16,6 +17,7 @@ const siteConfig = useSiteConfigStore()
 <template>
 	<!-- the instance's site theme (tokens overridden under .site-theme in its stylesheet) -->
 	<div class="site-theme flex min-h-screen flex-col">
+		<AdminBar />
 		<SiteHeader
 			:config="siteConfig.config"
 			:menu="menus.menus.main ?? null"

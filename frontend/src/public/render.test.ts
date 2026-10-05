@@ -73,6 +73,8 @@ describe('render', () => {
 		expect(html).toContain('href="tel:+491"')
 		expect(html).not.toContain('Email')
 		expect(html).toContain('src="/api/public/media/m1.png"')
+		// staff admin bar is client-only
+		expect(html).not.toContain('admin-bar')
 	})
 
 	it('builds head tags with escaped values and absolute URLs', async () => {

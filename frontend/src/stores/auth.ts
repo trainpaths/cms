@@ -56,7 +56,8 @@ function storage(action: (s: Storage) => void) {
 	}
 }
 
-function readAuthType(): AuthType | null {
+/** Persisted user type of the last session (a hint: the session itself may have expired). */
+export function readAuthType(): AuthType | null {
 	try {
 		const value = localStorage.getItem(AUTH_TYPE_KEY)
 		return value === 'customer' || value === 'staff' ? value : null
