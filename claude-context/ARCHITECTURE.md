@@ -163,7 +163,7 @@ staff save ─► API IRenderQueue ─► RenderWorker ─POST /render─► ren
   a meta title (no firm name: meta title, then page title); description = page meta description, else the first
   paragraph; og:site_name = firm name; og:image = first image, else the site's share image; `<html lang>` = instance
   `site.lang`, written into index.html + public.html at build time by `cms()` (a static value: no runtime plumbing).
-- Dev: `make dev` server-renders public pages itself (`frontend/server/dev-ssr.js`, Vite `ssrLoadModule`), so
+- Dev: `pnpm dev` server-renders public pages itself (`frontend/server/dev-ssr.js`, Vite `ssrLoadModule`), so
   hydration mismatches show up in development; the renderer container isn't needed.
 
 ## Limits

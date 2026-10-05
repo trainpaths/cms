@@ -90,7 +90,7 @@ public sealed class RenderWorker(
 			}
 			catch (Exception ex) when (ex is not OperationCanceledException)
 			{
-				// renderer not up yet (compose start order), down, or not run at all (`make dev`): retry each tick, warn once
+				// renderer not up yet (compose start order), down, or not run at all (`pnpm dev`): retry each tick, warn once
 				if (!failing) logger.LogWarning("Renderer version check failed, retrying: {Message}", ex.Message);
 				failing = true;
 			}

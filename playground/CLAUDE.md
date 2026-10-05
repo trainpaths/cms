@@ -25,12 +25,12 @@ e2e/                Playwright suite (below); e2e/tests/instance/ covers the exa
 ```
 Extension points in general: `frontend/CLAUDE.md` → Package surface.
 
-Commands (repo root): `make dev` (API stack in docker + Vite dev server with dev SSR), `make build-front`
-(`vue-tsc -b && vite build && vite build --ssr`), `make test-e2e`. The Dockerfile's `frontend-build` stage builds this
+Commands (repo root): `pnpm dev` (API stack in docker + Vite dev server with dev SSR), `pnpm build:front`
+(`vue-tsc -b && vite build && vite build --ssr`), `pnpm test:e2e`. The Dockerfile's `frontend-build` stage builds this
 app; the `renderer` and `frontend` images serve its `dist/` and `dist-ssr/`.
 
 ## E2E tests (`e2e/`, Playwright, Chromium, 1 worker)
-Needs the full stack (`docker compose up -d --build` or `make up`).
+Needs the full stack (`pnpm docker:up`).
 ```
 e2e/playwright.config.ts       base URL from PLAYWRIGHT_BASE_URL (default http://localhost:5173)
 e2e/global-setup.ts            frontend-reachable preflight
@@ -51,6 +51,6 @@ The full suite exceeds the default rate limits (per IP): run the stack with rais
 Editor specs need staff credentials in the Playwright env — the same values as the stack's
 `BOOTSTRAP_SUPERADMIN_*` (or `E2E_STAFF_EMAIL/PASSWORD`); without them they are skipped:
 ```bash
-BOOTSTRAP_SUPERADMIN_EMAIL=... BOOTSTRAP_SUPERADMIN_PASSWORD=... make test-e2e
+BOOTSTRAP_SUPERADMIN_EMAIL=... BOOTSTRAP_SUPERADMIN_PASSWORD=... pnpm test:e2e
 ```
 First run on a machine: `pnpm --filter cms-playground exec playwright install chromium`.

@@ -417,7 +417,7 @@ Tests that build their own `WebApplicationFactory` must add `ApiFactory.StorageS
 `ApiFactory.Cms` (defaults + public auth on) when they call customer endpoints. `ApiFactory` registers `ApiFactory.Cms`.
 Tests run on Microsoft.Testing.Platform (xunit.v3 4.x); the root `global.json` opts `dotnet test` into it.
 Integration tests boot the real app against a throwaway Postgres container; unit tests mock the
-DbContext. Root convenience alias: `make test-backend`.
+DbContext. Root alias: `pnpm test:back`.
 
 ## Scripts
 ```bash
@@ -431,7 +431,7 @@ dotnet ef migrations add <Name>         # create new migration after entity chan
 The committed contract `frontend/openapi/swagger.json` is regenerated on **every build** by
 `Microsoft.Extensions.ApiDescription.Server` (csproj: `OpenApiDocumentsDirectory` →
 `../frontend/openapi`; the `NormalizeOpenApiFileName` target renames the emitted
-`api-backend.json` to `swagger.json`). `make build-back` / `dotnet build` both trigger it.
+`api-backend.json` to `swagger.json`). `pnpm build:back` / `dotnet build` both trigger it.
 
 The contract is **exact**, so the frontend uses the generated types as-is (no mapping layer):
 `SupportNonNullableReferenceTypes` + `NonNullableReferenceTypesAsRequired` + `UseAllOfToExtendReferenceSchemas`
@@ -447,4 +447,4 @@ fallback, no S3 options validation, and **skipping** migrations and the super-ad
 
 The root `Dockerfile`'s `api-build` stage builds with `-p:OpenApiGenerateDocumentsOnBuild=false`: the frontend package
 ships the client generated from the committed contract (`frontend/src/api/`, CI checks both for drift), so the image
-build doesn't generate anything. Contract change → `make build-back` → `make gen-api` → commit both.
+build doesn't generate anything. Contract change → `pnpm build:back` → `pnpm gen-api` → commit both.
