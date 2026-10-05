@@ -3,8 +3,11 @@ import { firmName } from '../lib/siteConfig'
 import { pathOf, type PublicState } from './state'
 
 const DESCRIPTION_MAX = 160
-/** Admin/CMS icon (public/favicon.svg); used when the site config has no icon. */
-const CMS_ICON = '/favicon.svg'
+/**
+ * Admin/CMS icon (package public/favicon.svg); used when the site config has no icon, and in the admin chrome. Bind it
+ * (`:src`): a static `src` is resolved as a module at build time, and the file isn't in the app's own publicDir.
+ */
+export const CMS_ICON = '/favicon.svg'
 
 /**
  * Document title (site meta rule): "{meta title} - {firm name}", just the firm name when the page has no meta title;

@@ -1,6 +1,6 @@
 import type { Router } from 'vue-router'
 import { client } from './api/client.gen'
-import { ApiError } from './api-error'
+import { toApiError } from './api-error'
 import { useAuthStore } from './stores/auth'
 import { loginRouteFor } from './router'
 
@@ -37,13 +37,5 @@ export function setupInterceptors(router: Router) {
 		return response
 	})
 
-	// body is ProblemDetails (JSON), plain text, or a network TypeError (no response)
-	client.interceptors.error.use((error, response) => {
-		if (error instanceof ApiError) return error
-		const status = response?.status ?? 0
-		if (status === 413) return new ApiError('File exceeds 10 MB.', 413)
-		const problem = typeof error === 'object' && error ? (error as { detail?: string; title?: string }) : {}
-		const message = problem.detail ?? problem.title ?? (status ? `Request failed (${status})` : 'Network error')
-		return new ApiError(message, status)
-	})
+	client.interceptors.error.use(toApiError)
 }
