@@ -1,16 +1,25 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Button, Input, Select } from '@trainpaths/nb-ui'
-import type { PageSort } from '../composables/usePageFilter'
+import type { PageSort, PageStatusFilter } from '../composables/usePageFilter'
 
-/** Search + tag + sort controls for page lists (pages admin, menu page picker). State: `usePageFilter`. */
+/**
+ * Search + tag + sort controls for page lists (pages admin, menu page picker). State: `usePageFilter`.
+ * The status select shows only when `v-model:status` is bound (pages admin; the picker lists published pages only).
+ */
 const props = defineProps<{ tags: string[]; compact?: boolean }>()
 const search = defineModel<string>('search', { required: true })
 const tag = defineModel<string>('tag', { required: true })
 const sort = defineModel<PageSort>('sort', { required: true })
+const status = defineModel<PageStatusFilter>('status')
 
 // '' = no tag filter, a real option (Select's placeholder is unselectable)
 const tagOptions = computed(() => [{ value: '', label: 'All tags' }, ...props.tags])
+const statusOptions: { value: PageStatusFilter; label: string }[] = [
+	{ value: '', label: 'All statuses' },
+	{ value: 'published', label: 'Published' },
+	{ value: 'draft', label: 'Not published' },
+]
 </script>
 
 <template>
@@ -36,6 +45,15 @@ const tagOptions = computed(() => [{ value: '', label: 'All tags' }, ...props.ta
 				:class="{ 'min-w-160': !compact }"
 				aria-label="Filter by tag"
 				data-testid="page-filter-tag"
+			/>
+			<Select
+				v-if="status !== undefined"
+				v-model="status"
+				:options="statusOptions"
+				class="min-w-0 flex-1"
+				:class="{ 'min-w-160': !compact }"
+				aria-label="Filter by status"
+				data-testid="page-filter-status"
 			/>
 			<!-- sort by updatedAt: clock + arrow, down = newest first, up = oldest first -->
 			<Button

@@ -131,3 +131,37 @@ test('list modal edits slug and publish status', async ({ staffPage: page, brows
 	await dialog.getByRole('button', { name: 'Cancel' }).click()
 	await expect(row(page, title)).toContainText('Published')
 })
+
+test('status filter: published / not published, cleared by "All statuses"', async ({ staffPage: page }) => {
+	const prefix = `E2E Status ${unique()}`
+	const published = await createPage(page, `${prefix} live`)
+	const draft = await createPage(page, `${prefix} draft`)
+	await page.goto('/admin/pages')
+	await row(page, published).getByTestId('page-edit').click()
+	const dialog = page.getByTestId('page-edit-dialog')
+	await dialog.getByTestId('page-edit-published').check()
+	await dialog.getByTestId('page-edit-save').click()
+	await expect(dialog).toBeHidden()
+
+	await page.getByTestId('page-filter-search').fill(prefix)
+	const status = page.getByTestId('page-filter-status')
+	await status.selectOption('published')
+	await expect(page.getByTestId('page-row')).toHaveCount(1)
+	await expect(row(page, published)).toBeVisible()
+	await status.selectOption('draft')
+	await expect(page.getByTestId('page-row')).toHaveCount(1)
+	await expect(row(page, draft)).toBeVisible()
+	await status.selectOption({ label: 'All statuses' })
+	await expect(page.getByTestId('page-row')).toHaveCount(2)
+
+	// "Clear filters" resets the status too
+	await status.selectOption('published')
+	await page.getByTestId('page-filter-search').fill(`${prefix} draft`)
+	await page.getByRole('button', { name: 'Clear filters' }).click()
+	await expect(status).toHaveValue('')
+
+	// menus' page picker lists published pages only: no status filter there
+	await page.goto('/admin/menus')
+	await expect(page.getByTestId('menu-page-picker').getByTestId('page-filter-search')).toBeVisible()
+	await expect(page.getByTestId('page-filter-status')).toHaveCount(0)
+})

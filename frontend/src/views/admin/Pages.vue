@@ -18,7 +18,7 @@ const errorMessage = ref<string | null>(null)
 const newPageTitle = ref('')
 const showNewPageInput = ref(false)
 const tagsStore = useTagsStore()
-const { search, tag, sort, active: filtering, filtered, reset } = usePageFilter(() => pages.items)
+const { search, tag, status, sort, active: filtering, filtered, reset } = usePageFilter(() => pages.items)
 const editing = ref<PageSummary | null>(null)
 const { confirm } = useConfirm()
 
@@ -125,6 +125,7 @@ async function handleDeletePage(page: PageSummary) {
 				v-if="pages.items.length"
 				v-model:search="search"
 				v-model:tag="tag"
+				v-model:status="status"
 				v-model:sort="sort"
 				:tags="tagsStore.names"
 				class="mb-12"
@@ -151,7 +152,7 @@ async function handleDeletePage(page: PageSummary) {
 				v-else-if="filtering && !filtered.length"
 				icon="search"
 				title="No pages match."
-				description="Try another search or tag."
+				description="Try another search or filter."
 			>
 				<template #action>
 					<Button
