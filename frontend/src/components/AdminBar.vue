@@ -23,43 +23,25 @@ async function logout() {
 </script>
 
 <template>
-	<div
-		v-if="visible"
-		class="flex h-32 items-center justify-between gap-16 bg-gray-900 px-16 font-cms text-xs text-white"
-		data-testid="admin-bar"
-	>
-		<!-- plain links: admin routes are a full page load from the public app -->
-		<a
-			href="/admin"
-			class="flex items-center gap-6 font-semibold text-white no-underline"
-		>
-			<img
-				:src="CMS_ICON"
-				alt=""
-				class="size-16"
-			/>
-			CMS
-		</a>
-		<div class="flex items-center gap-4">
-			<a
-				href="/admin"
-				class="rounded-sm px-8 py-4 text-white no-underline hover:bg-white/15"
-			>
-				Admin
+	<div v-if="visible" class="justify-center flex items-center h-30 bg-accent-dark font-cms text-xs text-white"
+		data-testid="admin-bar">
+		<div class="w-full max-w-5xl flex items-center justify-between">
+			<!-- plain links: admin routes are a full page load from the public app -->
+			<a href="/admin" class="flex items-center gap-6 font-semibold text-white no-underline">
+				<img :src="CMS_ICON" alt="" class="size-16" />
+				CMS
 			</a>
-			<button
-				type="button"
-				class="flex cursor-pointer items-center gap-6 rounded-sm border-none bg-transparent px-8 py-4 text-xs text-white hover:bg-white/15 disabled:opacity-60"
-				:disabled="busy"
-				data-testid="admin-bar-logout"
-				@click="logout"
-			>
-				<Icon
-					name="exit"
-					:size="14"
-				/>
-				Log out
-			</button>
+			<div class="flex items-center gap-4 *:h-32">
+				<a href="/admin" class="flex items-center px-8 text-white no-underline hover:bg-white/15">
+					Admin
+				</a>
+				<button type="button"
+					class="flex cursor-pointer items-center gap-6 border-none bg-transparent px-8 text-xs text-white hover:bg-white/15 disabled:opacity-60"
+					:disabled="busy" data-testid="admin-bar-logout" @click="logout">
+					<Icon name="exit" :size="14" />
+					Log out
+				</Button>
+			</div>
 		</div>
 	</div>
 </template>
