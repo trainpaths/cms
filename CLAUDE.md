@@ -123,8 +123,9 @@ OpenAPI drift check. **frontend**: `pnpm audit`, generated-client drift check, l
 Playwright from `playground/` (with a bootstrap super admin for the editor specs). Dependabot opens weekly update PRs.
 `release.yml` runs after a green CI run on `main` (or manually, forcing the bump): Conventional Commits since the last
 tag → bump (`!`/`BREAKING CHANGE` major, `feat` minor, else patch; only docs/chore/ci/test/style/build → none), commits
-`chore(release): vX.Y.Z` (version in `frontend/package.json`), tags, GitHub release, pushes
-`ghcr.io/trainpaths/cms-api:X.Y.Z` / `:X.Y` / `:latest` (amd64 + arm64). Always `git pull` after a release.
+`chore(release): vX.Y.Z` (version in `frontend/package.json`) **on the tag only**, GitHub release, pushes
+`ghcr.io/trainpaths/cms-api:X.Y.Z` / `:X.Y` / `:latest` (amd64 + arm64). `main` is protected (PR + required checks)
+and never gets the release commit: its `frontend/package.json` version is stale, tags are authoritative.
 **Breaking for instances** (config keys, override points, block contract, entry stubs) → mark the commit `!`.
 
 ## Git workflow
