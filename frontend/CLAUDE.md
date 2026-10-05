@@ -65,7 +65,7 @@ HTML files from `cms.config.json` `site.lang` (`server/site-lang.js`, read per t
 ```
 state.ts            PublicState {slug, page|null, menu, config, baseUrl}: what a page renders from (API RenderState mirrors it)
 createPublicApp.ts  app factory (SSR app or client app), seeds stores (publicPage, menus, siteConfig)
-PublicApp.vue       .site-theme root: SiteHeader + PageView (template or PageContent; or NotFound) + SiteFooter
+PublicApp.vue       .site-theme root: AdminBar (client-only) + SiteHeader + PageView (template or PageContent; or NotFound) + SiteFooter
 templates.ts        getTemplate(name): the instance's src/templates/*.vue; TemplatePage / TemplateProps types
 router.ts           routes `home` / `/home` redirect / `public-page` / catch-all; first navigation keeps the server
                     state, later ones load the page first; unknown page, app route or deeper path → full page load
@@ -125,7 +125,8 @@ Base layer restores v3 defaults: gray-200 border colour, gray-400 placeholders, 
 - Bearer token added by `src/interceptors.ts` (memory-only token from the auth store).
 - **Call the SDK directly** (`const { data } = await getApiPages()`), no wrapper layer. `openapi-ts.config.ts`
   sets `throwOnError: true`: `data` is non-optional and failures throw `ApiError(message, status)` (`src/api-error.ts`,
-  built by the error interceptor in `src/interceptors.ts` from ProblemDetails `detail ?? title`; status 0 = network).
+  built by its error interceptor `toApiError`, registered by the admin and the public client, from ProblemDetails
+  `detail ?? title`; status 0 = network).
   `errorMessage(err, fallback)` for UI text.
 - Types are exact (required/nullable follow C# nullability, enums are string unions), so `lib/web-editor/core/types.ts`
   re-exports them. Backend DTO change → `pnpm build:back` → `pnpm gen-api` → vue-tsc shows every affected caller.
@@ -143,7 +144,7 @@ Base layer restores v3 defaults: gray-200 border colour, gray-400 placeholders, 
 | `/forgot-password` | `ForgotPassword.vue` | guest |
 | `/reset-password` | `ResetPassword.vue` (`?token=`) | public |
 | `/verify-email` | `VerifyEmail.vue` (`?token=`) | public |
-| `/admin/pages` | `admin/Pages.vue` (list with search / tag filter / updatedAt sort toggle (clock + arrow icon button, down = newest first) (`PageFilters` + `composables/usePageFilter.ts`), tag chips, edit modal `components/PageEditDialog.vue` (slug, published, tags; saves only what changed via slug PUT → publish/unpublish → tags PUT), create, view/preview, delete) | staff |
+| `/admin/pages` | `admin/Pages.vue` (list with search / tag filter / status filter (All statuses / Published / Not published; only here, `v-model:status` shows it) / updatedAt sort toggle (clock + arrow icon button, down = newest first) (`PageFilters` + `composables/usePageFilter.ts`), tag chips, edit modal `components/PageEditDialog.vue` (slug, published, tags; saves only what changed via slug PUT → publish/unpublish → tags PUT), create, view/preview, delete) | staff |
 | `/admin/pages/:id` | `admin/PageEditor.vue` → `WebEditor` (no nav) | staff |
 | `/admin/pages/:id/preview` | `admin/PagePreview.vue` (draft preview, no nav) | staff |
 | `/admin/media` | `admin/Media.vue` (rename + alt; library grid 3/4/6 cols; details in a fixed right sidebar on lg+, modal below; click again to close) | staff |
@@ -152,10 +153,15 @@ Base layer restores v3 defaults: gray-200 border colour, gray-400 placeholders, 
 | `/:slug` | `public-page`: hand-off like `home` (links in SiteHeader/Footer, Pages list) | public |
 | `/:pathMatch(.*)*` | `NotFound.vue` | public |
 
-**Nav:** `App.vue` renders `components/AppNav.vue` (sticky top bar: Dashboard, Pages, Menus, Media, Configuration, User → `/profile`;
-staff-only items hidden for customers; burger menu below md) on `meta.requiresAuth` routes unless `meta.hideNav`
-(editor, preview). Customer auth screens (`/login`, `/register`, `/forgot-password`, `meta.publicNav`) render
-`components/PublicNav.vue` (loads menu + config → `SiteHeader`) instead; `/admin/login` and the other auth screens have no nav. Fixed overlays must start below its 56px (`top-56`).
+**Nav:** `App.vue` renders `components/AppNav.vue` on `meta.requiresAuth` routes unless `meta.hideNav` (editor,
+preview): md+ fixed left sidebar (`w-220`; content gets `md:pl-220`): `<favicon> CMS`, items with nb-ui `Icon`s
+(Dashboard, Pages, Menus, Media, Configuration; staff-only items hidden for customers), bottom row `User` → `/profile` +
+exit icon button (log out). Below md: sticky 56px top bar + burger → the same `#app-nav-menu` as a full-screen
+overlay below the bar (body scroll locked). Customer auth screens (`/login`, `/register`, `/forgot-password`, `meta.publicNav`) render
+`components/PublicNav.vue` (loads menu + config → `SiteHeader`) instead; `/admin/login` and the other auth screens have no nav. Fixed overlays: md+ the sidebar is on the left (no top offset).
+**Admin bar** (`components/AdminBar.vue`, public site): thin dark bar above `SiteHeader` for staff → `/admin`, log out
+(auth store `logout()`, refresh cookie). Client-only: shown after mount from the `auth_type` hint (`readAuthType()`),
+no API call, so SSR/hydration are identical for everyone (an expired session lands on the admin login).
 
 Guard (`router.beforeEach`): `meta.requiresAuth` → `ensureSession()` else `/admin/login` for `/admin*` paths,
 `/login` otherwise (remembers `redirectAfterLogin`); `meta.requiresStaff` → `authType === 'staff'` else `dashboard`; `meta.guest` → authenticated users go to `dashboard` (`/admin`).
@@ -250,9 +256,9 @@ src/router/index.ts    routes + guards
 src/style.css          Tailwind import + nb-ui theme.css + @source of the package + v3-compat base (+ web-editor.css)
 src/lib/web-editor/     block editor library (own CLAUDE.md)
 src/views/             route views (admin/ = page management)
-src/components/        app shell pieces (AppNav, SiteHeader + site/, SiteFooter, ConfigImageField, PageFilters,
+src/components/        app shell pieces (AppNav, AdminBar, SiteHeader + site/, SiteFooter, ConfigImageField, PageFilters,
                        PageEditDialog, menus/ tree editor)
-src/composables/       usePageFilter (search/tag/sort over PageSummary[])
+src/composables/       usePageFilter (search/tag/status/sort over PageSummary[])
 src/lib/menus/tree.ts  pure menu tree ops (locate, move, indent/outdent, depth checks)
 nginx.conf             `/` + `/{slug}` → API HTML endpoint (X-Accel-Redirect to index.html/public.html), SPA fallback, /api proxy (64k; /api/pages 2m; /api/menus 512k; /api/media 11m), CSP (img-src 'self' only: uploads are same-origin)
 public/favicon.svg     CMS admin icon (emitted by cms() unless the instance has its own)
