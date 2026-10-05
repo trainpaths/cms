@@ -14,8 +14,7 @@ export default async function globalSetup(config: FullConfig) {
     } catch (error) {
         throw new Error(
             `E2E tests require full stack running.\n` +
-                `1. Run: docker compose up\n` +
-                `2. In another terminal: make dev (Vite dev server of the playground)\n` +
+                `Run at the repo root: pnpm docker:up\n` +
                 `Original error: ${error}`
         )
     } finally {

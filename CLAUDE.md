@@ -48,27 +48,28 @@ frontend/                @trainpaths/cms package (raw source): admin SPA, public
 playground/              instance app on `workspace:*` (cms.config.json, index.html, public.html, entry stubs, style.css,
                          sample block/override/template) + e2e/
 api-backend/             .NET API (+ Tests/: xUnit unit + Testcontainers integration)
-package.json, pnpm-workspace.yaml   pnpm workspace root (frontend + playground; ESLint lives here)
+package.json, pnpm-workspace.yaml   pnpm workspace root (frontend + playground; ESLint, all repo scripts)
 Dockerfile               5-stage build: api-build → frontend-build (playground) → api → renderer → frontend
 docker-compose.yml       postgres + seaweedfs + api + renderer + frontend (the playground instance)
-Makefile                 root convenience targets (delegate to pnpm / dotnet / docker compose)
 .env.example             copy to .env (git-ignored)
 ```
 
 ## Commands
 ```bash
 cp .env.example .env     # set API_JWT_KEY + S3_SECRET_KEY (openssl rand -hex 32) + BOOTSTRAP_SUPERADMIN_* (first staff login)
-make install             # pnpm install (workspace)
-docker compose up -d --build   # full stack (playground) → http://localhost:5173
-make dev                 # postgres + seaweedfs + api in docker, playground Vite dev server with hot reload
-make build-back          # dotnet build → regenerates frontend/openapi/swagger.json (commit it; CI checks drift)
-make gen-api             # regenerate the typed client frontend/src/api/ from swagger.json (commit it; CI checks drift)
-make lint                # ESLint (package + playground)
-make typecheck           # vue-tsc: package + playground
-make build-front         # playground type-check + build (client + SSR bundles)
-make test-backend        # xUnit (needs Docker for Testcontainers)
-make test-front          # Vitest unit tests (SSR render)
-make test-e2e            # Playwright (needs the stack running; editor specs need staff creds, see frontend/CLAUDE.md)
+pnpm install             # workspace
+pnpm docker:up           # full stack (playground) → http://localhost:5173; docker:down stops
+pnpm dev                 # postgres + seaweedfs + api in docker, playground Vite dev server with hot reload
+                         # (dev:build rebuilds the api image first; dev:web = Vite only)
+pnpm build:back          # dotnet build → regenerates frontend/openapi/swagger.json (commit it; CI checks drift)
+pnpm gen-api             # regenerate the typed client frontend/src/api/ from swagger.json (commit it; CI checks drift)
+pnpm lint                # ESLint (package + playground)
+pnpm typecheck           # vue-tsc: package + playground
+pnpm build:front         # playground type-check + build (client + SSR bundles)
+pnpm test:back           # xUnit (needs Docker for Testcontainers)
+pnpm test:front          # Vitest unit tests (SSR render)
+pnpm test:e2e            # Playwright (needs the stack running; editor specs need staff creds, see frontend/CLAUDE.md)
+pnpm test:all            # test:back + test:front + test:e2e
 ```
 
 **No local .NET SDK?** Run `dotnet` in the SDK image with the repo mounted at the same path (the
@@ -114,7 +115,7 @@ Typed client generated from the committed contract (and committed itself: instan
   objects, switch expressions: trailing comma on the last item, closing bracket on its own line.
   Parameter/argument lists (records, primary ctors, calls) can't take a trailing comma, so their `)`
   stays on the last item's line.
-- **Frontend**: tabs, ESLint (`make lint`); multi-line lists end with a trailing comma.
+- **Frontend**: tabs, ESLint (`pnpm lint`); multi-line lists end with a trailing comma.
 
 ## CI + releases (.github/workflows/)
 `ci.yml` runs on PRs + pushes to `main`. **backend**: vulnerable-package check, `dotnet test`,

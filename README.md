@@ -51,24 +51,26 @@ docker-compose.yml full local stack (postgres + seaweedfs + api + renderer + fro
 
 ```bash
 cp .env.example .env     # set API_JWT_KEY, S3_SECRET_KEY (openssl rand -hex 32), BOOTSTRAP_SUPERADMIN_* (first admin)
-docker compose up -d --build      # full stack → http://localhost:5173, admin at /admin/login
-make install && make dev          # postgres + seaweedfs + api in docker, playground Vite dev server with hot reload
+pnpm install
+pnpm docker:up                    # full stack → http://localhost:5173, admin at /admin/login
+pnpm dev                          # postgres + seaweedfs + api in docker, playground Vite dev server with hot reload
 ```
 
-| Target              | What it does                                                         |
-| ------------------- | -------------------------------------------------------------------- |
-| `make dev`          | API stack in docker + playground Vite dev server                     |
-| `make up` / `down`  | Start / stop the full stack                                          |
-| `make build-back`   | Build the API (rewrites the committed OpenAPI contract)              |
-| `make gen-api`      | Regenerate the committed typed client from the contract              |
-| `make lint`         | ESLint (package + playground)                                        |
-| `make typecheck`    | vue-tsc (package + playground)                                       |
-| `make build-front`  | Build the playground (client + SSR bundles)                          |
-| `make test-backend` | `dotnet test` (xUnit + Testcontainers)                               |
-| `make test-front`   | Vitest (SSR render, head tags)                                       |
-| `make test-e2e`     | Playwright against the running stack (see `playground/CLAUDE.md`)    |
+| Script                           | What it does                                                                          |
+| -------------------------------- | ------------------------------------------------------------------------------------- |
+| `pnpm dev`                       | API stack in docker + playground Vite dev server (`dev:build` rebuilds the API image) |
+| `pnpm docker:up` / `docker:down` | Start / stop the full stack                                                           |
+| `pnpm build:back`                | Build the API (rewrites the committed OpenAPI contract)                               |
+| `pnpm gen-api`                   | Regenerate the committed typed client from the contract                               |
+| `pnpm lint`                      | ESLint (package + playground)                                                         |
+| `pnpm typecheck`                 | vue-tsc (package + playground)                                                        |
+| `pnpm build:front`               | Build the playground (client + SSR bundles)                                           |
+| `pnpm test:back`                 | `dotnet test` (xUnit + Testcontainers)                                                |
+| `pnpm test:front`                | Vitest (SSR render, head tags)                                                        |
+| `pnpm test:e2e`                  | Playwright against the running stack (see `playground/CLAUDE.md`)                     |
+| `pnpm test:all`                  | All three test suites                                                                 |
 
-API change: `make build-back`, then `make gen-api`, commit `frontend/openapi/swagger.json` and `frontend/src/api/`;
+API change: `pnpm build:back`, then `pnpm gen-api`, commit `frontend/openapi/swagger.json` and `frontend/src/api/`;
 CI fails when either drifts.
 
 ## Releases

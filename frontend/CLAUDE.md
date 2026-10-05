@@ -119,8 +119,8 @@ Base layer restores v3 defaults: gray-200 border colour, gray-400 placeholders, 
 
 ## API client (auto-generated, committed)
 - Output: `src/api/` (`*.gen.ts`, **never edit**, committed so instances need no hey-api), config `openapi-ts.config.ts`.
-  Regenerate: `make gen-api` (root) from the committed `openapi/swagger.json`; CI fails when it drifts.
-- The contract is rewritten by every backend build (`make build-back` at repo root); commit it, then `make gen-api`.
+  Regenerate: `pnpm gen-api` (root) from the committed `openapi/swagger.json`; CI fails when it drifts.
+- The contract is rewritten by every backend build (`pnpm build:back` at repo root); commit it, then `pnpm gen-api`.
 - Base URL `''` → same-origin `/api/*` (Vite proxy in dev → `VITE_API_BASE_URL`; nginx in the container).
 - Bearer token added by `src/interceptors.ts` (memory-only token from the auth store).
 - **Call the SDK directly** (`const { data } = await getApiPages()`), no wrapper layer. `openapi-ts.config.ts`
@@ -128,7 +128,7 @@ Base layer restores v3 defaults: gray-200 border colour, gray-400 placeholders, 
   built by the error interceptor in `src/interceptors.ts` from ProblemDetails `detail ?? title`; status 0 = network).
   `errorMessage(err, fallback)` for UI text.
 - Types are exact (required/nullable follow C# nullability, enums are string unions), so `lib/web-editor/core/types.ts`
-  re-exports them. Backend DTO change → `make build-back` → `pnpm gen-api` → vue-tsc shows every affected caller.
+  re-exports them. Backend DTO change → `pnpm build:back` → `pnpm gen-api` → vue-tsc shows every affected caller.
 
 ## Router (`src/router/index.ts`)
 | Path | View | Access |
@@ -232,13 +232,13 @@ Live in the playground instance: `playground/e2e/` → see `playground/CLAUDE.md
 Tabs (width 4), no semicolons, single quotes, 120-char lines, one attribute per line in templates.
 Prettier isn't a dependency; format with `pnpm dlx prettier@3 --write <paths>`.
 
-## Scripts (`pnpm --filter @trainpaths/cms <script>`, or the root `make` targets)
+## Scripts (`pnpm --filter @trainpaths/cms <script>`, or the root scripts)
 ```
 gen-api           # regenerate src/api/ from openapi/swagger.json (commit the result)
 typecheck         # vue-tsc -b: src (tsconfig.app.json) + vite-plugin.js/server/*.js (tsconfig.node.json, checkJs)
 test              # Vitest (src/ only)
 ```
-Dev server, build and e2e run in `playground/` (`make dev`, `make build-front`, `make test-e2e`).
+Dev server, build and e2e run in `playground/` (root `pnpm dev`, `pnpm build:front`, `pnpm test:e2e`).
 
 ## Key files
 ```
