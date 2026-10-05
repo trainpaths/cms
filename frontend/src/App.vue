@@ -13,7 +13,10 @@ const showNav = computed(() => !!route.meta.requiresAuth && !route.meta.hideNav)
 <template>
 	<AppNav v-if="showNav" />
 	<PublicNav v-else-if="route.meta.publicNav" />
-	<router-view />
+	<!-- md+: room for the fixed sidebar -->
+	<div :class="{ 'md:pl-220': showNav }">
+		<router-view />
+	</div>
 	<ToastContainer />
 	<ConfirmDialog />
 </template>

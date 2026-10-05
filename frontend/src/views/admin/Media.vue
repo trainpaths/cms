@@ -137,10 +137,10 @@ function formatSize(bytes: number) {
 		/>
 	</div>
 
-	<!-- below lg: dismissable modal; lg+: fixed far-right sidebar below the 56px nav, overlaying the page (grid never shifts) -->
+	<!-- below lg: dismissable modal; lg+: fixed far-right full-height sidebar, overlaying the page (grid never shifts) -->
 	<div
 		v-if="selected"
-		class="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-16 font-sans lg:inset-auto lg:right-0 lg:top-56 lg:block lg:h-[calc(100vh-56px)] lg:w-280 lg:bg-transparent lg:p-0"
+		class="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-16 font-sans lg:inset-auto lg:right-0 lg:top-0 lg:block lg:h-screen lg:w-280 lg:bg-transparent lg:p-0"
 		@click.self="selectedId = null"
 	>
 		<aside
