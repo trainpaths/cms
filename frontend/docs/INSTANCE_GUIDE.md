@@ -206,10 +206,7 @@ paragraph. Link-preview image: the page's first image, else the share image from
 1. Read the release notes between your version and the target (GitHub releases of `trainpaths/cms`); a major
    version lists what breaks (config keys, override points, block contract, entry stubs).
 2. Bump **both**: the package tag in `package.json` and the API image tag (and `@trainpaths/nb-ui` to the CMS's
-   `peerDependencies` value), then `pnpm install`.
+   `peerDependencies` value), then `pnpm install`. Instances from `trainpaths/cms-starter` do all of this with
+   `pnpm bump-cms [X.Y.Z]` (default: latest release; also checks the tag and image exist).
 3. `pnpm build`; fix type errors (your overrides/blocks are checked against the new package source).
 4. Back up the database: the API applies its migrations on start, there is no downgrade.
-
-**Trying an unreleased CMS**: `pnpm pack --pack-destination <instance>/.cms-local` in the CMS's `frontend/`, point
-`@trainpaths/cms` at `file:.cms-local/trainpaths-cms-0.0.0.tgz`, and build the API image from the CMS repo
-(`docker compose build api`, tag it `ghcr.io/trainpaths/cms-api:<CMS_VERSION>`).
