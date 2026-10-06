@@ -1,4 +1,4 @@
-import { test, expect, createPage, insertBlock } from '../../fixtures/staff.fixture'
+import { test, expect, createPage, insertBlock, rowAction } from '../../fixtures/staff.fixture'
 
 // What the playground adds as an instance (playground/src/, cms.config.json): the extension points a client site uses.
 
@@ -37,9 +37,10 @@ test('template page: rendered by the instance template, locked in the admin', as
 
 	await page.goto('/admin/pages')
 	const row = page.getByTestId('page-row').filter({ hasText: '/imprint' })
-	await expect(row.getByTestId('page-delete')).toBeDisabled()
+	await expect(await rowAction(row, 'page-delete')).toBeDisabled()
+	await page.keyboard.press('Escape')
 
-	await row.getByTestId('page-edit').click()
+	await (await rowAction(row, 'page-edit')).click()
 	await expect(page.getByTestId('page-edit-slug')).toBeDisabled()
 	await expect(page.getByText('Fixed by the site configuration')).toBeVisible()
 })

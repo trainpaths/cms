@@ -2,14 +2,16 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Alert, Badge, Button, EmptyState, Icon, Input, Loading, useConfirm, useToast } from '@trainpaths/nb-ui'
-import { deleteApiPagesById, postApiPages, postApiPagesImport } from '../../api/sdk.gen'
+import { deleteApiPagesById, getApiPagesById, postApiPages, postApiPagesImport } from '../../api/sdk.gen'
 import { errorMessage as describe, type PageSummary } from '../../lib/web-editor'
 import { usePagesStore } from '../../stores/pages'
 import { useTagsStore } from '../../stores/tags'
 import { usePageFilter } from '../../composables/usePageFilter'
 import PageFilters from '../../components/PageFilters.vue'
 import PageEditDialog from '../../components/PageEditDialog.vue'
-import { PageExportError, parsePageExport } from '../../lib/pageExport'
+import { PageExportError, pageExportFileName, parsePageExport, toPageExport } from '../../lib/pageExport'
+import { saveJson } from '../../lib/download'
+import ActionMenu, { type ActionItem } from '../../components/ActionMenu.vue'
 
 const router = useRouter()
 
@@ -82,6 +84,56 @@ async function handleImportFile(event: Event) {
 	}
 }
 
+// the saved page, fetched fresh (the list only has summaries)
+async function handleExportPage(page: PageSummary) {
+	try {
+		const { data } = await getApiPagesById({ path: { id: page.id } })
+		pages.remember(data)
+		saveJson(toPageExport(data), pageExportFileName(data.slug))
+	} catch (err: unknown) {
+		errorMessage.value = describe(err, 'Failed to export page')
+	}
+}
+
+// a new draft with the same content via the import endpoint (slug gets -2, -3…); stays on the list
+async function handleDuplicatePage(page: PageSummary) {
+	try {
+		const { data: source } = await getApiPagesById({ path: { id: page.id } })
+		const { data } = await postApiPagesImport({
+			body: {
+				title: `${source.title} (copy)`.slice(0, 200),
+				slug: source.slug,
+				blocks: source.blocks,
+				metaTitle: source.metaTitle,
+				metaDescription: source.metaDescription,
+				tags: source.tags,
+			},
+		})
+		pages.add(data.page)
+		tagsStore.refresh()
+		toast({ message: `Duplicated as draft /${data.page.slug}`, type: 'success' })
+	} catch (err: unknown) {
+		errorMessage.value = describe(err, 'Failed to duplicate page')
+	}
+}
+
+function rowActions(page: PageSummary): ActionItem[] {
+	return [
+		{ label: 'Edit', icon: 'edit', testId: 'page-edit', onSelect: () => (editing.value = page) },
+		{ label: 'Duplicate', icon: 'copy', testId: 'page-duplicate', onSelect: () => handleDuplicatePage(page) },
+		{ label: 'Export', icon: 'download', testId: 'page-export', onSelect: () => handleExportPage(page) },
+		{
+			label: 'Delete',
+			icon: 'trash',
+			danger: true,
+			disabled: page.locked,
+			title: page.locked ? "Part of the site configuration, can't be deleted" : undefined,
+			testId: 'page-delete',
+			onSelect: () => handleDeletePage(page),
+		},
+	]
+}
+
 async function handleDeletePage(page: PageSummary) {
 	const ok = await confirm({
 		title: `Delete "${page.title}"?`,
@@ -134,6 +186,7 @@ async function handleDeletePage(page: PageSummary) {
 				<Button
 					variant="outline"
 					text="primary"
+					border="primary"
 					class="gap-6"
 					title="Create a draft page from an exported page file (.json)"
 					aria-label="Import page"
@@ -281,30 +334,6 @@ async function handleDeletePage(page: PageSummary) {
 					</span>
 				</RouterLink>
 				<Button
-					variant="ghost"
-					text="secondary"
-					square
-					title="Edit slug, status and tags"
-					aria-label="Edit page settings"
-					data-testid="page-edit"
-					@click="editing = page"
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						width="16"
-						height="16"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					>
-						<path d="M12 20h9" />
-						<path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-					</svg>
-				</Button>
-				<Button
 					as="a"
 					variant="ghost"
 					text="secondary"
@@ -334,32 +363,12 @@ async function handleDeletePage(page: PageSummary) {
 						/>
 					</svg>
 				</Button>
-				<Button
-					variant="ghost"
-					text="danger"
-					square
+				<ActionMenu
+					:items="rowActions(page)"
+					:label="`Actions for ${page.title}`"
+					test-id="page-actions"
 					class="mr-8"
-					:title="page.locked ? 'Part of the site configuration, can\'t be deleted' : 'Delete page'"
-					aria-label="Delete page"
-					:disabled="page.locked"
-					data-testid="page-delete"
-					@click="handleDeletePage(page)"
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						width="16"
-						height="16"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					>
-						<polyline points="3 6 5 6 21 6" />
-						<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-					</svg>
-				</Button>
+				/>
 			</div>
 		</div>
 	</div>

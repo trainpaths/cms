@@ -1,4 +1,4 @@
-import { test, expect, createPage, type Page } from '../../fixtures/staff.fixture'
+import { test, expect, createPage, rowAction, type Page } from '../../fixtures/staff.fixture'
 
 const unique = () => crypto.randomUUID().slice(0, 8)
 
@@ -44,7 +44,7 @@ test('list modal: autocomplete, popular tags, filter by tag and search', async (
 	const tag = `e2e-shared-${unique()}`
 
 	await page.goto('/admin/pages')
-	await row(page, first).getByTestId('page-edit').click()
+	await (await rowAction(row(page, first), 'page-edit')).click()
 	const dialog = page.getByTestId('page-edit-dialog')
 	await addTag(dialog, tag)
 	await dialog.getByTestId('page-edit-save').click()
@@ -52,7 +52,7 @@ test('list modal: autocomplete, popular tags, filter by tag and search', async (
 	await expect(row(page, first).getByTestId('page-row-tag')).toHaveText([tag])
 
 	// the second page picks the existing tag from the autocomplete
-	await row(page, second).getByTestId('page-edit').click()
+	await (await rowAction(row(page, second), 'page-edit')).click()
 	await expect(dialog.getByTestId('tag-popular')).toBeVisible()
 	await dialog.getByTestId('tag-text').fill(tag.slice(0, 14))
 	await dialog.getByTestId('tag-suggestion').filter({ hasText: tag }).click()
@@ -85,7 +85,7 @@ test('list modal: autocomplete, popular tags, filter by tag and search', async (
 test('tags are single words: Space and comma split, pasted text becomes several tags', async ({ staffPage: page }) => {
 	const title = await createPage(page, `E2E Words ${unique()}`)
 	await page.goto('/admin/pages')
-	await row(page, title).getByTestId('page-edit').click()
+	await (await rowAction(row(page, title), 'page-edit')).click()
 	const dialog = page.getByTestId('page-edit-dialog')
 	const text = dialog.getByTestId('tag-text')
 	const u = unique()
@@ -103,7 +103,7 @@ test('list modal edits slug and publish status', async ({ staffPage: page, brows
 	const title = await createPage(page, `E2E Settings ${unique()}`)
 	const slug = `e2e-settings-${unique()}`
 	await page.goto('/admin/pages')
-	await row(page, title).getByTestId('page-edit').click()
+	await (await rowAction(row(page, title), 'page-edit')).click()
 	const dialog = page.getByTestId('page-edit-dialog')
 
 	await dialog.getByTestId('page-edit-slug').fill('Not A Slug!')
@@ -123,7 +123,7 @@ test('list modal edits slug and publish status', async ({ staffPage: page, brows
 	await visitor.close()
 
 	// a taken slug is reported and nothing else is applied
-	await row(page, title).getByTestId('page-edit').click()
+	await (await rowAction(row(page, title), 'page-edit')).click()
 	await dialog.getByTestId('page-edit-slug').fill('home')
 	await dialog.getByTestId('page-edit-published').uncheck()
 	await dialog.getByTestId('page-edit-save').click()
@@ -137,7 +137,7 @@ test('status filter: published / not published, cleared by "All statuses"', asyn
 	const published = await createPage(page, `${prefix} live`)
 	const draft = await createPage(page, `${prefix} draft`)
 	await page.goto('/admin/pages')
-	await row(page, published).getByTestId('page-edit').click()
+	await (await rowAction(row(page, published), 'page-edit')).click()
 	const dialog = page.getByTestId('page-edit-dialog')
 	await dialog.getByTestId('page-edit-published').check()
 	await dialog.getByTestId('page-edit-save').click()
