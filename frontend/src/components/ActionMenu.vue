@@ -131,7 +131,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onOutside))
 				role="menu"
 				tabindex="-1"
 				:aria-label="label"
-				class="absolute top-full right-0 z-40 mt-4 flex min-w-140 origin-top-right flex-col rounded-md border border-gray-200 bg-white p-4 font-sans shadow-lg outline-hidden"
+				class="absolute top-full right-0 z-40 mt-4 flex min-w-120 origin-top-right flex-col rounded-md border border-gray-200 bg-white p-4 font-sans shadow-lg outline-hidden"
 				@keydown="onMenuKeydown"
 			>
 				<button
