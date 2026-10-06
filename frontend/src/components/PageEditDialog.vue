@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { Alert, Button, FormField, Input, Modal, Switch, TagInput } from '@trainpaths/nb-ui'
 import {
+	getApiPagesById,
 	postApiPagesByIdPublish,
 	postApiPagesByIdUnpublish,
 	putApiPagesById,
@@ -15,12 +16,15 @@ import {
 	type PageDetail,
 	type PageSummary,
 } from '../lib/web-editor'
+import { pageExportFileName, toPageExport } from '../lib/pageExport'
+import { saveJson } from '../lib/download'
 import { usePagesStore } from '../stores/pages'
 import { useTagsStore } from '../stores/tags'
 
 /**
  * Pages-list modal: slug, publish status and tags of one page. Save sends only what changed, each through its
  * own endpoint (slug, publish/unpublish, tags), in that order; a failing step stops the rest.
+ * "Download JSON" exports the saved page (`lib/pageExport.ts`), not the unsaved form values.
  */
 const props = defineProps<{ page: PageSummary }>()
 const emit = defineEmits<{ close: [] }>()
@@ -31,6 +35,7 @@ const slug = ref(props.page.slug)
 const published = ref(props.page.status === 'published')
 const tags = ref([...props.page.tags])
 const saving = ref(false)
+const downloading = ref(false)
 const error = ref<string | null>(null)
 
 // same rule as the API's PageService.ValidateSlug (reserved slugs are left to the API)
@@ -48,6 +53,20 @@ const changed = computed(
 )
 
 onMounted(() => tagsStore.load())
+
+async function download() {
+	downloading.value = true
+	error.value = null
+	try {
+		const { data } = await getApiPagesById({ path: { id: props.page.id } })
+		pages.remember(data)
+		saveJson(toPageExport(data), pageExportFileName(data.slug))
+	} catch (err: unknown) {
+		error.value = errorMessage(err, 'Failed to download page')
+	} finally {
+		downloading.value = false
+	}
+}
 
 async function save() {
 	if (slugError.value || saving.value) return
@@ -133,6 +152,38 @@ async function save() {
 			</Alert>
 		</form>
 		<template #footer>
+			<Button
+				variant="ghost"
+				text="secondary"
+				class="mr-auto gap-6"
+				:loading="downloading"
+				title="Download this page as JSON (import it on the pages list to create a copy)"
+				data-testid="page-download"
+				@click="download"
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					width="16"
+					height="16"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					aria-hidden="true"
+				>
+					<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+					<polyline points="7 10 12 15 17 10" />
+					<line
+						x1="12"
+						y1="15"
+						x2="12"
+						y2="3"
+					/>
+				</svg>
+				Download JSON
+			</Button>
 			<Button
 				variant="outline"
 				:disabled="saving"
