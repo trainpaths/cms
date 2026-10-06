@@ -120,7 +120,7 @@ async function handleDuplicatePage(page: PageSummary) {
 function rowActions(page: PageSummary): ActionItem[] {
 	return [
 		{ label: 'Edit', icon: 'edit', testId: 'page-edit', onSelect: () => (editing.value = page) },
-		{ label: 'Duplicate', icon: 'copy', testId: 'page-duplicate', onSelect: () => handleDuplicatePage(page) },
+		{ label: 'Duplicate', icon: 'duplicate', testId: 'page-duplicate', onSelect: () => handleDuplicatePage(page) },
 		{ label: 'Export', icon: 'download', testId: 'page-export', onSelect: () => handleExportPage(page) },
 		{
 			label: 'Delete',
@@ -194,27 +194,7 @@ async function handleDeletePage(page: PageSummary) {
 					data-testid="page-import"
 					@click="importInput?.click()"
 				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						width="16"
-						height="16"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						aria-hidden="true"
-					>
-						<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-						<polyline points="7 10 12 15 17 10" />
-						<line
-							x1="12"
-							y1="15"
-							x2="12"
-							y2="3"
-						/>
-					</svg>
+					<Icon name="upload" />
 					<span class="hidden sm:inline">Import</span>
 				</Button>
 				<input
@@ -344,24 +324,7 @@ async function handleDeletePage(page: PageSummary) {
 					:aria-label="page.status === 'published' ? 'View page' : 'Preview draft'"
 					data-testid="page-view"
 				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						width="16"
-						height="16"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					>
-						<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-						<circle
-							cx="12"
-							cy="12"
-							r="3"
-						/>
-					</svg>
+					<Icon name="eye" />
 				</Button>
 				<ActionMenu
 					:items="rowActions(page)"

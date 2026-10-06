@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
+import { Icon } from '@trainpaths/nb-ui'
 import type { PublicMenu, SiteConfig } from '../lib/web-editor'
 import SiteNavLink from './site/SiteNavLink.vue'
 import SiteNavTree from './site/SiteNavTree.vue'
@@ -107,25 +108,7 @@ function onKeydown(e: KeyboardEvent) {
 				data-testid="site-nav-burger"
 				@click="open = !open"
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					width="22"
-					height="22"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-				>
-					<path
-						v-if="open"
-						d="M6 6l12 12M18 6L6 18"
-					/>
-					<path
-						v-else
-						d="M4 7h16M4 12h16M4 17h16"
-					/>
-				</svg>
+				<Icon :name="open ? 'x' : 'menu'" :size="22" />
 			</button>
 		</div>
 

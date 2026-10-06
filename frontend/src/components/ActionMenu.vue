@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref, useId, watch } from 'vue'
-import { Button, Icon } from '@trainpaths/nb-ui'
-
-export type ActionIcon = 'edit' | 'copy' | 'download' | 'trash'
+import { Button, Icon, type IconName } from '@trainpaths/nb-ui'
 
 export interface ActionItem {
 	label: string
-	icon: ActionIcon
+	icon: IconName
 	danger?: boolean
 	disabled?: boolean
 	/** tooltip, e.g. why an item is disabled */
@@ -16,8 +14,8 @@ export interface ActionItem {
 }
 
 /**
- * "…" button with a small menu below it. Same look and keyboard handling as nb-ui's `Dropdown`, which only renders
- * nb-ui icon names (no edit/copy/download/trash there); this one draws its own icons.
+ * "…" button with a small menu below it. Same look and keyboard handling as nb-ui's `Dropdown`, plus a per-item
+ * `title` (why an item is disabled) and `data-testid`, which `Dropdown` items don't take.
  */
 withDefaults(defineProps<{ items: ActionItem[]; label?: string; testId?: string }>(), {
 	label: 'Actions',
@@ -28,17 +26,6 @@ const open = ref(false)
 const root = ref<HTMLElement | null>(null)
 const menu = ref<HTMLElement | null>(null)
 const menuId = `action-menu-${useId()}`
-
-// lucide paths (same set as the other inline icons in the admin)
-const icons: Record<ActionIcon, string[]> = {
-	edit: ['M12 20h9', 'M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z'],
-	copy: [
-		'M11 9h9a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2z',
-		'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1',
-	],
-	download: ['M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4', 'M7 10l5 5 5-5', 'M12 15V3'],
-	trash: ['M3 6h18', 'M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'],
-}
 
 const menuItems = () => [...(menu.value?.querySelectorAll<HTMLElement>('[role="menuitem"]:not([disabled])') ?? [])]
 
@@ -151,24 +138,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onOutside))
 					]"
 					@click="select(item)"
 				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						width="16"
-						height="16"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						aria-hidden="true"
-					>
-						<path
-							v-for="d in icons[item.icon]"
-							:key="d"
-							:d="d"
-						/>
-					</svg>
+					<Icon :name="item.icon" />
 					{{ item.label }}
 				</button>
 			</div>
