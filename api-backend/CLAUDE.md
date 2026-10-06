@@ -409,7 +409,7 @@ UpdateSiteConfigRequest   Fields {key: value}, Groups {key: ConfigEntryValue[]},
 logo/icon → media_assets SET NULL; SiteConfigValues: `Values` jsonb replaced the free `Fields` list, old data dropped;
 AddPageMetaAndShareImage: `pages.MetaTitle/MetaDescription`, `site_config.ShareImageMediaId`), `tags` + `page_tags` and `menus` (AddTagsAndMenus: unique tag `Name`,
 unique menu `Handle`, `Items` jsonb), `rendered_pages` (AddRenderedPages: PK/FK `PageId` → pages CASCADE),
-`backup_settings` (AddBackupSettings: singleton, enums as strings, no FKs; AddBackupDayOfMonth: `DayOfMonth`, default 1)
+`backup_settings` (AddBackupSettings: singleton, enums as strings, no FKs)
 Constraints: email unique per table; refresh_token + verification_token owner check
 (CustomerId XOR StaffId non-null)
 

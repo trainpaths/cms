@@ -12,8 +12,8 @@ using api_backend;
 namespace api_backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261006114923_AddBackupDayOfMonth")]
-    partial class AddBackupDayOfMonth
+    [Migration("20261006120019_AddBackupSettings")]
+    partial class AddBackupSettings
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
