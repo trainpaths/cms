@@ -40,6 +40,9 @@ public sealed class BackupService(
 	ILogger<BackupService> logger)
 {
 	private const string WorkDir = ".work";
+
+	/// <summary>Every archive is deleted this long after it was stored here (uploads count from the upload).</summary>
+	public const int MaxAgeYears = 2;
 	private const string BusyMessage = "Another backup or restore is running.";
 
 	private string Dir => options.Value.Directory;
@@ -63,6 +66,7 @@ public sealed class BackupService(
 		settings.Interval = req.Interval;
 		settings.TimeOfDay = TimeOnly.ParseExact(req.TimeOfDay, "HH:mm");
 		settings.Weekday = (DayOfWeek)req.Weekday;
+		settings.DayOfMonth = req.DayOfMonth;
 		settings.Retention = req.Retention;
 		settings.UpdatedAt = DateTimeOffset.UtcNow;
 		await db.SaveChangesAsync(ct);
@@ -83,9 +87,9 @@ public sealed class BackupService(
 		catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException)
 		{
 		}
-		return new(s.Interval, s.TimeOfDay.ToString("HH:mm"), (int)s.Weekday, s.Retention, s.LastRunAt, s.LastError,
+		return new(s.Interval, s.TimeOfDay.ToString("HH:mm"), (int)s.Weekday, s.DayOfMonth, s.Retention, s.LastRunAt, s.LastError,
 			BackupSchedule.NextRun(s, DateTimeOffset.UtcNow), Dir,
-			string.IsNullOrWhiteSpace(options.Value.HostPath) ? null : options.Value.HostPath, free, MaxUploadBytes);
+			string.IsNullOrWhiteSpace(options.Value.HostPath) ? null : options.Value.HostPath, free, MaxUploadBytes, MaxAgeYears);
 	}
 
 	// ── list / read / delete ───────────────────────────────────────────────────
@@ -362,6 +366,28 @@ public sealed class BackupService(
 				: "Unexpected error, see the API logs.";
 		}
 		await db.SaveChangesAsync(ct);
+	}
+
+	/// <summary>Deletes archives stored more than <see cref="MaxAgeYears"/> ago, any kind. Skipped while busy.</summary>
+	public int DeleteExpired(DateTimeOffset now)
+	{
+		if (!Directory.Exists(Dir))
+			return 0;
+		using var held = backupLock.TryEnter();
+		if (held is null)
+			return 0;
+		var cutoff = now.AddYears(-MaxAgeYears);
+		var deleted = 0;
+		foreach (var path in Directory.EnumerateFiles(Dir))
+		{
+			var name = Path.GetFileName(path);
+			if (BackupArchive.StoredAt(name) is not { } at || at >= cutoff)
+				continue;
+			File.Delete(path);
+			deleted++;
+			logger.LogInformation("Deleted backup {Name}: older than {Years} years.", name, MaxAgeYears);
+		}
+		return deleted;
 	}
 
 	private void Prune(int keep)

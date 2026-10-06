@@ -2347,7 +2347,9 @@
         "enum": [
           "off",
           "daily",
-          "weekly"
+          "weekly",
+          "biweekly",
+          "monthly"
         ],
         "type": "string"
       },
@@ -2362,8 +2364,10 @@
       },
       "BackupSettingsResponse": {
         "required": [
+          "dayOfMonth",
           "directory",
           "interval",
+          "maxAgeYears",
           "maxUploadBytes",
           "retention",
           "timeOfDay",
@@ -2382,6 +2386,10 @@
             "type": "string"
           },
           "weekday": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "dayOfMonth": {
             "type": "integer",
             "format": "int32"
           },
@@ -2418,6 +2426,10 @@
           "maxUploadBytes": {
             "type": "integer",
             "format": "int64"
+          },
+          "maxAgeYears": {
+            "type": "integer",
+            "format": "int32"
           }
         },
         "additionalProperties": false
@@ -3467,6 +3479,7 @@
       },
       "UpdateBackupSettingsRequest": {
         "required": [
+          "dayOfMonth",
           "interval",
           "retention",
           "timeOfDay",
@@ -3485,6 +3498,10 @@
             "type": "string"
           },
           "weekday": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "dayOfMonth": {
             "type": "integer",
             "format": "int32"
           },

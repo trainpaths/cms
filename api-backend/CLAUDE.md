@@ -150,7 +150,8 @@ Design, archive layout and the restore sequence: `claude-context/ARCHITECTURE.md
 ```
 BackupsController           /api/backups             [Authorize(SuperAdmin)], rate limit "auth" (general)
   GET    /settings             → BackupSettingsResponse (schedule + nextRunAt, directory, hostPath, freeBytes, maxUploadBytes)
-  PUT    /settings             UpdateBackupSettingsRequest(interval off|daily|weekly, timeOfDay "HH:mm" UTC, weekday 0-6, retention 1-100)
+  PUT    /settings             UpdateBackupSettingsRequest(interval off|daily|weekly|biweekly|monthly, timeOfDay "HH:mm" UTC,
+                                 weekday 0-6, dayOfMonth 1-28, retention 1-100)
   GET    /                     → BackupInfo[] (name, kind from the file name, createdAt/cmsVersion/mediaCount from the manifest, error)
   POST   /                     → 201 BackupInfo (manual) | 409 busy | 500 tool/disk failure (detail = message)
   GET    /{name}               → application/gzip file (range) | 404
@@ -162,7 +163,8 @@ BackupsController           /api/backups             [Authorize(SuperAdmin)], ra
   NotFound | Busy | Invalid), tool/disk failures throw `BackupFailedException` (controller → 500 with the message).
   Names only via `BackupArchive.NamePattern()` (no traversal); work files in `<dir>/.work/<guid>`, archives written as `.partial`.
 - `BackupArchive` (layout, manifest record, `ReadManifestAsync` = first entry only, `ScanAsync` = full read + checks),
-  `BackupSchedule` (pure due/next logic, unit-tested), `BackupScheduler` (hosted, 1-min tick; tests remove it),
+  `BackupSchedule` (pure due/next logic, unit-tested), `BackupScheduler` (hosted, 1-min tick: `DeleteExpired` (> 2 years,
+  any kind, by the file-name timestamp `BackupArchive.StoredAt`) + `RunScheduledAsync`; tests remove it),
   `BackupLock` (singleton: `TryEnter`, `Maintenance()` → the Program.cs middleware answers other `/api` requests 503).
 - `IDatabaseDumper` → `PgDumper`: `pg_dump --snapshot`, `pg_restore -f - | psql -1` (credentials via `PG*` env from
   `ConnectionStrings:Postgres`; ends psql's input only after pg_restore exited 0, else kills it = rollback).
@@ -384,8 +386,8 @@ PublicMenu / PublicMenuItem Handle, Items | Label, Slug?, Url?, Children
 MediaItem                   Id, Url, FileName, ContentType, Size, Alt(≤100), CreatedAt
 MediaRef                    Id, Url, Alt   (page responses)
 UpdateMediaRequest          Alt?
-BackupSettingsResponse    Interval, TimeOfDay, Weekday, Retention, LastRunAt?, LastError?, NextRunAt?, Directory, HostPath?, FreeBytes?, MaxUploadBytes
-UpdateBackupSettingsRequest  Interval, TimeOfDay("HH:mm"), Weekday(0-6), Retention(1-100)
+BackupSettingsResponse    Interval, TimeOfDay, Weekday, DayOfMonth, Retention, LastRunAt?, LastError?, NextRunAt?, Directory, HostPath?, FreeBytes?, MaxUploadBytes, MaxAgeYears
+UpdateBackupSettingsRequest  Interval, TimeOfDay("HH:mm"), Weekday(0-6), DayOfMonth(1-28), Retention(1-100)
 BackupInfo                Name, Kind (auto|manual|pre-restore|upload), CreatedAt, Size, CmsVersion?, MediaCount?, Error?   RestoreResult  PreRestoreBackup
 SiteConfigResponse        Fields {key: value}, Groups {key: ConfigEntry[]}, Logo?/Icon?/ShareImage? (MediaRef), UpdatedAt?, FooterLinks
 ConfigEntry               Id, Key, Label, Type, Value, Address?
@@ -407,7 +409,7 @@ UpdateSiteConfigRequest   Fields {key: value}, Groups {key: ConfigEntryValue[]},
 logo/icon → media_assets SET NULL; SiteConfigValues: `Values` jsonb replaced the free `Fields` list, old data dropped;
 AddPageMetaAndShareImage: `pages.MetaTitle/MetaDescription`, `site_config.ShareImageMediaId`), `tags` + `page_tags` and `menus` (AddTagsAndMenus: unique tag `Name`,
 unique menu `Handle`, `Items` jsonb), `rendered_pages` (AddRenderedPages: PK/FK `PageId` → pages CASCADE),
-`backup_settings` (AddBackupSettings: singleton, enums as strings, no FKs)
+`backup_settings` (AddBackupSettings: singleton, enums as strings, no FKs; AddBackupDayOfMonth: `DayOfMonth`, default 1)
 Constraints: email unique per table; refresh_token + verification_token owner check
 (CustomerId XOR StaffId non-null)
 

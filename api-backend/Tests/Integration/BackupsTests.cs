@@ -58,6 +58,7 @@ public class BackupsTests : IClassFixture<ApiFactory>
 			["interval"] = "weekly",
 			["timeOfDay"] = "04:30",
 			["weekday"] = 2,
+			["dayOfMonth"] = 9,
 			["retention"] = 3,
 		});
 		put.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -66,18 +67,46 @@ public class BackupsTests : IClassFixture<ApiFactory>
 		saved.TimeOfDay.Should().Be("04:30");
 		saved.Weekday.Should().Be(2);
 		saved.Retention.Should().Be(3);
+		saved.DayOfMonth.Should().Be(9);
+		saved.MaxAgeYears.Should().Be(2);
 		saved.NextRunAt.Should().NotBeNull();
 		saved.NextRunAt!.Value.DayOfWeek.Should().Be(DayOfWeek.Tuesday);
 
-		foreach (var (time, weekday, retention) in new[] { ("25:00", 0, 7), ("4:30", 0, 7), ("04:30", 7, 7), ("04:30", 0, 0) })
+		foreach (var (time, weekday, day, retention) in new[]
+		{
+			("25:00", 0, 1, 7), ("4:30", 0, 1, 7), ("04:30", 7, 1, 7), ("04:30", 0, 1, 0), ("04:30", 0, 29, 7), ("04:30", 0, 0, 7),
+		})
 		{
 			(await Send(HttpMethod.Put, $"{Base}/settings", admin, new JsonObject
 			{
-				["interval"] = "daily",
+				["interval"] = "monthly",
 				["timeOfDay"] = time,
 				["weekday"] = weekday,
+				["dayOfMonth"] = day,
 				["retention"] = retention,
-			})).StatusCode.Should().Be(HttpStatusCode.BadRequest, $"{time} / {weekday} / {retention}");
+			})).StatusCode.Should().Be(HttpStatusCode.BadRequest, $"{time} / {weekday} / {day} / {retention}");
+		}
+	}
+
+	[Fact]
+	public async Task ArchivesOlderThanTwoYears_AreDeleted_AnyKind()
+	{
+		Directory.CreateDirectory(_factory.BackupDirectory);
+		var now = new DateTimeOffset(2026, 10, 6, 12, 0, 0, TimeSpan.Zero);
+		string[] expired = ["manual-20241006-115959.tar.gz", "upload-20200101-000000.tar.gz"];
+		string[] kept = ["pre-restore-20241006-120001.tar.gz", "auto-20261001-030000.tar.gz", "notes-20200101-000000.txt"];
+		foreach (var name in expired.Concat(kept))
+			await File.WriteAllTextAsync(Path.Combine(_factory.BackupDirectory, name), "x", Ct);
+
+		using var scope = _factory.Services.CreateScope();
+		scope.ServiceProvider.GetRequiredService<BackupService>().DeleteExpired(now).Should().Be(2);
+
+		foreach (var name in expired)
+			File.Exists(Path.Combine(_factory.BackupDirectory, name)).Should().BeFalse(name);
+		foreach (var name in kept)
+		{
+			File.Exists(Path.Combine(_factory.BackupDirectory, name)).Should().BeTrue(name);
+			File.Delete(Path.Combine(_factory.BackupDirectory, name));
 		}
 	}
 

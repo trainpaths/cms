@@ -5,13 +5,15 @@ using api_backend.Models.Backup;
 namespace api_backend.Models.Dto;
 
 /// <summary>
-/// The automatic backup schedule (times UTC, <see cref="Weekday"/> 0 = Sunday like JS <c>getUTCDay</c>) plus where
+/// The automatic backup schedule (times UTC, <see cref="Weekday"/> 0 = Sunday like JS <c>getUTCDay</c>, used by weekly
+/// and biweekly; <see cref="DayOfMonth"/> 1-28 by monthly) plus where
 /// archives go: <see cref="Directory"/> in the container, <see cref="HostPath"/> its host side when the instance set it.
 /// </summary>
 public record BackupSettingsResponse(
 	BackupInterval Interval,
 	string TimeOfDay,
 	int Weekday,
+	int DayOfMonth,
 	int Retention,
 	DateTimeOffset? LastRunAt,
 	string? LastError,
@@ -19,12 +21,14 @@ public record BackupSettingsResponse(
 	string Directory,
 	string? HostPath,
 	long? FreeBytes,
-	long MaxUploadBytes);
+	long MaxUploadBytes,
+	int MaxAgeYears);
 
 public record UpdateBackupSettingsRequest(
 	BackupInterval Interval,
 	[Required, RegularExpression("^([01][0-9]|2[0-3]):[0-5][0-9]$")] string TimeOfDay,
 	[Range(0, 6)] int Weekday,
+	[Range(1, 28)] int DayOfMonth,
 	[Range(1, 100)] int Retention);
 
 /// <summary>

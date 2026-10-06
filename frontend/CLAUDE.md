@@ -139,7 +139,8 @@ Base layer restores v3 defaults: gray-200 border colour, gray-400 placeholders, 
 | `/register` | `Register.vue` (customer signup) | guest |
 | `/` | `home`: hand-off to the public site (full page load; `toPublicSite` guard; first navigation → not-found) | public |
 | `/admin` | `Dashboard.vue` (welcome + profile links; name `dashboard`) | auth |
-| `/profile` | `Profile.vue`: super admins get tabs (`?tab=backups`) **Profile** (`components/ProfileDetails.vue`) + **Backups** (`components/backups/BackupsPanel.vue`: schedule (UTC, local time hint), storage folder (read-only), back up now, upload with progress (`lib/backupUpload.ts`, XHR), list with download (blob) / restore (confirm → logout → admin login) / delete); others just ProfileDetails | auth |
+| `/profile` | `Profile.vue`: super admins get tabs (`?tab=backups`) **Profile** (`components/ProfileDetails.vue`) + **Backups** (`components/backups/BackupsPanel.vue`: schedule off/daily/weekly/every 2 weeks/monthly (UTC, local time hint;
+weekday for weekly + biweekly, day 1-28 for monthly), storage folder (`hostPath`, else "Developer has not set backup folder"), back up now, upload with progress (`lib/backupUpload.ts`, XHR), list rows: Restore (primary) / download + delete icons (download = blob; restore = confirm → logout → admin login)); others just ProfileDetails | auth |
 | `/change-password` | `ChangePassword.vue` | auth |
 | `/forgot-password` | `ForgotPassword.vue` | guest |
 | `/reset-password` | `ResetPassword.vue` (`?token=`) | public |

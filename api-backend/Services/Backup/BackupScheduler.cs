@@ -1,6 +1,9 @@
 namespace api_backend.Services.Backup;
 
-/// <summary>Checks every minute whether the automatic backup is due (<see cref="BackupSchedule"/>).</summary>
+/// <summary>
+/// Every minute: deletes archives older than <see cref="BackupService.MaxAgeYears"/> and runs the automatic backup when
+/// due (<see cref="BackupSchedule"/>).
+/// </summary>
 public sealed class BackupScheduler(IServiceScopeFactory scopeFactory, ILogger<BackupScheduler> logger) : BackgroundService
 {
 	private static readonly TimeSpan Interval = TimeSpan.FromMinutes(1);
@@ -13,7 +16,10 @@ public sealed class BackupScheduler(IServiceScopeFactory scopeFactory, ILogger<B
 			try
 			{
 				using var scope = scopeFactory.CreateScope();
-				await scope.ServiceProvider.GetRequiredService<BackupService>().RunScheduledAsync(DateTimeOffset.UtcNow, stoppingToken);
+				var backups = scope.ServiceProvider.GetRequiredService<BackupService>();
+				var now = DateTimeOffset.UtcNow;
+				backups.DeleteExpired(now);
+				await backups.RunScheduledAsync(now, stoppingToken);
 			}
 			catch (Exception ex) when (ex is not OperationCanceledException)
 			{

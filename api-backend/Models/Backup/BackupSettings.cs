@@ -18,8 +18,11 @@ public class BackupSettings
 	/// <summary>UTC time of day the automatic backup runs.</summary>
 	public TimeOnly TimeOfDay { get; set; } = new(3, 0);
 
-	/// <summary>Weekly backups: the day (UTC).</summary>
+	/// <summary>Weekly / biweekly backups: the day (UTC).</summary>
 	public DayOfWeek Weekday { get; set; } = DayOfWeek.Sunday;
+
+	/// <summary>Monthly backups: the day of the month (1-28, so every month has it).</summary>
+	public int DayOfMonth { get; set; } = 1;
 
 	/// <summary>How many automatic backups are kept; older ones are deleted after each run.</summary>
 	public int Retention { get; set; } = 7;
@@ -39,6 +42,9 @@ public enum BackupInterval
 	[JsonStringEnumMemberName("off")] Off,
 	[JsonStringEnumMemberName("daily")] Daily,
 	[JsonStringEnumMemberName("weekly")] Weekly,
+	/// <summary>Every other week: the first chosen weekday after the schedule was saved, then every 14 days.</summary>
+	[JsonStringEnumMemberName("biweekly")] Biweekly,
+	[JsonStringEnumMemberName("monthly")] Monthly,
 }
 
 /// <summary>Table names the backup code refers to in raw SQL / pg_dump arguments.</summary>
