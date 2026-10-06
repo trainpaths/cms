@@ -16,8 +16,8 @@ test('schedule, back up now, download', async ({ staffPage: page }) => {
 	await page.goto('/profile')
 	await page.getByRole('tab', { name: 'Backups' }).click()
 	await expect(page).toHaveURL(/tab=backups/)
-	// compose stack without BACKUP_DIR (CI, default .env)
-	await expect(page.getByTestId('backup-location')).toHaveText('Developer has not set backup folder')
+	// compose default bind mount (CI, default .env)
+	await expect(page.getByTestId('backup-location')).toHaveText(process.env.BACKUP_DIR || './backups')
 
 	await page.getByTestId('backup-interval').selectOption('weekly')
 	await expect(page.getByTestId('backup-weekday')).toBeVisible()
