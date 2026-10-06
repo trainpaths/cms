@@ -39,7 +39,7 @@ e2e/fixtures/staff.fixture.ts  staffPage (logs in as bootstrap super admin) + cr
 e2e/tests/smoke.spec.ts, e2e/tests/nav.spec.ts, e2e/tests/auth/*.spec.ts, e2e/tests/site/{public-site,server-render}.spec.ts
 (needs the seeded default pages)
 e2e/tests/editor/{pages,pages-view,blocks,block-fixes,editor-ux,outline,publish,responsive}.spec.ts, e2e/tests/media/media.spec.ts,
-e2e/tests/config/configuration.spec.ts, e2e/tests/pages/tags.spec.ts, e2e/tests/menus/menus.spec.ts (replaces the main menu)
+e2e/tests/config/configuration.spec.ts, e2e/tests/pages/{tags,export-import}.spec.ts, e2e/tests/menus/menus.spec.ts (replaces the main menu)
 e2e/tests/instance/instance.spec.ts   callout block (SSR), NotFound override, imprint template (locked)
 e2e/tests/site/meta.spec.ts           meta title/description + firm name → rendered <head> (clears the firm name again)
 ```
