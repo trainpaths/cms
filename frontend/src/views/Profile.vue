@@ -1,146 +1,48 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
-import { loginRouteFor } from '../router'
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { Button, Input, FormField, Card, DescriptionList, DescriptionItem, Alert, Link } from '@trainpaths/nb-ui'
+import { Tabs } from '@trainpaths/nb-ui'
+import { useAuthStore } from '../stores/auth'
+import ProfileDetails from '../components/ProfileDetails.vue'
+import BackupsPanel from '../components/backups/BackupsPanel.vue'
 
+const route = useRoute()
 const router = useRouter()
-const authStore = useAuthStore()
-const { user, authType, error, loading } = storeToRefs(authStore)
+const { user, authType } = storeToRefs(useAuthStore())
 
-const editMode = ref(false)
-const editDisplayName = ref('')
-const saving = ref(false)
-const successMessage = ref('')
-
-onMounted(() => {
-	authStore.fetchCurrentUser()
+// the API enforces it too (SuperAdmin policy); this only hides the tab
+const isSuperAdmin = computed(() => authType.value === 'staff' && !!user.value?.roles?.includes('super_admin'))
+const tabs = [
+	{ key: 'profile', label: 'Profile' },
+	{ key: 'backups', label: 'Backups' },
+]
+// in the query so a reload or link lands on the same tab
+const tab = computed({
+	get: () => (route.query.tab === 'backups' ? 'backups' : 'profile'),
+	set: (key: string) => router.replace({ query: { ...route.query, tab: key === 'profile' ? undefined : key } }),
 })
-
-function startEdit() {
-	editDisplayName.value = user.value?.displayName ?? ''
-	editMode.value = true
-	successMessage.value = ''
-}
-
-function cancelEdit() {
-	editMode.value = false
-	authStore.clearError()
-}
-
-async function saveProfile() {
-	saving.value = true
-	successMessage.value = ''
-	try {
-		const success = await authStore.updateProfile(editDisplayName.value)
-		if (success) {
-			editMode.value = false
-			successMessage.value = 'Profile updated successfully'
-			await authStore.fetchCurrentUser()
-		}
-	} finally {
-		saving.value = false
-	}
-}
-
-async function handleLogout() {
-	const type = authType.value
-	await authStore.logout()
-	router.push(loginRouteFor(type))
-}
 </script>
 
 <template>
-	<div class="p-32 max-w-600 mx-auto font-sans">
-		<h1 class="text-2xl font-bold mb-24">Profile</h1>
-
-		<div
-			v-if="loading && !user"
-			class="text-black opacity-60"
+	<div
+		class="mx-auto p-32 font-sans"
+		:class="isSuperAdmin ? 'max-w-800' : 'max-w-600'"
+	>
+		<h1 class="mb-24 text-2xl font-bold">Profile</h1>
+		<Tabs
+			v-if="isSuperAdmin"
+			v-model="tab"
+			:tabs="tabs"
+			data-testid="profile-tabs"
 		>
-			Loading user info...
-		</div>
-
-		<div v-else-if="user">
-			<Alert
-				v-if="successMessage"
-				type="success"
-				class="mb-16"
-			>
-				{{ successMessage }}
-			</Alert>
-
-			<Card v-if="editMode">
-				<form
-					class="flex flex-col gap-8"
-					@submit.prevent="saveProfile"
-				>
-					<FormField
-						label="Display Name"
-						:error="error || undefined"
-					>
-						<Input
-							v-model="editDisplayName"
-							:invalid="!!error"
-						/>
-					</FormField>
-					<div class="flex gap-8">
-						<Button
-							type="submit"
-							:loading="saving"
-						>
-							{{ saving ? 'Saving...' : 'Save' }}
-						</Button>
-						<Button
-							type="button"
-							variant="outline"
-							text="primary"
-							@click="cancelEdit"
-						>
-							Cancel
-						</Button>
-					</div>
-				</form>
-			</Card>
-
-			<Card v-else>
-				<DescriptionList>
-					<DescriptionItem label="Email">{{ user.email }}</DescriptionItem>
-					<DescriptionItem label="Display Name">
-						{{ user.displayName ?? '—' }}
-						<Button
-							variant="ghost"
-							size="sm"
-							class="ml-8"
-							@click="startEdit"
-						>
-							Edit
-						</Button>
-					</DescriptionItem>
-					<DescriptionItem label="Type">{{ authType }}</DescriptionItem>
-					<DescriptionItem label="User Type">{{ user.userType ?? '—' }}</DescriptionItem>
-					<DescriptionItem label="Roles">{{ user.roles?.join(', ') || '—' }}</DescriptionItem>
-					<DescriptionItem label="Organization">{{ user.organizationId ?? '—' }}</DescriptionItem>
-				</DescriptionList>
-			</Card>
-
-			<div class="flex items-center gap-16 mt-16">
-				<Link to="/change-password">Change Password</Link>
-				<Button @click="handleLogout">Logout</Button>
-			</div>
-		</div>
-
-		<div v-else>
-			<p>Could not load user info.</p>
-			<Alert
-				v-if="error"
-				type="error"
-				class="mt-8"
-			>
-				{{ error }}
-			</Alert>
-		</div>
+			<template #profile>
+				<ProfileDetails />
+			</template>
+			<template #backups>
+				<BackupsPanel v-if="tab === 'backups'" />
+			</template>
+		</Tabs>
+		<ProfileDetails v-else />
 	</div>
 </template>
