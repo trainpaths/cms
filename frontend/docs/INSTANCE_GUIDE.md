@@ -201,8 +201,9 @@ paragraph. Link-preview image: the page's first image, else the share image from
   `COPY cms.config.json /app/`).
 - Environment: the CMS repo's `.env.example` lists every variable (DB, JWT key, S3 keys, SMTP, first admin).
 - **Network** (the starter's `compose.yaml`): postgres + seaweedfs on an internal `backend` network (only the api joins
-  it; seaweedfs's master/filer ports have no auth), frontend + api ports published on **127.0.0.1 only** (Docker
-  ports bypass ufw). The api port is only for the Vite dev proxy. Serve the site through a reverse proxy on the host
+  it; seaweedfs's master/filer ports have no auth). Only the frontend publishes a port, on **127.0.0.1** (Docker
+  ports bypass ufw). The api port for the Vite dev proxy lives in `compose.override.yaml`, which `docker compose`
+  loads automatically; servers skip it with `COMPOSE_FILE=compose.yaml` in `.env`. Serve the site through a reverse proxy on the host
   (TLS) → `127.0.0.1:FRONTEND_PORT`, which must set X-Forwarded-For (Caddy does by default): the CMS `nginx.conf`
   trusts it from the Docker gateway (`172.16.0.0/12`) so rate limits see each visitor's IP.
 - **Hardening**: every service `security_opt: [no-new-privileges:true]` + `cap_drop: [ALL]`; postgres and seaweedfs
