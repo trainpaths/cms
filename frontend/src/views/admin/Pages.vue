@@ -75,8 +75,6 @@ async function handleImportFile(event: Event) {
 	try {
 		const body = parsePageExport(await file.text())
 		const { data } = await postApiPagesImport({ body })
-		pages.add(data.page)
-		tagsStore.refresh()
 		const missing = data.missingMediaIds.length
 		toast({
 			message:
@@ -84,7 +82,10 @@ async function handleImportFile(event: Event) {
 				(missing ? `; ${missing} image${missing === 1 ? '' : 's'} not found in the media library` : ''),
 			type: missing ? 'warning' : 'success',
 		})
+		// leave first: updating the caches re-renders the whole list (slow with thousands of pages)
 		await router.push({ name: 'admin-page-editor', params: { id: data.page.id } })
+		pages.add(data.page)
+		tagsStore.refresh()
 	} catch (err: unknown) {
 		errorMessage.value = err instanceof PageExportError ? err.message : describe(err, 'Failed to import page')
 	} finally {
