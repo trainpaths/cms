@@ -38,6 +38,7 @@ It grew out of two projects:
 | Media library (upload, rename, alt text, delete) | `/admin/media` → `views/admin/Media.vue`; in the editor: Upload / Choose existing on image + card blocks |
 | Site config ("Configuration": fixed fields + groups shaped by the instance config, e.g. firm name, contact, socials; logo, icon) | `/admin/configuration` → `views/admin/Configuration.vue` (+ `components/config/`); public footer `components/SiteFooter.vue` (firm + contact + footer pages), public favicon |
 | Site config API | `SiteConfigController.cs` (staff GET/PUT), `PublicSiteConfigController.cs` (anonymous GET) |
+| Page JSON export/import (download in the pages list + editor Export section; "Import page" creates a new draft, slug deduplicated, media by id: unknown ids reported) | `frontend/src/lib/pageExport.ts`, `views/admin/Pages.vue`; API `POST /api/pages/import` |
 | Page tags (editor Page tab, pages-list modal; autocomplete + 3 most popular) + page search / tag filter / status filter (pages list only) / updatedAt sort | nb-ui `TagInput`, `components/PageFilters.vue`; API `PUT /api/pages/{id}/tags`, `GET /api/tags` |
 | Menus (nested links/folders; fixed **main** menu = public navigation, extra menus e.g. for a footer) | `/admin/menus` → `views/admin/Menus.vue`; public `components/SiteHeader.vue`; API `MenusController.cs`, `PublicMenusController.cs` |
 | Media API + storage | `MediaController.cs` (staff), `PublicMediaController.cs` (anonymous file reads) → SeaweedFS (S3) |
