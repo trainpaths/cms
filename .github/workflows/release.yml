@@ -81,6 +81,7 @@ jobs:
             patch) next="$major.$minor.$((patch + 1))" ;;
           esac
           echo "$last → v$next ($bump)"
+          echo "last=$last" >> "$GITHUB_OUTPUT"
           echo "next=$next" >> "$GITHUB_OUTPUT"
           echo "minor=${next%.*}" >> "$GITHUB_OUTPUT"
 
@@ -88,6 +89,7 @@ jobs:
         if: steps.version.outputs.next != ''
         env:
           NEXT: ${{ steps.version.outputs.next }}
+          LAST: ${{ steps.version.outputs.last }}
           GH_TOKEN: ${{ github.token }}
         run: |
           # keeps package.json's tab indentation
@@ -98,7 +100,11 @@ jobs:
           git tag "v$NEXT"
           # tag only: bump commit lives on the tag, main stays PR-only (protected)
           git push origin "v$NEXT"
-          gh release create "v$NEXT" --generate-notes --title "v$NEXT"
+          # notes from the last release: GitHub's own pick is the newest tag reachable from the new one, and release
+          # tags sit off main, so it would list everything since the first release
+          start=()
+          [ "$LAST" != v0.0.0 ] && start=(--notes-start-tag "$LAST")
+          gh release create "v$NEXT" --generate-notes "${start[@]}" --title "v$NEXT"
 
       - uses: docker/setup-qemu-action@v3
         if: steps.version.outputs.next != ''
