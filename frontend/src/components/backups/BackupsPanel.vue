@@ -43,7 +43,7 @@ const backups = ref<BackupInfo[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 
-const form = ref({ interval: 'off' as BackupInterval, timeOfDay: '03:00', weekday: 0, retention: 7 })
+const form = ref({ interval: 'off' as BackupInterval, timeOfDay: '03:00', weekday: 0, dayOfMonth: 1, retention: 7 })
 const saving = ref(false)
 const creating = ref(false)
 const uploadProgress = ref<number | null>(null)
@@ -54,7 +54,11 @@ const intervals: { value: BackupInterval; label: string }[] = [
 	{ value: 'off', label: 'Off' },
 	{ value: 'daily', label: 'Daily' },
 	{ value: 'weekly', label: 'Weekly' },
+	{ value: 'biweekly', label: 'Every 2 weeks' },
+	{ value: 'monthly', label: 'Monthly' },
 ]
+// 1-28: every month has the day
+const monthDays = Array.from({ length: 28 }, (_, i) => ({ value: i + 1, label: `${i + 1}.` }))
 const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((label, value) => ({
 	value,
 	label,
@@ -77,7 +81,13 @@ const dirty = computed(() => {
 	const s = settings.value
 	if (!s) return false
 	const f = form.value
-	return f.interval !== s.interval || f.timeOfDay !== s.timeOfDay || f.weekday !== s.weekday || f.retention !== s.retention
+	return (
+		f.interval !== s.interval ||
+		f.timeOfDay !== s.timeOfDay ||
+		f.weekday !== s.weekday ||
+		f.dayOfMonth !== s.dayOfMonth ||
+		f.retention !== s.retention
+	)
 })
 
 // schedule is UTC: show what that is here
@@ -107,7 +117,13 @@ async function load() {
 
 function applySettings(s: BackupSettingsResponse) {
 	settings.value = s
-	form.value = { interval: s.interval, timeOfDay: s.timeOfDay, weekday: s.weekday, retention: s.retention }
+	form.value = {
+		interval: s.interval,
+		timeOfDay: s.timeOfDay,
+		weekday: s.weekday,
+		dayOfMonth: s.dayOfMonth,
+		retention: s.retention,
+	}
 }
 
 async function refreshList() {
@@ -258,13 +274,24 @@ function formatDate(iso: string | null | undefined): string {
 						/>
 					</FormField>
 					<FormField
-						v-if="form.interval === 'weekly'"
+						v-if="form.interval === 'weekly' || form.interval === 'biweekly'"
 						label="Day (UTC)"
+						:hint="form.interval === 'biweekly' ? 'Starts on the first one after saving' : undefined"
 					>
 						<Select
 							v-model="form.weekday"
 							:options="weekdays"
 							data-testid="backup-weekday"
+						/>
+					</FormField>
+					<FormField
+						v-if="form.interval === 'monthly'"
+						label="Day of the month (UTC)"
+					>
+						<Select
+							v-model="form.dayOfMonth"
+							:options="monthDays"
+							data-testid="backup-day-of-month"
 						/>
 					</FormField>
 					<FormField
@@ -332,11 +359,12 @@ function formatDate(iso: string | null | undefined): string {
 						class="m-0"
 						data-testid="backup-location"
 					>
-						<span class="font-mono break-all">{{ settings.directory }}</span> in the API container
-						<template v-if="settings.hostPath">
-							→ <span class="font-mono break-all">{{ settings.hostPath }}</span> on the server
-						</template>
-						<template v-else> (Docker volume; set <span class="font-mono">BACKUP_DIR</span> for a host folder)</template>
+						<span
+							v-if="settings.hostPath"
+							class="font-mono break-all"
+							>{{ settings.hostPath }}</span
+						>
+						<template v-else>Developer has not set backup folder</template>
 					</dd>
 					<template v-if="settings.freeBytes != null">
 						<dt class="text-black/60">Free space</dt>
@@ -345,7 +373,8 @@ function formatDate(iso: string | null | undefined): string {
 				</dl>
 				<p class="mt-12 mb-0 text-xs text-black/60">
 					The folder is set by the server's Docker setup and can't be changed here. Copy archives off the server
-					(download them, or sync the folder) to keep them safe from a disk failure.
+					(download them, or sync the folder) to keep them safe from a disk failure. Backups are deleted after
+					{{ settings.maxAgeYears }} years.
 				</p>
 			</Card>
 
@@ -424,19 +453,11 @@ function formatDate(iso: string | null | undefined): string {
 								{{ item.error }}
 							</div>
 						</div>
-						<div class="flex shrink-0 gap-8">
+						<div class="flex shrink-0 items-center gap-4">
 							<Button
-								variant="ghost"
+								bg="primary"
 								size="sm"
-								data-testid="backup-download"
-								@click="download(item)"
-							>
-								Download
-							</Button>
-							<Button
-								variant="outline"
-								size="sm"
-								text="danger"
+								class="mr-4"
 								:disabled="busy || !!item.error"
 								:loading="restoring === item.name"
 								data-testid="backup-restore"
@@ -446,14 +467,55 @@ function formatDate(iso: string | null | undefined): string {
 							</Button>
 							<Button
 								variant="ghost"
-								size="sm"
+								text="secondary"
+								square
+								title="Download"
+								:aria-label="`Download ${item.name}`"
+								data-testid="backup-download"
+								@click="download(item)"
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="16"
+									height="16"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									aria-hidden="true"
+								>
+									<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+									<path d="M7 10l5 5 5-5" />
+									<path d="M12 15V3" />
+								</svg>
+							</Button>
+							<Button
+								variant="ghost"
 								text="danger"
+								square
+								title="Delete"
 								:disabled="busy"
 								:aria-label="`Delete ${item.name}`"
 								data-testid="backup-delete"
 								@click="remove(item)"
 							>
-								Delete
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="16"
+									height="16"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									aria-hidden="true"
+								>
+									<path d="M3 6h18" />
+									<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+								</svg>
 							</Button>
 						</div>
 					</li>

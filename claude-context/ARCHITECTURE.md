@@ -66,7 +66,7 @@ and Garage (AGPL, no bucket policies/versioning): SeaweedFS is Apache 2.0, matur
   render nothing (editor shows "deleted" placeholder). No usage tracking yet.
 
 ## Backups: one archive = pg_dump + every media blob
-Super admins (Profile → Backups) back up on demand or on a daily/weekly schedule, and restore; staff can also export
+Super admins (Profile → Backups) back up on demand or on a daily/weekly/biweekly/monthly schedule, and restore; staff can also export
 single pages as JSON (`lib/pageExport.ts`, `POST /api/pages/import`, always a new draft). Code: `api-backend/Services/Backup/`.
 - **Archive** `/backups/<auto|manual|pre-restore|upload>-yyyyMMdd-HHmmss.tar.gz`: `manifest.json` first (format,
   version, CMS version, newest EF migration, media count; the list reads only this entry), `db.dump` (`pg_dump -Fc`),
@@ -89,9 +89,12 @@ single pages as JSON (`lib/pageExport.ts`, `POST /api/pages/import`, always a ne
   delete blobs no restored media row references → re-render everything.
   Not `pg_restore --clean`: it drops only what the dump has, so tables of newer migrations would survive and break the
   migrate. The DB user must own the `public` schema (the compose superuser does; managed DBs: the database owner).
-- **Schedule** (`BackupSchedule`, UTC): a slot counts once it passed after the last run *and* after the settings were
-  saved (turning it on at 10:00 with a 03:00 slot waits for tomorrow); downtime catches up with one run. Retention
-  deletes only `auto-*` archives. `BackupScheduler` checks every minute.
+- **Schedule** (`BackupSchedule`, UTC): daily (time), weekly (weekday), biweekly (every 14 days from the first
+  matching weekday after saving: the save is the anchor), monthly (day 1-28, so every month has it). A slot counts once
+  it passed after the last run *and* after the settings were saved (turning it on at 10:00 with a 03:00 slot waits for
+  tomorrow); downtime catches up with one run. Retention deletes only `auto-*` archives. `BackupScheduler` checks every
+  minute; it also deletes **every** archive stored more than 2 years ago (`MaxAgeYears`, by the time in the file name,
+  so an uploaded old backup counts from its upload).
 
 ## Site config: fields + groups shaped by the instance config
 Sites want different info (firm, address, hours, VAT ID, socials...), and the site's *code* (footer, templates)

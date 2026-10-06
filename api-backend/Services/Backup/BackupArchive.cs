@@ -34,8 +34,16 @@ public static partial class BackupArchive
 
 	public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { WriteIndented = true };
 
-	[GeneratedRegex(@"^(auto|manual|pre-restore|upload)-\d{8}-\d{6}(-\d{1,3})?\.tar\.gz$")]
+	[GeneratedRegex(@"^(auto|manual|pre-restore|upload)-(?<stamp>\d{8}-\d{6})(-\d{1,3})?\.tar\.gz$")]
 	public static partial Regex NamePattern();
+
+	/// <summary>When the archive was stored on this server (UTC, from its name); null for other names.</summary>
+	public static DateTimeOffset? StoredAt(string name) =>
+		NamePattern().Match(name) is { Success: true } m
+		&& DateTimeOffset.TryParseExact(m.Groups["stamp"].Value, "yyyyMMdd-HHmmss", null,
+			System.Globalization.DateTimeStyles.AssumeUniversal, out var at)
+			? at
+			: null;
 
 	public static BackupKind KindOf(string name) => name.Split('-')[0] switch
 	{

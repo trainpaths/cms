@@ -20,7 +20,7 @@ export type BackupInfo = {
     error?: string | null;
 };
 
-export type BackupInterval = 'off' | 'daily' | 'weekly';
+export type BackupInterval = 'off' | 'daily' | 'weekly' | 'biweekly' | 'monthly';
 
 export type BackupKind = 'auto' | 'manual' | 'pre-restore' | 'upload';
 
@@ -28,6 +28,7 @@ export type BackupSettingsResponse = {
     interval: BackupInterval;
     timeOfDay: string;
     weekday: number;
+    dayOfMonth: number;
     retention: number;
     lastRunAt?: string | null;
     lastError?: string | null;
@@ -36,6 +37,7 @@ export type BackupSettingsResponse = {
     hostPath?: string | null;
     freeBytes?: number | null;
     maxUploadBytes: number;
+    maxAgeYears: number;
 };
 
 export type Block = {
@@ -307,6 +309,7 @@ export type UpdateBackupSettingsRequest = {
     interval: BackupInterval;
     timeOfDay: string;
     weekday: number;
+    dayOfMonth: number;
     retention: number;
 };
 

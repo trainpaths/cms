@@ -56,6 +56,7 @@ public class BackupRoundTripTests : IClassFixture<ApiFactory>
 			["interval"] = "daily",
 			["timeOfDay"] = "02:15",
 			["weekday"] = 0,
+			["dayOfMonth"] = 1,
 			["retention"] = 4,
 		});
 
