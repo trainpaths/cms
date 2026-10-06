@@ -19,6 +19,7 @@ namespace api_backend.Migrations
                     Interval = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: false),
                     TimeOfDay = table.Column<TimeOnly>(type: "time without time zone", nullable: false),
                     Weekday = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: false),
+                    DayOfMonth = table.Column<int>(type: "integer", nullable: false),
                     Retention = table.Column<int>(type: "integer", nullable: false),
                     LastRunAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     LastError = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
