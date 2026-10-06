@@ -8,7 +8,7 @@ Design decisions behind pages: `claude-context/ARCHITECTURE.md` (repo root).
 
 ## Instance config (`Services/Cms/`)
 The client site's developer config, baked into its API image (`/app/cms.config.json`; the playground mounts it in
-docker-compose). The API is its **only runtime reader**: the admin gets what it needs from `/api/public/instance`. Exception:
+compose.yaml). The API is its **only runtime reader**: the admin gets what it needs from `/api/public/instance`. Exception:
 `site.lang` is applied at frontend build time by the `cms()` Vite plugin (the API still validates it).
 ```
 CmsConfig.cs        records CmsConfig { publicAuth, site.lang, blocks.exclude, pages[], siteConfig } + CmsPageConfig { slug, title, template?,
@@ -80,7 +80,7 @@ TagsController         /api/tags             [Authorize(StaffOnly)], rate limit 
   `PublicPage.Template` (the instance template the public app renders it with).
 
 ## Media
-Bytes in blob storage (SeaweedFS in docker-compose), metadata + alt text in `media_assets`. Why: `claude-context/ARCHITECTURE.md`.
+Bytes in blob storage (SeaweedFS in the compose stack), metadata + alt text in `media_assets`. Why: `claude-context/ARCHITECTURE.md`.
 ```
 MediaController        /api/media            [Authorize(StaffOnly)], rate limit "pages"
   GET    /                     → MediaItem[] (newest first)
@@ -322,9 +322,9 @@ appsettings.Development.json        # dev overrides
 
 ## Config keys (appsettings.json)
 In docker these are overridden by env vars from `.env` (mapped via `Section__Key` in
-docker-compose); host-side `dotnet run` uses the appsettings values below.
+compose); host-side `dotnet run` uses the appsettings values below.
 ```
-ConnectionStrings:Postgres          # injected from DB_* env vars in docker-compose
+ConnectionStrings:Postgres          # injected from DB_* env vars in compose.yaml
 Jwt:Issuer                          # "website-template"          ← API_JWT_ISSUER
 Jwt:Audience                        # "website-template-clients"  ← API_JWT_AUDIENCE
 Jwt:SigningKey                      # from API_JWT_KEY env var
@@ -343,11 +343,11 @@ Email:FromName                      # display name                ← EMAIL_FROM
 Email:LinkBaseUrl                   # frontend origin for email links (no trailing slash) ← APP_BASE_URL
 Email:VerificationLinkExpiryHours   # 24
 Email:ResetLinkExpiryHours          # 1
-Storage:S3:ServiceUrl               # http://seaweedfs:8333 in docker-compose (required, validated on start)
+Storage:S3:ServiceUrl               # http://seaweedfs:8333 in compose.yaml (required, validated on start)
 Storage:S3:AccessKey/SecretKey      # ← S3_ACCESS_KEY / S3_SECRET_KEY (required)
 Storage:S3:Bucket                   # "media"                     ← S3_BUCKET
 Storage:S3:Region                   # "us-east-1" (signing only)
-Renderer:BaseUrl                    # http://renderer:8080 in docker-compose; empty → no pre-rendering
+Renderer:BaseUrl                    # http://renderer:8080 in compose.yaml; empty → no pre-rendering
 Renderer:PublicBaseUrl              # site origin for canonical/OG URLs ← APP_BASE_URL
 Renderer:DebounceMilliseconds       # 1000
 Renderer:CheckIntervalSeconds       # 60

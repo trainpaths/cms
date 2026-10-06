@@ -44,7 +44,7 @@ frontend/          @trainpaths/cms package (admin, editor, public site, vite plu
 playground/        an instance app using the package via the workspace; dev server, compose stack, e2e → playground/CLAUDE.md
 api-backend/       C# .NET 10 API (+ xUnit / Testcontainers tests) → api-backend/CLAUDE.md
 claude-context/    design docs (overview, architecture decisions, block system)
-docker-compose.yml full local stack (postgres + seaweedfs + api + renderer + frontend)
+compose.yaml       full local stack (postgres + seaweedfs + api + renderer + frontend), ports on 127.0.0.1
 ```
 
 ## Developing the CMS
