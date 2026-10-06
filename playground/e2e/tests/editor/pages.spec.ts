@@ -1,4 +1,4 @@
-import { test, expect, createPage } from '../../fixtures/staff.fixture'
+import { test, expect, createPage, rowAction } from '../../fixtures/staff.fixture'
 import { test as anonTest } from '@playwright/test'
 
 test.describe('Pages admin', () => {
@@ -20,7 +20,7 @@ test.describe('Pages admin', () => {
 	test('can delete a page', async ({ staffPage: page }) => {
 		const title = await createPage(page)
 		await page.getByRole('button', { name: 'Back', exact: true }).click()
-		await page.getByTestId('page-row').filter({ hasText: title }).getByTitle('Delete page').click()
+		await (await rowAction(page.getByTestId('page-row').filter({ hasText: title }), 'page-delete')).click()
 		await page.getByTestId('confirm-ok').click()
 		await expect(page.getByTestId('page-row').filter({ hasText: title })).toHaveCount(0)
 	})

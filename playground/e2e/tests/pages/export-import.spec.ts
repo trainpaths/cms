@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises'
-import { test, expect, createPage, type Page } from '../../fixtures/staff.fixture'
+import { test, expect, createPage, rowAction, type Page } from '../../fixtures/staff.fixture'
 
 function rows(page: Page, title: string) {
 	return page.getByTestId('page-row').filter({ hasText: title })
@@ -29,12 +29,11 @@ test('a page downloaded as JSON imports as a new draft', async ({ staffPage: pag
 		page: { title, slug, metaTitle: 'Exported meta', blocks: [] },
 	})
 
-	// list: the saved server copy, from the page's edit modal
+	// list: the saved server copy, from the row's "…" menu
 	await page.goto('/admin/pages')
-	await rows(page, title).getByTestId('page-edit').click()
-	const fromList = await downloaded(page, () => page.getByTestId('page-download').click())
+	const exportItem = await rowAction(rows(page, title), 'page-export')
+	const fromList = await downloaded(page, () => exportItem.click())
 	expect(fromList.json.page).toEqual(fromEditor.json.page)
-	await page.getByTestId('page-edit-dialog').getByRole('button', { name: 'Cancel' }).click()
 
 	// import sits in the "+ New Page" row
 	await page.getByRole('button', { name: '+ New Page' }).click()
@@ -76,4 +75,38 @@ test('the new-page row: icon-only import on phones, cancel closes it', async ({ 
 
 	await page.getByTestId('page-new-cancel').click()
 	await expect(importButton).toBeHidden()
+})
+
+test('row menu: Edit opens the modal, Duplicate copies, Delete asks first', async ({ staffPage: page }) => {
+	const title = await createPage(page)
+	const slug = await page.getByTestId('page-slug').inputValue()
+	const metaSaved = page.waitForResponse((r) => r.request().method() === 'PUT' && r.ok())
+	await page.getByTestId('page-meta-title').fill('Copied meta')
+	await page.getByTestId('page-meta-title').press('Enter')
+	await metaSaved
+	await page.goto('/admin/pages')
+	const row = rows(page, title).filter({ hasNotText: '(copy)' })
+	// view (a link) + "…"
+	await expect(row.getByTestId('page-view')).toBeVisible()
+	await expect(row.getByRole('button')).toHaveCount(1)
+	await row.getByTestId('page-actions').click()
+	await expect(row.getByRole('menuitem')).toHaveText(['Edit', 'Duplicate', 'Export', 'Delete'])
+	await page.keyboard.press('Escape')
+
+	await (await rowAction(row, 'page-duplicate')).click()
+	const copy = rows(page, `${title} (copy)`)
+	await expect(copy).toContainText(`/${slug}-2`)
+	await expect(copy).toContainText('Draft')
+	await copy.getByRole('link').first().click()
+	await expect(page.getByTestId('page-meta-title')).toHaveValue('Copied meta')
+	await page.goto('/admin/pages')
+
+	await (await rowAction(row, 'page-edit')).click()
+	await expect(page.getByTestId('page-edit-dialog')).toBeVisible()
+	await expect(row.getByRole('menu')).toHaveCount(0)
+	await page.getByTestId('page-edit-dialog').getByRole('button', { name: 'Cancel' }).click()
+
+	await (await rowAction(row, 'page-delete')).click()
+	await page.getByTestId('confirm-ok').click()
+	await expect(row).toHaveCount(0)
 })

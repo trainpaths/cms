@@ -35,7 +35,8 @@ Needs the full stack (`pnpm docker:up`).
 e2e/playwright.config.ts       base URL from PLAYWRIGHT_BASE_URL (default http://localhost:5173)
 e2e/global-setup.ts            frontend-reachable preflight
 e2e/fixtures/auth.fixture.ts   authenticatedPage (registers a fresh customer)
-e2e/fixtures/staff.fixture.ts  staffPage (logs in as bootstrap super admin) + createPage/insertBlock/uploadImage helpers
+e2e/fixtures/staff.fixture.ts  staffPage (logs in as bootstrap super admin) + createPage/insertBlock/uploadImage helpers,
+                               rowAction(row, 'page-edit'|'page-duplicate'|'page-export'|'page-delete') (opens the row's "…" menu)
 e2e/tests/smoke.spec.ts, e2e/tests/nav.spec.ts, e2e/tests/auth/*.spec.ts, e2e/tests/site/{public-site,server-render}.spec.ts
 (needs the seeded default pages)
 e2e/tests/editor/{pages,pages-view,blocks,block-fixes,editor-ux,outline,publish,responsive}.spec.ts, e2e/tests/media/media.spec.ts,

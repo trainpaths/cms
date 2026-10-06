@@ -144,7 +144,7 @@ Base layer restores v3 defaults: gray-200 border colour, gray-400 placeholders, 
 | `/forgot-password` | `ForgotPassword.vue` | guest |
 | `/reset-password` | `ResetPassword.vue` (`?token=`) | public |
 | `/verify-email` | `VerifyEmail.vue` (`?token=`) | public |
-| `/admin/pages` | `admin/Pages.vue` (list with search / tag filter / status filter (All statuses / Published / Not published; only here, `v-model:status` shows it) / updatedAt sort toggle (clock + arrow icon button, down = newest first) (`PageFilters` + `composables/usePageFilter.ts`), tag chips, edit modal `components/PageEditDialog.vue` (slug, published, tags; saves only what changed via slug PUT → publish/unpublish → tags PUT; footer far left: "Download JSON" of the saved page), view/preview, delete; "+ New Page" opens a row: Import (download icon + "Import", icon only below sm; file → `parsePageExport` → `POST /api/pages/import` → editor of the new draft, toast warns about missing images), title input, Create, cancel (x icon)) | staff |
+| `/admin/pages` | `admin/Pages.vue` (list with search / tag filter / status filter (All statuses / Published / Not published; only here, `v-model:status` shows it) / updatedAt sort toggle (clock + arrow icon button, down = newest first) (`PageFilters` + `composables/usePageFilter.ts`), tag chips, row = view/preview link + "…" `components/ActionMenu.vue` (Edit → modal `components/PageEditDialog.vue` (slug, published, tags; saves only what changed via slug PUT → publish/unpublish → tags PUT), Duplicate (fetch + `POST /api/pages/import` as "<title> (copy)", slug `-2`…, stays on the list), Export (JSON of the saved page), Delete (confirm; disabled for locked pages)); "+ New Page" opens a row: Import (primary outline, download icon + "Import", icon only below sm; file → `parsePageExport` → `POST /api/pages/import` → editor of the new draft, toast warns about missing images), title input, Create, cancel (x icon)) | staff |
 | `/admin/pages/:id` | `admin/PageEditor.vue` → `WebEditor` (no nav) | staff |
 | `/admin/pages/:id/preview` | `admin/PagePreview.vue` (draft preview, no nav) | staff |
 | `/admin/media` | `admin/Media.vue` (rename + alt; library grid 3/4/6 cols; details in a fixed right sidebar on lg+, modal below; click again to close) | staff |
@@ -257,12 +257,13 @@ src/style.css          Tailwind import + nb-ui theme.css + @source of the packag
 src/lib/web-editor/     block editor library (own CLAUDE.md)
 src/views/             route views (admin/ = page management)
 src/components/        app shell pieces (AppNav, AdminBar, SiteHeader + site/, SiteFooter, ConfigImageField, PageFilters,
-                       PageEditDialog, menus/ tree editor)
+                       PageEditDialog, ActionMenu ("…" menu like nb-ui Dropdown, own edit/copy/download/trash icons),
+                       menus/ tree editor)
 src/composables/       usePageFilter (search/tag/status/sort over PageSummary[])
 src/lib/menus/tree.ts  pure menu tree ops (locate, move, indent/outdent, depth checks)
 src/lib/pageExport.ts  page export file (`{format: "cms-page", version, exportedAt, page}`): toPageExport, parsePageExport
                        (throws PageExportError = user-facing message) + Vitest; editor PageSettings "Export" downloads the
-                       on-screen state, the pages list's edit modal the saved copy
+                       on-screen state, the row menu's Export the saved copy
 src/lib/download.ts    saveBlob / saveJson (browser file download)
 nginx.conf             `/` + `/{slug}` → API HTML endpoint (X-Accel-Redirect to index.html/public.html), SPA fallback, /api proxy (64k; /api/pages 2m; /api/menus 512k; /api/media 11m), CSP (img-src 'self' only: uploads are same-origin)
 public/favicon.svg     CMS admin icon (emitted by cms() unless the instance has its own)

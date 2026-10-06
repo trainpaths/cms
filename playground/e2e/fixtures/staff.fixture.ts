@@ -41,6 +41,12 @@ export async function createPage(page: Page, title = `E2E ${crypto.randomUUID().
 	return title
 }
 
+/** Opens a pages-list row's "…" menu and returns one of its items. */
+export async function rowAction(row: Locator, item: 'page-edit' | 'page-duplicate' | 'page-export' | 'page-delete') {
+	await row.getByTestId('page-actions').click()
+	return row.getByTestId(item)
+}
+
 /** Inserts a block from the left sidebar inserter. */
 export async function insertBlock(page: Page, title: string) {
 	await page
