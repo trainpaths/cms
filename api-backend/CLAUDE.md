@@ -3,7 +3,7 @@
 .NET 10 ASP.NET Core + EF Core 10 + Npgsql + JWT Bearer + Swashbuckle.
 Feature areas: **auth** (from the template), **pages** (the CMS block editor's storage, + tags), **media**
 (uploaded images in S3-compatible blob storage), **site config** (fixed fields + groups shaped by the instance config, logo, icon),
-**menus** (navigation trees) and the **instance config** (`cms.config.json` of the client site).
+**menus** (navigation trees), **backups** (DB + media archives) and the **instance config** (`cms.config.json` of the client site).
 Design decisions behind pages: `claude-context/ARCHITECTURE.md` (repo root).
 
 ## Instance config (`Services/Cms/`)
@@ -145,6 +145,30 @@ PublicHtmlController   /api/public/html      [AllowAnonymous], rate limit "pages
   with change timestamps). Only rows of the current renderer version and newer than the last change are served.
 - `Renderer:BaseUrl` empty → worker off, every page is the shell (integration tests, `dotnet run` without the renderer).
 
+## Backups (`Services/Backup/`)
+Design, archive layout and the restore sequence: `claude-context/ARCHITECTURE.md` → Backups.
+```
+BackupsController           /api/backups             [Authorize(SuperAdmin)], rate limit "auth" (general)
+  GET    /settings             → BackupSettingsResponse (schedule + nextRunAt, directory, hostPath, freeBytes, maxUploadBytes)
+  PUT    /settings             UpdateBackupSettingsRequest(interval off|daily|weekly, timeOfDay "HH:mm" UTC, weekday 0-6, retention 1-100)
+  GET    /                     → BackupInfo[] (name, kind from the file name, createdAt/cmsVersion/mediaCount from the manifest, error)
+  POST   /                     → 201 BackupInfo (manual) | 409 busy | 500 tool/disk failure (detail = message)
+  GET    /{name}               → application/gzip file (range) | 404
+  DELETE /{name}               → 204 | 404 | 409
+  POST   /upload               multipart `file` (no Kestrel cap; ≤ Backup:MaxUploadMegabytes) → 201 BackupInfo (upload-…) | 400 damaged/not a backup
+  POST   /{name}/restore       → RestoreResult(preRestoreBackup) | 400 damaged/newer schema | 404 | 409 | 500
+```
+- `BackupService` (scoped): Create/List/Delete/SaveUpload/Restore/RunScheduledAsync, `BackupResult<T>` (`BackupError`:
+  NotFound | Busy | Invalid), tool/disk failures throw `BackupFailedException` (controller → 500 with the message).
+  Names only via `BackupArchive.NamePattern()` (no traversal); work files in `<dir>/.work/<guid>`, archives written as `.partial`.
+- `BackupArchive` (layout, manifest record, `ReadManifestAsync` = first entry only, `ScanAsync` = full read + checks),
+  `BackupSchedule` (pure due/next logic, unit-tested), `BackupScheduler` (hosted, 1-min tick; tests remove it),
+  `BackupLock` (singleton: `TryEnter`, `Maintenance()` → the Program.cs middleware answers other `/api` requests 503).
+- `IDatabaseDumper` → `PgDumper`: `pg_dump --snapshot`, `pg_restore -f - | psql -1` (credentials via `PG*` env from
+  `ConnectionStrings:Postgres`; ends psql's input only after pg_restore exited 0, else kills it = rollback).
+- `Models/Backup/BackupSettings.cs` → `backup_settings` singleton (no FKs: survives restores), `BackupTables.DataExcluded`.
+- `IBlobStorage.ListKeysAsync` (restore removes unreferenced blobs), `MediaService.ContentTypeOf(key)` (re-upload).
+
 ## Site config
 One row (`site_config`, `Id = 1`, created on first PUT). Shaped by the instance config: `CmsConfig.SiteConfigSchema()` =
 core field `firmName` + core group `contact` (presets address/phone/email, all default, custom entries allowed; an
@@ -243,6 +267,10 @@ MenuService           Scoped      menus: CRUD, item validation, public resolutio
 IBlobStorage          Singleton   S3BlobStorage (tests: InMemoryBlobStorage)
 EmailQueue/IEmailQueue Singleton  in-memory queue; EmailDispatcher (hosted) sends via IEmailSender
 TokenCleanupService   Hosted      every 6 h deletes tokens expired/revoked > 7 days ago
+BackupService         Scoped      full backups: create / list / upload / delete / restore / scheduled run
+BackupLock            Singleton   one backup operation at a time + restore maintenance gate
+IDatabaseDumper       Singleton   PgDumper (pg_dump / pg_restore / psql)
+BackupScheduler       Hosted      every minute: automatic backup when due
 IEmailSender          Singleton   ConsoleEmailSender (default, logs the link) when Email:Host empty; MailKitEmailSender (SMTP) otherwise
 ```
 
@@ -321,6 +349,10 @@ Renderer:BaseUrl                    # http://renderer:8080 in docker-compose; em
 Renderer:PublicBaseUrl              # site origin for canonical/OG URLs ← APP_BASE_URL
 Renderer:DebounceMilliseconds       # 1000
 Renderer:CheckIntervalSeconds       # 60
+Backup:Directory                    # "/backups" (Development: "backups", relative to the content root)
+Backup:HostPath                     # display only: host side of the mount  ← BACKUP_DIR
+Backup:MaxUploadMegabytes           # 2048 (nginx /api/backups allows 2g)
+Cms:Version                         # "dev"; release images: the tag (Dockerfile ARG CMS_VERSION), in backup manifests
 Cms:ConfigPath                      # instance config file, relative to the content root (default cms.config.json)
 ```
 
@@ -352,6 +384,9 @@ PublicMenu / PublicMenuItem Handle, Items | Label, Slug?, Url?, Children
 MediaItem                   Id, Url, FileName, ContentType, Size, Alt(≤100), CreatedAt
 MediaRef                    Id, Url, Alt   (page responses)
 UpdateMediaRequest          Alt?
+BackupSettingsResponse    Interval, TimeOfDay, Weekday, Retention, LastRunAt?, LastError?, NextRunAt?, Directory, HostPath?, FreeBytes?, MaxUploadBytes
+UpdateBackupSettingsRequest  Interval, TimeOfDay("HH:mm"), Weekday(0-6), Retention(1-100)
+BackupInfo                Name, Kind (auto|manual|pre-restore|upload), CreatedAt, Size, CmsVersion?, MediaCount?, Error?   RestoreResult  PreRestoreBackup
 SiteConfigResponse        Fields {key: value}, Groups {key: ConfigEntry[]}, Logo?/Icon?/ShareImage? (MediaRef), UpdatedAt?, FooterLinks
 ConfigEntry               Id, Key, Label, Type, Value, Address?
 UpdateSiteConfigRequest   Fields {key: value}, Groups {key: ConfigEntryValue[]}, LogoMediaId?, IconMediaId?, ShareImageMediaId?   (full replace)
@@ -371,7 +406,8 @@ UpdateSiteConfigRequest   Fields {key: value}, Groups {key: ConfigEntryValue[]},
 `StorageKey`, index on `CreatedAt`, `CreatedById` → staff ON DELETE SET NULL), `site_config` (AddSiteConfig: singleton,
 logo/icon → media_assets SET NULL; SiteConfigValues: `Values` jsonb replaced the free `Fields` list, old data dropped;
 AddPageMetaAndShareImage: `pages.MetaTitle/MetaDescription`, `site_config.ShareImageMediaId`), `tags` + `page_tags` and `menus` (AddTagsAndMenus: unique tag `Name`,
-unique menu `Handle`, `Items` jsonb), `rendered_pages` (AddRenderedPages: PK/FK `PageId` → pages CASCADE)
+unique menu `Handle`, `Items` jsonb), `rendered_pages` (AddRenderedPages: PK/FK `PageId` → pages CASCADE),
+`backup_settings` (AddBackupSettings: singleton, enums as strings, no FKs)
 Constraints: email unique per table; refresh_token + verification_token owner check
 (CustomerId XOR StaffId non-null)
 
@@ -400,13 +436,13 @@ on `/api/auth`), 64 KB request body limit (2 MB on page writes via `[RequestSize
 The "Authorize" button in `/swagger` accepts a JWT. Paste an access token to call protected endpoints.
 
 ### Middleware order (Program.cs)
-`UseForwardedHeaders` → `UseExceptionHandler` → security headers → `UseSwagger`/`UseSwaggerUI` (dev) → `UseCors` → `UseAuthentication` → `UseAuthorization` → `UseRateLimiter` → `MapControllers` + `MapHealthChecks`
+`UseForwardedHeaders` → `UseExceptionHandler` → security headers → restore gate (503) → `UseSwagger`/`UseSwaggerUI` (dev) → `UseCors` → `UseAuthentication` → `UseAuthorization` → `UseRateLimiter` → `MapControllers` + `MapHealthChecks`
 (No `UseHttpsRedirection`: TLS terminates at the proxy.)
 
 ## Testing (`Tests/`)
 xUnit v3 + AwesomeAssertions + Testcontainers.PostgreSql (`Tests/Tests.csproj`, net10.0).
 ```
-Unit/Services/        JwtTokenService, PasswordHashService, Customer/StaffAuthService, PageService, CmsConfigLoader
+Unit/Services/        JwtTokenService, PasswordHashService, Customer/StaffAuthService, PageService, CmsConfigLoader, BackupSchedule
                       (EF InMemory via Unit/TestDbContextFactory.cs; ExecuteUpdate-based
                       flows such as refresh rotation are covered by integration tests)
 Integration/          ApiFactory.cs (WebApplicationFactory + Testcontainers PostgreSQL),
@@ -414,12 +450,16 @@ Integration/          ApiFactory.cs (WebApplicationFactory + Testcontainers Post
                       RateLimitingTests, ExceptionHandlerTests, EmailFlowTests,
                       BootstrapTests, TokenCleanupTests, PagesTests, MediaTests, SiteConfigTests, TagsTests, MenusTests (AuthCookies.cs: refresh-cookie helpers),
                       InstanceConfigTests (locked/template pages, footer links, public auth off; own CmsConfig via ConfigureTestServices),
-                      RenderingTests (FakeRenderer replaces IRendererClient; fast debounce/check config)
+                      RenderingTests (FakeRenderer replaces IRendererClient; fast debounce/check config),
+                      BackupsTests (auth, settings, names, busy 409, 503 gate, invalid uploads, newer schema refused),
+                      BackupRoundTripTests (real pg tools, own DB: backup → change → restore → undo, download/upload,
+                      scheduled run + retention; skipped without pg_dump)
                       (CollectingEmailSender + InMemoryBlobStorage test doubles in ApiFactory)
 ```
 Run: `dotnet test --project api-backend/Tests/Tests.csproj` (needs Docker for the Testcontainers PostgreSQL).
 No local SDK? See the `docker run ... mcr.microsoft.com/dotnet/sdk:10.0` recipe in the root `CLAUDE.md`.
 New rate-limit policies need a high override in `Integration/ApiFactory.cs` (tests run from one IP).
+`ApiFactory` gives each factory its own `Backup:Directory` (temp, deleted on dispose) and removes `BackupScheduler`.
 Tests that build their own `WebApplicationFactory` must add `ApiFactory.StorageSettings` (S3 start validation), and
 `ApiFactory.Cms` (defaults + public auth on) when they call customer endpoints. `ApiFactory` registers `ApiFactory.Cms`.
 Tests run on Microsoft.Testing.Platform (xunit.v3 4.x); the root `global.json` opts `dotnet test` into it.

@@ -34,7 +34,8 @@ api-backend/CLAUDE.md                 .NET API: auth, pages, config, tests, Open
 | UI kit     | `@trainpaths/nb-ui` (own public repo, installed from a git tag; re-exported as `@trainpaths/cms/ui`) |
 | API client | hey-api, generated from the committed `frontend/openapi/swagger.json` into the committed `frontend/src/api/` |
 | Backend    | C# .NET 10 controllers, EF Core 10 + Npgsql, JWT bearer |
-| Database   | PostgreSQL 18 (auth tables, `pages` with the block tree in a `jsonb` column, `tags`/`page_tags`, `menus` (jsonb item tree), `media_assets`, `site_config`) |
+| Database   | PostgreSQL 18 (auth tables, `pages` with the block tree in a `jsonb` column, `tags`/`page_tags`, `menus` (jsonb item tree), `media_assets`, `site_config`, `backup_settings`) |
+| Backups    | API runs `pg_dump`/`pg_restore`/`psql` (client 18 in the api image): DB + media archives in `/backups` (`BACKUP_DIR`), see ARCHITECTURE.md → Backups |
 | Media      | SeaweedFS (S3 API, internal only); the API streams files at `/api/public/media/{key}` |
 | Serving    | nginx (frontend container): admin SPA, `/api` reverse proxy, public pages via the API's stored HTML |
 | Public SSR | `renderer` container (Node, `frontend/server/render-server.js`): Vue SSR of public pages on content change; see ARCHITECTURE.md → Public pages |
@@ -81,6 +82,9 @@ docker run --rm --network host -v "$PWD":"$PWD" -w "$PWD" \
   mcr.microsoft.com/dotnet/sdk:10.0 dotnet test --project api-backend/Tests/Tests.csproj
 ```
 (`dotnet ef` needs `dotnet tool install --global dotnet-ef --version 10.0.12` inside the container first.)
+`BackupRoundTripTests` need `pg_dump`/`pg_restore`/`psql` 18 and are skipped without them (the plain SDK image has
+none; CI installs them): build an SDK image with `postgresql-client-18` (same apt lines as the Dockerfile's `api`
+stage) and run the command above with it.
 
 ## .env vars
 `.env` is read by docker-compose (`${VAR}` interpolation) and Vite (`loadEnv`). Host-side
@@ -98,6 +102,7 @@ FORWARDED_KNOWN_NETWORKS               → ForwardedHeaders:KnownNetworks
 AUTH_SECURE_COOKIE                     → Auth:SecureCookie
 BOOTSTRAP_SUPERADMIN_EMAIL/PASSWORD    first staff account (= site owner who can use the editor)
 S3_ACCESS_KEY/S3_SECRET_KEY (required), S3_BUCKET   SeaweedFS admin identity → Storage:S3:* (endpoint fixed: http://seaweedfs:8333)
+BACKUP_DIR                             host folder for backup archives (→ /backups in the api; empty = volume `backups`)
 SMTP_*, EMAIL_FROM, EMAIL_FROM_NAME, APP_BASE_URL   email (empty SMTP_HOST → console sender); APP_BASE_URL is also
                                        the public origin in canonical/OG tags (→ Renderer:PublicBaseUrl)
 VITE_API_BASE_URL                      Vite dev proxy target only
@@ -121,10 +126,12 @@ Typed client generated from the committed contract (and committed itself: instan
 `ci.yml` runs on PRs + pushes to `main`. **backend**: vulnerable-package check, `dotnet test`,
 OpenAPI drift check. **frontend**: `pnpm audit`, generated-client drift check, lint, typecheck, Vitest, compose stack,
 Playwright from `playground/` (with a bootstrap super admin for the editor specs). Dependabot opens weekly update PRs.
+The backend job installs `postgresql-client-18` (backup round-trip tests).
 `release.yml` runs after a green CI run on `main` (or manually, forcing the bump): Conventional Commits since the last
 tag → bump (`!`/`BREAKING CHANGE` major, `feat` minor, else patch; only docs/chore/ci/test/style/build → none), commits
 `chore(release): vX.Y.Z` (version in `frontend/package.json`) **on the tag only**, GitHub release, pushes
-`ghcr.io/trainpaths/cms-api:X.Y.Z` / `:X.Y` / `:latest` (amd64 + arm64). `main` is protected (PR + required checks)
+`ghcr.io/trainpaths/cms-api:X.Y.Z` / `:X.Y` / `:latest` (amd64 + arm64; build arg `CMS_VERSION` → `Cms:Version`, recorded in
+backup manifests). `main` is protected (PR + required checks)
 and never gets the release commit: its `frontend/package.json` version is stale, tags are authoritative.
 **Breaking for instances** (config keys, override points, block contract, entry stubs) → mark the commit `!`.
 

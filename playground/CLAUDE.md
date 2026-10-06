@@ -42,6 +42,8 @@ e2e/tests/smoke.spec.ts, e2e/tests/nav.spec.ts, e2e/tests/auth/*.spec.ts, e2e/te
 e2e/tests/editor/{pages,pages-view,blocks,block-fixes,editor-ux,outline,publish,responsive}.spec.ts, e2e/tests/media/media.spec.ts,
 e2e/tests/config/configuration.spec.ts, e2e/tests/pages/{tags,export-import}.spec.ts, e2e/tests/menus/menus.spec.ts (replaces the main menu)
 e2e/tests/instance/instance.spec.ts   callout block (SSR), NotFound override, imprint template (locked)
+e2e/tests/backups/backups.spec.ts     serial: schedule + back up + download, restore (signs out; later pages gone), no tab without
+                                      super_admin (registers an editor via the API). The restore re-renders every public page.
 e2e/tests/site/meta.spec.ts           meta title/description + firm name → rendered <head> (clears the firm name again)
 ```
 Public auth off / `blocks.exclude` / `editable: false` aren't in the playground config: covered by the API tests
@@ -49,6 +51,11 @@ Public auth off / `blocks.exclude` / `editable: false` aren't in the playground 
 The full suite exceeds the default rate limits (per IP): run the stack with raised limits, e.g.
 `RATE_LIMIT_PERMIT=10000 RATE_LIMIT_GENERAL_PERMIT=10000 RATE_LIMIT_PAGES_PERMIT=10000 docker compose up -d --build`
 (shell env overrides `.env`; CI does the same via `.env`).
+Thousands of leftover e2e pages make the pages list slow enough to fail timing-sensitive specs; CI starts fresh. To get a
+fresh stack next to the dev one: `docker compose -p cmse2e -f docker-compose.yml -f <override setting other container_name
+values>` with other `FRONTEND_PORT`/`API_PORT`, `PLAYWRIGHT_BASE_URL` pointing at it, then `down -v` (only that project's volumes).
+After changing frontend code, rebuild `frontend` **and** `renderer` together: the renderer's public.html must reference the
+same asset hashes, else public pages render unstyled and never hydrate.
 Editor specs need staff credentials in the Playwright env — the same values as the stack's
 `BOOTSTRAP_SUPERADMIN_*` (or `E2E_STAFF_EMAIL/PASSWORD`); without them they are skipped:
 ```bash

@@ -65,6 +65,34 @@ and Garage (AGPL, no bucket policies/versioning): SeaweedFS is Apache 2.0, matur
   a page renders without extra requests. Deleting media removes blob + row; blocks still pointing at it
   render nothing (editor shows "deleted" placeholder). No usage tracking yet.
 
+## Backups: one archive = pg_dump + every media blob
+Super admins (Profile → Backups) back up on demand or on a daily/weekly schedule, and restore; staff can also export
+single pages as JSON (`lib/pageExport.ts`, `POST /api/pages/import`, always a new draft). Code: `api-backend/Services/Backup/`.
+- **Archive** `/backups/<auto|manual|pre-restore|upload>-yyyyMMdd-HHmmss.tar.gz`: `manifest.json` first (format,
+  version, CMS version, newest EF migration, media count; the list reads only this entry), `db.dump` (`pg_dump -Fc`),
+  `media/<storageKey>` per blob, `missing-media.json` when blobs were gone. The folder is the source of truth (no table).
+- **Where**: fixed container path (`Backup:Directory`); the instance's compose file decides the host side
+  (`BACKUP_DIR` → bind mount, default a named volume). The app can't change its own mount, so the admin only shows it.
+- **Why the API runs pg_dump** (postgresql-client-18 in the image) instead of a DB-level or volume snapshot: works the
+  same against a managed Postgres and any S3 store; blobs go through `IBlobStorage`, never SeaweedFS internals.
+- **Consistent backup**: a REPEATABLE READ transaction exports its snapshot (`pg_export_snapshot()`), reads the media
+  keys and runs `pg_dump --snapshot=…` while open, so dump and key list are the same instant. A blob deleted before it's
+  copied is listed in `missing-media.json` (no lock on media deletes). Written to `.partial`, renamed when complete.
+- **Left out** (`BackupTables.DataExcluded`): rows of `backup_settings` (the schedule survives a restore),
+  `refresh_tokens`/`verification_tokens` (everyone signs in again) and `rendered_pages` (re-rendered).
+- **Restore**, under one lock (backup/restore/upload/delete never overlap, busy = 409): read the whole archive (damage
+  shows before anything changes) → refuse a newer schema (manifest migration unknown to this build) → `pre-restore`
+  backup (the undo) → maintenance gate (every other `/api` request 503) → upload the archive's blobs (GUID keys:
+  additive, harmless if the next step fails) → `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` + `pg_restore -f -`
+  piped into **one** `psql --single-transaction` (all or nothing; psql's input closes only after pg_restore succeeded,
+  since end of input commits) → clear Npgsql pools → migrate (older backups catch up) → write the schedule back →
+  delete blobs no restored media row references → re-render everything.
+  Not `pg_restore --clean`: it drops only what the dump has, so tables of newer migrations would survive and break the
+  migrate. The DB user must own the `public` schema (the compose superuser does; managed DBs: the database owner).
+- **Schedule** (`BackupSchedule`, UTC): a slot counts once it passed after the last run *and* after the settings were
+  saved (turning it on at 10:00 with a 03:00 slot waits for tomorrow); downtime catches up with one run. Retention
+  deletes only `auto-*` archives. `BackupScheduler` checks every minute.
+
 ## Site config: fields + groups shaped by the instance config
 Sites want different info (firm, address, hours, VAT ID, socials...), and the site's *code* (footer, templates)
 needs to find it. So the developer defines the shape in `cms.config.json` and the owner fills it in ("Configuration"):

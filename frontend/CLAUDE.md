@@ -139,7 +139,7 @@ Base layer restores v3 defaults: gray-200 border colour, gray-400 placeholders, 
 | `/register` | `Register.vue` (customer signup) | guest |
 | `/` | `home`: hand-off to the public site (full page load; `toPublicSite` guard; first navigation → not-found) | public |
 | `/admin` | `Dashboard.vue` (welcome + profile links; name `dashboard`) | auth |
-| `/profile` | `Profile.vue` | auth |
+| `/profile` | `Profile.vue`: super admins get tabs (`?tab=backups`) **Profile** (`components/ProfileDetails.vue`) + **Backups** (`components/backups/BackupsPanel.vue`: schedule (UTC, local time hint), storage folder (read-only), back up now, upload with progress (`lib/backupUpload.ts`, XHR), list with download (blob) / restore (confirm → logout → admin login) / delete); others just ProfileDetails | auth |
 | `/change-password` | `ChangePassword.vue` | auth |
 | `/forgot-password` | `ForgotPassword.vue` | guest |
 | `/reset-password` | `ResetPassword.vue` (`?token=`) | public |
@@ -258,13 +258,14 @@ src/lib/web-editor/     block editor library (own CLAUDE.md)
 src/views/             route views (admin/ = page management)
 src/components/        app shell pieces (AppNav, AdminBar, SiteHeader + site/, SiteFooter, ConfigImageField, PageFilters,
                        PageEditDialog, ActionMenu ("…" menu like nb-ui Dropdown, own edit/copy/download/trash icons),
-                       menus/ tree editor)
+                       menus/ tree editor, ProfileDetails, backups/BackupsPanel)
 src/composables/       usePageFilter (search/tag/status/sort over PageSummary[])
 src/lib/menus/tree.ts  pure menu tree ops (locate, move, indent/outdent, depth checks)
 src/lib/pageExport.ts  page export file (`{format: "cms-page", version, exportedAt, page}`): toPageExport, parsePageExport
                        (throws PageExportError = user-facing message) + Vitest; editor PageSettings "Export" downloads the
                        on-screen state, the row menu's Export the saved copy
 src/lib/download.ts    saveBlob / saveJson (browser file download)
-nginx.conf             `/` + `/{slug}` → API HTML endpoint (X-Accel-Redirect to index.html/public.html), SPA fallback, /api proxy (64k; /api/pages 2m; /api/menus 512k; /api/media 11m), CSP (img-src 'self' only: uploads are same-origin)
+src/lib/backupUpload.ts uploadBackup (XHR for progress; ensureSession + bearer itself) + formatBytes
+nginx.conf             `/` + `/{slug}` → API HTML endpoint (X-Accel-Redirect to index.html/public.html), SPA fallback, /api proxy (64k; /api/pages 2m; /api/menus 512k; /api/media 11m; /api/backups 2g, unbuffered, 15 min timeouts), CSP (img-src 'self' only: uploads are same-origin)
 public/favicon.svg     CMS admin icon (emitted by cms() unless the instance has its own)
 ```
