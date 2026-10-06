@@ -200,6 +200,11 @@ paragraph. Link-preview image: the page's first image, else the share image from
   `dist-ssr/`; run from that directory), **api** (`FROM ghcr.io/trainpaths/cms-api:<version>` +
   `COPY cms.config.json /app/`).
 - Environment: the CMS repo's `.env.example` lists every variable (DB, JWT key, S3 keys, SMTP, first admin).
+- **Backups** (super admins: Profile → Backups) are written to `/backups` in the api container. Mount it, or archives
+  vanish with the container: `- ${BACKUP_DIR:-backups}:/backups` on the api service (+ a `backups:` volume, and
+  `Backup__HostPath: ${BACKUP_DIR:-}` so the admin can show the host folder). A host folder must be writable by uid
+  1654 (`sudo chown 1654 ./backups`). Copy archives off the server (download, or sync the folder). The api image
+  ships the PostgreSQL 18 client tools for this; with a managed Postgres the DB user must own the `public` schema.
 
 ## Upgrading
 
@@ -209,4 +214,5 @@ paragraph. Link-preview image: the page's first image, else the share image from
    `peerDependencies` value), then `pnpm install`. Instances from `trainpaths/cms-starter` do all of this with
    `pnpm bump-cms [X.Y.Z]` (default: latest release; also checks the tag and image exist).
 3. `pnpm build`; fix type errors (your overrides/blocks are checked against the new package source).
-4. Back up the database: the API applies its migrations on start, there is no downgrade.
+4. Back up first (Profile → Backups → Back up now, then download it): the API applies its migrations on start, there
+   is no downgrade, and an older CMS refuses to restore a newer backup.
