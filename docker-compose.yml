@@ -76,9 +76,13 @@ services:
       # public pages are pre-rendered by the renderer service (frontend/server/render-server.ts)
       Renderer__BaseUrl: http://renderer:8080
       Renderer__PublicBaseUrl: ${APP_BASE_URL:-http://localhost:5173}
+      # shown in the admin's Backups tab (the API can't see the host side of its mount)
+      Backup__HostPath: ${BACKUP_DIR:-}
     # instance config of the playground (an instance's own api image COPYs its cms.config.json to /app instead)
     volumes:
       - ./playground/cms.config.json:/app/cms.config.json:ro
+      # backup archives: named volume by default, or a host folder (BACKUP_DIR, writable by uid 1654)
+      - ${BACKUP_DIR:-backups}:/backups
     depends_on:
       postgres:
         condition: service_healthy
@@ -130,4 +134,5 @@ services:
 volumes:
   pgdata:
   seaweed-data:
+  backups:
   # redis-data:

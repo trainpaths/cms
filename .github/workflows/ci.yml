@@ -25,6 +25,17 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      # BackupRoundTripTests run the real pg_dump / pg_restore / psql (skipped without them)
+      - name: Install PostgreSQL 18 client
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client-18
+          pg_dump --version
+
       - name: Restore
         run: dotnet restore api-backend/Tests/Tests.csproj
 
