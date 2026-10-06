@@ -95,6 +95,20 @@ export type ForgotPasswordRequest = {
     email: string;
 };
 
+export type ImportPageRequest = {
+    title: string;
+    slug?: string | null;
+    blocks: Array<Block>;
+    metaTitle?: string | null;
+    metaDescription?: string | null;
+    tags?: Array<string> | null;
+};
+
+export type ImportPageResult = {
+    page: PageDetail;
+    missingMediaIds: Array<string>;
+};
+
 export type InstanceConfig = {
     publicAuth: boolean;
     excludedBlocks: Array<string>;
@@ -721,6 +735,22 @@ export type PutApiPagesByIdResponses = {
 };
 
 export type PutApiPagesByIdResponse = PutApiPagesByIdResponses[keyof PutApiPagesByIdResponses];
+
+export type PostApiPagesImportData = {
+    body?: ImportPageRequest;
+    path?: never;
+    query?: never;
+    url: '/api/pages/import';
+};
+
+export type PostApiPagesImportResponses = {
+    /**
+     * OK
+     */
+    200: ImportPageResult;
+};
+
+export type PostApiPagesImportResponse = PostApiPagesImportResponses[keyof PostApiPagesImportResponses];
 
 export type PutApiPagesByIdTagsData = {
     body?: UpdatePageTagsRequest;

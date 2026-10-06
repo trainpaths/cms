@@ -120,6 +120,44 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		return PageResult<PageDetail>.Ok(await ToDetailAsync(page, ct));
 	}
 
+	/// <summary>
+	/// Creates a draft page from an exported page file. Never overwrites: a taken (or reserved) slug gets a
+	/// <c>-2</c>, <c>-3</c>... suffix. Media is referenced by id; ids unknown to this site are reported, not rejected.
+	/// </summary>
+	public async Task<PageResult<ImportPageResult>> ImportAsync(ImportPageRequest req, Guid staffId, CancellationToken ct)
+	{
+		var title = req.Title.Trim();
+		if (title.Length == 0)
+			return PageResult<ImportPageResult>.Fail(PageError.Invalid, "Title is required.");
+		if ((MetaError(req.MetaTitle, MaxMetaTitleLength, "Meta title")
+			?? MetaError(req.MetaDescription, MaxMetaDescriptionLength, "Meta description")) is { } metaError)
+			return PageResult<ImportPageResult>.Fail(PageError.Invalid, metaError);
+		if (ValidateBlocks(req.Blocks) is { } blockError)
+			return PageResult<ImportPageResult>.Fail(PageError.Invalid, blockError);
+		var (tagNames, tagError) = NormalizeTags(req.Tags ?? []);
+		if (tagError is not null)
+			return PageResult<ImportPageResult>.Fail(PageError.Invalid, tagError);
+
+		var page = new Page
+		{
+			Title = title,
+			Slug = await UniqueSlugFromAsync(string.IsNullOrWhiteSpace(req.Slug) ? title : req.Slug, ct),
+			Blocks = req.Blocks,
+			MetaTitle = req.MetaTitle?.Trim() ?? "",
+			MetaDescription = req.MetaDescription?.Trim() ?? "",
+			CreatedById = staffId,
+			UpdatedById = staffId,
+		};
+		db.Pages.Add(page);
+		await AddTagsAsync(page, tagNames, ct);
+		await db.SaveChangesAsync(ct);
+
+		var detail = await ToDetailAsync(page, ct);
+		var found = detail.Media.Select(m => m.Id).ToHashSet();
+		var missing = MediaService.CollectIds(page.Blocks).Where(id => !found.Contains(id)).ToList();
+		return PageResult<ImportPageResult>.Ok(new ImportPageResult(detail, missing));
+	}
+
 	public async Task<PageResult<PageDetail>> UpdateAsync(Guid id, UpdatePageRequest req, Guid staffId, CancellationToken ct)
 	{
 		var page = await db.Pages.FirstOrDefaultAsync(p => p.Id == id, ct);
@@ -214,20 +252,41 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		if (page is null)
 			return PageResult<PageDetail>.Fail(PageError.NotFound);
 
+		var (names, error) = NormalizeTags(raw);
+		if (error is not null)
+			return PageResult<PageDetail>.Fail(PageError.Invalid, error);
+
+		var tags = await LoadOrCreateTagsAsync(names, ct);
+		db.PageTags.RemoveRange(page.PageTags.Where(pt => tags.All(t => t.Id != pt.TagId)));
+		foreach (var tag in tags.Where(t => page.PageTags.All(pt => pt.TagId != t.Id)))
+			page.PageTags.Add(new PageTag { Page = page, Tag = tag });
+		await db.SaveChangesAsync(ct);
+		await DeleteUnusedTagsAsync(ct);
+		return PageResult<PageDetail>.Ok(await ToDetailAsync(page, ct));
+	}
+
+	/// <summary>Normalized, deduplicated tag names, or the first validation error.</summary>
+	private static (List<string> Names, string? Error) NormalizeTags(List<string> raw)
+	{
 		var names = new List<string>();
 		foreach (var value in raw)
 		{
 			var name = Tag.Normalize(value ?? "");
 			if (name.Length is 0 or > TagLimits.MaxLength)
-				return PageResult<PageDetail>.Fail(PageError.Invalid, $"Tags must be 1-{TagLimits.MaxLength} characters.");
+				return (names, $"Tags must be 1-{TagLimits.MaxLength} characters.");
 			if (name.Any(char.IsWhiteSpace))
-				return PageResult<PageDetail>.Fail(PageError.Invalid, $"Tags are single words: \"{name}\" contains a space.");
+				return (names, $"Tags are single words: \"{name}\" contains a space.");
 			if (!names.Contains(name))
 				names.Add(name);
 		}
-		if (names.Count > TagLimits.MaxPerPage)
-			return PageResult<PageDetail>.Fail(PageError.Invalid, $"A page may have at most {TagLimits.MaxPerPage} tags.");
+		return names.Count > TagLimits.MaxPerPage
+			? (names, $"A page may have at most {TagLimits.MaxPerPage} tags.")
+			: (names, null);
+	}
 
+	// new tags are only tracked; the caller saves
+	private async Task<List<Tag>> LoadOrCreateTagsAsync(List<string> names, CancellationToken ct)
+	{
 		var tags = await db.Tags.Where(t => names.Contains(t.Name)).ToListAsync(ct);
 		foreach (var name in names.Where(n => tags.All(t => t.Name != n)))
 		{
@@ -235,13 +294,13 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 			db.Tags.Add(tag);
 			tags.Add(tag);
 		}
+		return tags;
+	}
 
-		db.PageTags.RemoveRange(page.PageTags.Where(pt => tags.All(t => t.Id != pt.TagId)));
-		foreach (var tag in tags.Where(t => page.PageTags.All(pt => pt.TagId != t.Id)))
+	private async Task AddTagsAsync(Page page, List<string> names, CancellationToken ct)
+	{
+		foreach (var tag in await LoadOrCreateTagsAsync(names, ct))
 			page.PageTags.Add(new PageTag { Page = page, Tag = tag });
-		await db.SaveChangesAsync(ct);
-		await DeleteUnusedTagsAsync(ct);
-		return PageResult<PageDetail>.Ok(await ToDetailAsync(page, ct));
 	}
 
 	/// <summary>Tags in use, most used first (autocomplete + "popular" suggestions).</summary>

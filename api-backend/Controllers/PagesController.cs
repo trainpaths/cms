@@ -42,6 +42,16 @@ public class PagesController(PageService pages, IRenderQueue render) : Controlle
 			: ToProblem(result);
 	}
 
+	[HttpPost("import")]
+	[RequestSizeLimit(MaxPageBodyBytes)]
+	public async Task<ActionResult<ImportPageResult>> Import(ImportPageRequest req, CancellationToken ct)
+	{
+		var result = await pages.ImportAsync(req, CurrentUserId, ct);
+		return result.Error is null
+			? CreatedAtAction(nameof(Get), new { id = result.Value!.Page.Id }, result.Value)
+			: ToProblem(result);
+	}
+
 	[HttpPut("{id:guid}")]
 	[RequestSizeLimit(MaxPageBodyBytes)]
 	public async Task<ActionResult<PageDetail>> Update(Guid id, UpdatePageRequest req, CancellationToken ct)

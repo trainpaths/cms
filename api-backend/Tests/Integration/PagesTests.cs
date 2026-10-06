@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using api_backend.Models.Auth;
 using api_backend.Models.Dto;
+using api_backend.Models.Media;
 using api_backend.Services.Auth.JWT;
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
@@ -174,6 +175,90 @@ public class PagesTests : IClassFixture<ApiFactory>
 			.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 		(await SendAsync(HttpMethod.Put, $"{Base}/{id}", token, new JsonObject { ["metaDescription"] = new string('d', 201) }))
 			.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+	}
+
+	[Fact]
+	public async Task Import_CreatesDraftWithMetaAndTags_DeduplicatesSlug_ReportsMissingMedia()
+	{
+		var token = await CreateStaffTokenAsync();
+		var slug = $"imp-{Guid.NewGuid():N}"[..20];
+		await SendAsync(HttpMethod.Post, Base, token, new JsonObject { ["title"] = "Existing", ["slug"] = slug });
+
+		var known = new MediaAsset { StorageKey = $"{Guid.NewGuid():N}.png", FileName = "a.png", ContentType = "image/png" };
+		using (var scope = _factory.Services.CreateScope())
+		{
+			var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+			db.MediaAssets.Add(known);
+			await db.SaveChangesAsync(Ct);
+		}
+		var missing = Guid.NewGuid();
+		var blocks = JsonNode.Parse($$"""
+			[{ "id": "i1", "name": "image", "attributes": { "mediaId": "{{known.Id}}" }, "innerBlocks": [] },
+			 { "id": "g1", "name": "group", "attributes": {},
+			   "innerBlocks": [{ "id": "i2", "name": "image", "attributes": { "mediaId": "{{missing}}" }, "innerBlocks": [] }] }]
+			""");
+
+		var response = await SendAsync(HttpMethod.Post, $"{Base}/import", token, new JsonObject
+		{
+			["title"] = " Imported ",
+			["slug"] = slug,
+			["blocks"] = blocks,
+			["metaTitle"] = "Meta",
+			["metaDescription"] = "Desc",
+			["tags"] = new JsonArray("Docs", "docs", "news"),
+		});
+
+		response.StatusCode.Should().Be(HttpStatusCode.Created);
+		var result = (await response.Content.ReadFromJsonAsync<ImportPageResult>(Ct))!;
+		result.Page.Title.Should().Be("Imported");
+		result.Page.Slug.Should().Be($"{slug}-2");
+		result.Page.Status.Should().Be(Models.Pages.PageStatus.Draft);
+		result.Page.MetaTitle.Should().Be("Meta");
+		result.Page.MetaDescription.Should().Be("Desc");
+		result.Page.Tags.Should().Equal("docs", "news");
+		result.Page.Media.Should().ContainSingle().Which.Id.Should().Be(known.Id);
+		result.MissingMediaIds.Should().Equal(missing);
+	}
+
+	[Fact]
+	public async Task Import_ReservedOrMissingSlug_FallsBackToValidSlug()
+	{
+		var token = await CreateStaffTokenAsync();
+
+		var reserved = await SendAsync(HttpMethod.Post, $"{Base}/import", token,
+			new JsonObject { ["title"] = "x", ["slug"] = "login", ["blocks"] = new JsonArray() });
+		(await reserved.Content.ReadFromJsonAsync<ImportPageResult>(Ct))!.Page.Slug.Should().StartWith("login-page");
+
+		var title = $"Fresh {Guid.NewGuid():N}"[..20];
+		var noSlug = await SendAsync(HttpMethod.Post, $"{Base}/import", token,
+			new JsonObject { ["title"] = title, ["blocks"] = new JsonArray() });
+		(await noSlug.Content.ReadFromJsonAsync<ImportPageResult>(Ct))!.Page.Slug.Should().Be(title.ToLowerInvariant().Replace(' ', '-'));
+	}
+
+	[Fact]
+	public async Task Import_InvalidBlocksOrTags_ReturnsBadRequest_AndCreatesNothing()
+	{
+		var token = await CreateStaffTokenAsync();
+		var title = $"Bad {Guid.NewGuid():N}";
+		var badBlocks = JsonNode.Parse("""[{ "id": "", "name": "paragraph", "attributes": {}, "innerBlocks": [] }]""");
+
+		(await SendAsync(HttpMethod.Post, $"{Base}/import", token, new JsonObject { ["title"] = title, ["blocks"] = badBlocks }))
+			.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+		(await SendAsync(HttpMethod.Post, $"{Base}/import", token,
+				new JsonObject { ["title"] = title, ["blocks"] = new JsonArray(), ["tags"] = new JsonArray("two words") }))
+			.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+		var list = await (await SendAsync(HttpMethod.Get, Base, token)).Content.ReadFromJsonAsync<List<PageSummary>>(Ct);
+		list!.Should().NotContain(p => p.Title == title);
+	}
+
+	[Fact]
+	public async Task Import_AsCustomer_ReturnsForbidden()
+	{
+		var token = CreateToken(Guid.NewGuid(), "customer", []);
+		var response = await SendAsync(HttpMethod.Post, $"{Base}/import", token,
+			new JsonObject { ["title"] = "x", ["blocks"] = new JsonArray() });
+		response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 	}
 
 	private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string url, string token, JsonNode? body = null)
