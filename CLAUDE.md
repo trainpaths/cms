@@ -52,7 +52,8 @@ api-backend/             .NET API (+ Tests/: xUnit unit + Testcontainers integra
 package.json, pnpm-workspace.yaml   pnpm workspace root (frontend + playground; ESLint, all repo scripts)
 Dockerfile               5-stage build: api-build → frontend-build (playground) → api → renderer → frontend
 compose.yaml             postgres + seaweedfs (internal `backend` network) + api + renderer + frontend (the playground
-                         instance); ports on 127.0.0.1 only; `backups-init` chowns the backups bind mount
+                         instance); ports on 127.0.0.1 only; `backups-init` chowns the backups bind mount; all
+                         services no-new-privileges + cap_drop ALL (ARCHITECTURE.md → Networking)
 .env.example             copy to .env (git-ignored)
 ```
 

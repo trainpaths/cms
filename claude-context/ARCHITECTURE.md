@@ -76,6 +76,9 @@ and Garage (AGPL, no bucket policies/versioning): SeaweedFS is Apache 2.0, matur
   untrusted entry = the visitor) and passes only that IP on; the API's `ForwardedHeaders:KnownNetworks` trusts nginx.
   Without this every visitor would share the gateway IP and one rate-limit bucket. X-Forwarded-Proto from the proxy
   is passed through. The host proxy must set X-Forwarded-For (Caddy does by default; nginx: `$proxy_add_x_forwarded_for`).
+- Hardening: every service has `no-new-privileges` and `cap_drop: [ALL]`; all processes run as non-root users (api
+  1654, renderer node, frontend nginx 101, postgres 70, seaweedfs 1000). Only the postgres/seaweedfs entrypoints run
+  as root briefly (chown their data dir, then drop) and keep CHOWN/DAC_OVERRIDE/FOWNER/SETUID/SETGID; backups-init keeps CHOWN.
 
 ## Backups: one archive = pg_dump + every media blob
 Super admins (Profile → Backups) back up on demand or on a daily/weekly/biweekly/monthly schedule, and restore; staff can also export

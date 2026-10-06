@@ -205,6 +205,9 @@ paragraph. Link-preview image: the page's first image, else the share image from
   ports bypass ufw). The api port is only for the Vite dev proxy. Serve the site through a reverse proxy on the host
   (TLS) → `127.0.0.1:FRONTEND_PORT`, which must set X-Forwarded-For (Caddy does by default): the CMS `nginx.conf`
   trusts it from the Docker gateway (`172.16.0.0/12`) so rate limits see each visitor's IP.
+- **Hardening**: every service `security_opt: [no-new-privileges:true]` + `cap_drop: [ALL]`; postgres and seaweedfs
+  add back `CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID` (their entrypoints fix data-dir ownership as root, then drop
+  to their user), `backups-init` adds `CHOWN`. A service you add: same baseline, add back only what it needs.
 - **Backups** (super admins: Profile → Backups) are written to `/backups` in the api container. Mount it, or archives
   vanish with the container: `- ${BACKUP_DIR:-./backups}:/backups` on the api service, plus
   `Backup__HostPath: ${BACKUP_DIR:-./backups}` so the admin can show the host folder. The api runs as uid 1654 and
