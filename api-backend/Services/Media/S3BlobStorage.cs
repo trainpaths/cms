@@ -1,4 +1,5 @@
 using System.Net;
+using System.Runtime.CompilerServices;
 using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
@@ -74,6 +75,27 @@ public sealed class S3BlobStorage : IBlobStorage, IDisposable
 
 	public async Task DeleteAsync(string key, CancellationToken ct) =>
 		await _client.DeleteObjectAsync(_bucket, key, ct);
+
+	public async IAsyncEnumerable<string> ListKeysAsync([EnumeratorCancellation] CancellationToken ct)
+	{
+		var request = new ListObjectsV2Request { BucketName = _bucket };
+		ListObjectsV2Response response;
+		do
+		{
+			try
+			{
+				response = await _client.ListObjectsV2Async(request, ct);
+			}
+			// nothing uploaded yet
+			catch (AmazonS3Exception e) when (e.ErrorCode == "NoSuchBucket")
+			{
+				yield break;
+			}
+			foreach (var obj in response.S3Objects ?? [])
+				yield return obj.Key;
+			request.ContinuationToken = response.NextContinuationToken;
+		} while (response.IsTruncated == true);
+	}
 
 	private async Task EnsureBucketAsync(CancellationToken ct)
 	{

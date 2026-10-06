@@ -50,3 +50,7 @@ test-results/
 # Local test output / IDE user files
 TestResults/
 *.csproj.user
+
+# local backup archives (Backup:Directory / BACKUP_DIR)
+/backups/
+/api-backend/backups/

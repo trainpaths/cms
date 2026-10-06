@@ -5,6 +5,7 @@ using api_backend;
 using api_backend.Models.Auth.JWT;
 using api_backend.Services.Auth;
 using api_backend.Services.Auth.JWT;
+using api_backend.Services.Backup;
 using api_backend.Services.Cms;
 using api_backend.Services.Email;
 using api_backend.Services.Media;
@@ -185,6 +186,13 @@ builder.Services.AddHttpClient<IRendererClient, HttpRendererClient>((sp, http) =
 	http.Timeout = TimeSpan.FromSeconds(30);
 });
 builder.Services.AddHostedService<RenderWorker>();
+// Full backups (database + media archives in Backup:Directory) + their schedule
+builder.Services.Configure<BackupOptions>(builder.Configuration.GetSection(BackupOptions.SectionName));
+builder.Services.AddSingleton<BackupLock>();
+builder.Services.AddSingleton<IDatabaseDumper, PgDumper>();
+builder.Services.AddScoped<BackupService>();
+builder.Services.AddHostedService<BackupScheduler>();
+
 builder.Services.AddSingleton<EmailQueue>();
 builder.Services.AddSingleton<IEmailQueue>(sp => sp.GetRequiredService<EmailQueue>());
 builder.Services.AddHostedService<EmailDispatcher>();
@@ -294,6 +302,25 @@ app.Use(async (context, next) =>
 			headers.CacheControl = "no-store";
 		return Task.CompletedTask;
 	});
+	await next(context);
+});
+
+// a restore swaps the database underneath: everything else waits
+var backupLock = app.Services.GetRequiredService<BackupLock>();
+app.Use(async (context, next) =>
+{
+	if (backupLock.Restoring && context.Request.Path.StartsWithSegments("/api"))
+	{
+		context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+		context.Response.Headers.RetryAfter = "30";
+		await context.Response.WriteAsJsonAsync(new
+		{
+			status = 503,
+			title = "Restoring a backup",
+			detail = "The site is being restored from a backup. Try again in a minute.",
+		}, context.RequestAborted);
+		return;
+	}
 	await next(context);
 });
 

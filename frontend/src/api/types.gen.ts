@@ -10,6 +10,34 @@ export type AuthResponse = {
     user: UserInfo;
 };
 
+export type BackupInfo = {
+    name: string;
+    kind: BackupKind;
+    createdAt: string;
+    size: number;
+    cmsVersion?: string | null;
+    mediaCount?: number | null;
+    error?: string | null;
+};
+
+export type BackupInterval = 'off' | 'daily' | 'weekly';
+
+export type BackupKind = 'auto' | 'manual' | 'pre-restore' | 'upload';
+
+export type BackupSettingsResponse = {
+    interval: BackupInterval;
+    timeOfDay: string;
+    weekday: number;
+    retention: number;
+    lastRunAt?: string | null;
+    lastError?: string | null;
+    nextRunAt?: string | null;
+    directory: string;
+    hostPath?: string | null;
+    freeBytes?: number | null;
+    maxUploadBytes: number;
+};
+
 export type Block = {
     id: string;
     name: string;
@@ -239,6 +267,10 @@ export type ResetPasswordRequest = {
     newPassword: string;
 };
 
+export type RestoreResult = {
+    preRestoreBackup: string;
+};
+
 export type SiteConfigResponse = {
     fields: {
         [key: string]: string;
@@ -269,6 +301,13 @@ export type StaffRegisterRequest = {
 export type TagUsage = {
     name: string;
     pageCount: number;
+};
+
+export type UpdateBackupSettingsRequest = {
+    interval: BackupInterval;
+    timeOfDay: string;
+    weekday: number;
+    retention: number;
 };
 
 export type UpdateMediaRequest = {
@@ -316,6 +355,140 @@ export type UserInfo = {
     roles: Array<string>;
     organizationId?: string | null;
 };
+
+export type GetApiBackupsSettingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/backups/settings';
+};
+
+export type GetApiBackupsSettingsResponses = {
+    /**
+     * OK
+     */
+    200: BackupSettingsResponse;
+};
+
+export type GetApiBackupsSettingsResponse = GetApiBackupsSettingsResponses[keyof GetApiBackupsSettingsResponses];
+
+export type PutApiBackupsSettingsData = {
+    body?: UpdateBackupSettingsRequest;
+    path?: never;
+    query?: never;
+    url: '/api/backups/settings';
+};
+
+export type PutApiBackupsSettingsResponses = {
+    /**
+     * OK
+     */
+    200: BackupSettingsResponse;
+};
+
+export type PutApiBackupsSettingsResponse = PutApiBackupsSettingsResponses[keyof PutApiBackupsSettingsResponses];
+
+export type GetApiBackupsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/backups';
+};
+
+export type GetApiBackupsResponses = {
+    /**
+     * OK
+     */
+    200: Array<BackupInfo>;
+};
+
+export type GetApiBackupsResponse = GetApiBackupsResponses[keyof GetApiBackupsResponses];
+
+export type PostApiBackupsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/backups';
+};
+
+export type PostApiBackupsResponses = {
+    /**
+     * OK
+     */
+    200: BackupInfo;
+};
+
+export type PostApiBackupsResponse = PostApiBackupsResponses[keyof PostApiBackupsResponses];
+
+export type DeleteApiBackupsByNameData = {
+    body?: never;
+    path: {
+        name: string;
+    };
+    query?: never;
+    url: '/api/backups/{name}';
+};
+
+export type DeleteApiBackupsByNameResponses = {
+    /**
+     * OK
+     */
+    200: unknown;
+};
+
+export type GetApiBackupsByNameData = {
+    body?: never;
+    path: {
+        name: string;
+    };
+    query?: never;
+    url: '/api/backups/{name}';
+};
+
+export type GetApiBackupsByNameResponses = {
+    /**
+     * OK
+     */
+    200: Blob | File;
+};
+
+export type GetApiBackupsByNameResponse = GetApiBackupsByNameResponses[keyof GetApiBackupsByNameResponses];
+
+export type PostApiBackupsUploadData = {
+    body?: {
+        file?: Blob | File;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/backups/upload';
+};
+
+export type PostApiBackupsUploadResponses = {
+    /**
+     * OK
+     */
+    200: BackupInfo;
+};
+
+export type PostApiBackupsUploadResponse = PostApiBackupsUploadResponses[keyof PostApiBackupsUploadResponses];
+
+export type PostApiBackupsByNameRestoreData = {
+    body?: never;
+    path: {
+        name: string;
+    };
+    query?: never;
+    url: '/api/backups/{name}/restore';
+};
+
+export type PostApiBackupsByNameRestoreResponses = {
+    /**
+     * OK
+     */
+    200: RestoreResult;
+};
+
+export type PostApiBackupsByNameRestoreResponse = PostApiBackupsByNameRestoreResponses[keyof PostApiBackupsByNameRestoreResponses];
 
 export type PostApiAuthCustomerRegisterData = {
     body?: RegisterRequest;
