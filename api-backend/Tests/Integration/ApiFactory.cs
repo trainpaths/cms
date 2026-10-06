@@ -1,4 +1,5 @@
 using api_backend;
+using api_backend.Services.Backup;
 using api_backend.Services.Cms;
 using api_backend.Services.Email;
 using api_backend.Services.Media;
@@ -34,6 +35,9 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 	/// <summary>Instance config of the test app: defaults with public auth on (the customer auth tests need it).</summary>
 	public static readonly CmsConfig Cms = CmsConfig.Default with { PublicAuth = true };
 
+	/// <summary>Per factory, so test classes don't see each other's archives.</summary>
+	public string BackupDirectory { get; } = Path.Combine(Path.GetTempPath(), $"cms-backups-{Guid.NewGuid():N}");
+
 	/// <summary>Replaces SeaweedFS/S3; tests inspect stored blobs directly.</summary>
 	public InMemoryBlobStorage BlobStorage { get; } = new();
 
@@ -57,6 +61,9 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
 			services.RemoveAll<CmsConfig>();
 			services.AddSingleton(Cms);
+
+			// real-time ticks would race the tests' own RunScheduledAsync calls
+			services.Remove(services.Single(d => d.ImplementationType == typeof(BackupScheduler)));
 		});
 
 		builder.ConfigureAppConfiguration((_, config) =>
@@ -70,6 +77,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 				["RateLimiting:General:WindowSeconds"] = "1",
 				["RateLimiting:Pages:PermitLimit"] = "100000",
 				["RateLimiting:Pages:WindowSeconds"] = "1",
+				["Backup:Directory"] = BackupDirectory,
 				// tests count/create pages themselves; PageSeederTests turns it back on
 				["Bootstrap:SeedPages"] = "false",
 			});
@@ -88,5 +96,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 	{
 		await _postgres.DisposeAsync();
 		await base.DisposeAsync();
+		if (Directory.Exists(BackupDirectory))
+			Directory.Delete(BackupDirectory, recursive: true);
 	}
 }

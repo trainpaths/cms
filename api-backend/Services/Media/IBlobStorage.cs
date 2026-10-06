@@ -19,4 +19,7 @@ public interface IBlobStorage
 
 	/// <summary>Idempotent: deleting a missing key succeeds.</summary>
 	Task DeleteAsync(string key, CancellationToken ct);
+
+	/// <summary>Every key in the store (a backup restore removes the ones no media row references).</summary>
+	IAsyncEnumerable<string> ListKeysAsync(CancellationToken ct);
 }

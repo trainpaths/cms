@@ -2,7 +2,7 @@
 
 import { type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { DeleteApiMediaByIdData, DeleteApiMediaByIdResponses, DeleteApiMenusByIdData, DeleteApiMenusByIdResponses, DeleteApiPagesByIdData, DeleteApiPagesByIdResponses, GetApiAuthCustomerMeData, GetApiAuthCustomerMeResponses, GetApiAuthStaffMeData, GetApiAuthStaffMeResponses, GetApiMediaByIdData, GetApiMediaByIdResponses, GetApiMediaData, GetApiMediaResponses, GetApiMenusByIdData, GetApiMenusByIdResponses, GetApiMenusData, GetApiMenusResponses, GetApiPagesByIdData, GetApiPagesByIdResponses, GetApiPagesData, GetApiPagesResponses, GetApiPublicInstanceData, GetApiPublicInstanceResponses, GetApiPublicMediaByKeyData, GetApiPublicMediaByKeyErrors, GetApiPublicMediaByKeyResponses, GetApiPublicMenusByHandleData, GetApiPublicMenusByHandleResponses, GetApiPublicPagesBySlugData, GetApiPublicPagesBySlugResponses, GetApiPublicSiteConfigData, GetApiPublicSiteConfigResponses, GetApiSiteConfigData, GetApiSiteConfigResponses, GetApiTagsData, GetApiTagsResponses, PostApiAuthCustomerChangePasswordData, PostApiAuthCustomerChangePasswordResponses, PostApiAuthCustomerConfirmEmailData, PostApiAuthCustomerConfirmEmailResponses, PostApiAuthCustomerForgotPasswordData, PostApiAuthCustomerForgotPasswordResponses, PostApiAuthCustomerLoginData, PostApiAuthCustomerLoginResponses, PostApiAuthCustomerLogoutData, PostApiAuthCustomerLogoutResponses, PostApiAuthCustomerProfileData, PostApiAuthCustomerProfileResponses, PostApiAuthCustomerRefreshData, PostApiAuthCustomerRefreshResponses, PostApiAuthCustomerRegisterData, PostApiAuthCustomerRegisterResponses, PostApiAuthCustomerRequestVerificationData, PostApiAuthCustomerRequestVerificationResponses, PostApiAuthCustomerResetPasswordData, PostApiAuthCustomerResetPasswordResponses, PostApiAuthStaffChangePasswordData, PostApiAuthStaffChangePasswordResponses, PostApiAuthStaffLoginData, PostApiAuthStaffLoginResponses, PostApiAuthStaffLogoutData, PostApiAuthStaffLogoutResponses, PostApiAuthStaffProfileData, PostApiAuthStaffProfileResponses, PostApiAuthStaffRefreshData, PostApiAuthStaffRefreshResponses, PostApiAuthStaffRegisterData, PostApiAuthStaffRegisterResponses, PostApiMediaData, PostApiMediaResponses, PostApiMenusData, PostApiMenusResponses, PostApiPagesByIdPublishData, PostApiPagesByIdPublishResponses, PostApiPagesByIdUnpublishData, PostApiPagesByIdUnpublishResponses, PostApiPagesData, PostApiPagesImportData, PostApiPagesImportResponses, PostApiPagesResponses, PutApiMediaByIdData, PutApiMediaByIdResponses, PutApiMenusByIdData, PutApiMenusByIdResponses, PutApiPagesByIdData, PutApiPagesByIdResponses, PutApiPagesByIdTagsData, PutApiPagesByIdTagsResponses, PutApiSiteConfigData, PutApiSiteConfigResponses } from './types.gen';
+import type { DeleteApiBackupsByNameData, DeleteApiBackupsByNameResponses, DeleteApiMediaByIdData, DeleteApiMediaByIdResponses, DeleteApiMenusByIdData, DeleteApiMenusByIdResponses, DeleteApiPagesByIdData, DeleteApiPagesByIdResponses, GetApiAuthCustomerMeData, GetApiAuthCustomerMeResponses, GetApiAuthStaffMeData, GetApiAuthStaffMeResponses, GetApiBackupsByNameData, GetApiBackupsByNameResponses, GetApiBackupsData, GetApiBackupsResponses, GetApiBackupsSettingsData, GetApiBackupsSettingsResponses, GetApiMediaByIdData, GetApiMediaByIdResponses, GetApiMediaData, GetApiMediaResponses, GetApiMenusByIdData, GetApiMenusByIdResponses, GetApiMenusData, GetApiMenusResponses, GetApiPagesByIdData, GetApiPagesByIdResponses, GetApiPagesData, GetApiPagesResponses, GetApiPublicInstanceData, GetApiPublicInstanceResponses, GetApiPublicMediaByKeyData, GetApiPublicMediaByKeyErrors, GetApiPublicMediaByKeyResponses, GetApiPublicMenusByHandleData, GetApiPublicMenusByHandleResponses, GetApiPublicPagesBySlugData, GetApiPublicPagesBySlugResponses, GetApiPublicSiteConfigData, GetApiPublicSiteConfigResponses, GetApiSiteConfigData, GetApiSiteConfigResponses, GetApiTagsData, GetApiTagsResponses, PostApiAuthCustomerChangePasswordData, PostApiAuthCustomerChangePasswordResponses, PostApiAuthCustomerConfirmEmailData, PostApiAuthCustomerConfirmEmailResponses, PostApiAuthCustomerForgotPasswordData, PostApiAuthCustomerForgotPasswordResponses, PostApiAuthCustomerLoginData, PostApiAuthCustomerLoginResponses, PostApiAuthCustomerLogoutData, PostApiAuthCustomerLogoutResponses, PostApiAuthCustomerProfileData, PostApiAuthCustomerProfileResponses, PostApiAuthCustomerRefreshData, PostApiAuthCustomerRefreshResponses, PostApiAuthCustomerRegisterData, PostApiAuthCustomerRegisterResponses, PostApiAuthCustomerRequestVerificationData, PostApiAuthCustomerRequestVerificationResponses, PostApiAuthCustomerResetPasswordData, PostApiAuthCustomerResetPasswordResponses, PostApiAuthStaffChangePasswordData, PostApiAuthStaffChangePasswordResponses, PostApiAuthStaffLoginData, PostApiAuthStaffLoginResponses, PostApiAuthStaffLogoutData, PostApiAuthStaffLogoutResponses, PostApiAuthStaffProfileData, PostApiAuthStaffProfileResponses, PostApiAuthStaffRefreshData, PostApiAuthStaffRefreshResponses, PostApiAuthStaffRegisterData, PostApiAuthStaffRegisterResponses, PostApiBackupsByNameRestoreData, PostApiBackupsByNameRestoreResponses, PostApiBackupsData, PostApiBackupsResponses, PostApiBackupsUploadData, PostApiBackupsUploadResponses, PostApiMediaData, PostApiMediaResponses, PostApiMenusData, PostApiMenusResponses, PostApiPagesByIdPublishData, PostApiPagesByIdPublishResponses, PostApiPagesByIdUnpublishData, PostApiPagesByIdUnpublishResponses, PostApiPagesData, PostApiPagesImportData, PostApiPagesImportResponses, PostApiPagesResponses, PutApiBackupsSettingsData, PutApiBackupsSettingsResponses, PutApiMediaByIdData, PutApiMediaByIdResponses, PutApiMenusByIdData, PutApiMenusByIdResponses, PutApiPagesByIdData, PutApiPagesByIdResponses, PutApiPagesByIdTagsData, PutApiPagesByIdTagsResponses, PutApiSiteConfigData, PutApiSiteConfigResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -17,6 +17,63 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
      */
     meta?: keyof ClientMeta extends never ? Record<string, unknown> : ClientMeta;
 };
+
+export const getApiBackupsSettings = <ThrowOnError extends boolean = true>(options?: Options<GetApiBackupsSettingsData, ThrowOnError>): RequestResult<GetApiBackupsSettingsResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetApiBackupsSettingsResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/backups/settings',
+    ...options
+});
+
+export const putApiBackupsSettings = <ThrowOnError extends boolean = true>(options?: Options<PutApiBackupsSettingsData, ThrowOnError>): RequestResult<PutApiBackupsSettingsResponses, unknown, ThrowOnError> => (options?.client ?? client).put<PutApiBackupsSettingsResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/backups/settings',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers
+    }
+});
+
+export const getApiBackups = <ThrowOnError extends boolean = true>(options?: Options<GetApiBackupsData, ThrowOnError>): RequestResult<GetApiBackupsResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetApiBackupsResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/backups',
+    ...options
+});
+
+export const postApiBackups = <ThrowOnError extends boolean = true>(options?: Options<PostApiBackupsData, ThrowOnError>): RequestResult<PostApiBackupsResponses, unknown, ThrowOnError> => (options?.client ?? client).post<PostApiBackupsResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/backups',
+    ...options
+});
+
+export const deleteApiBackupsByName = <ThrowOnError extends boolean = true>(options: Options<DeleteApiBackupsByNameData, ThrowOnError>): RequestResult<DeleteApiBackupsByNameResponses, unknown, ThrowOnError> => (options.client ?? client).delete<DeleteApiBackupsByNameResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/backups/{name}',
+    ...options
+});
+
+export const getApiBackupsByName = <ThrowOnError extends boolean = true>(options: Options<GetApiBackupsByNameData, ThrowOnError>): RequestResult<GetApiBackupsByNameResponses, unknown, ThrowOnError> => (options.client ?? client).get<GetApiBackupsByNameResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/backups/{name}',
+    ...options
+});
+
+export const postApiBackupsUpload = <ThrowOnError extends boolean = true>(options?: Options<PostApiBackupsUploadData, ThrowOnError>): RequestResult<PostApiBackupsUploadResponses, unknown, ThrowOnError> => (options?.client ?? client).post<PostApiBackupsUploadResponses, unknown, ThrowOnError>({
+    ...formDataBodySerializer,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/backups/upload',
+    ...options,
+    headers: {
+        'Content-Type': null,
+        ...options?.headers
+    }
+});
+
+export const postApiBackupsByNameRestore = <ThrowOnError extends boolean = true>(options: Options<PostApiBackupsByNameRestoreData, ThrowOnError>): RequestResult<PostApiBackupsByNameRestoreResponses, unknown, ThrowOnError> => (options.client ?? client).post<PostApiBackupsByNameRestoreResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/backups/{name}/restore',
+    ...options
+});
 
 export const postApiAuthCustomerRegister = <ThrowOnError extends boolean = true>(options?: Options<PostApiAuthCustomerRegisterData, ThrowOnError>): RequestResult<PostApiAuthCustomerRegisterResponses, unknown, ThrowOnError> => (options?.client ?? client).post<PostApiAuthCustomerRegisterResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],

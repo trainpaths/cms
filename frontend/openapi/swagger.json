@@ -5,6 +5,296 @@
     "version": "v1"
   },
   "paths": {
+    "/api/backups/settings": {
+      "get": {
+        "tags": [
+          "Backups"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupSettingsResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupSettingsResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupSettingsResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Backups"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/UpdateBackupSettingsRequest"
+                  }
+                ]
+              }
+            },
+            "text/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/UpdateBackupSettingsRequest"
+                  }
+                ]
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/UpdateBackupSettingsRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupSettingsResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupSettingsResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupSettingsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/backups": {
+      "get": {
+        "tags": [
+          "Backups"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BackupInfo"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BackupInfo"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BackupInfo"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Backups"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupInfo"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupInfo"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/backups/{name}": {
+      "get": {
+        "tags": [
+          "Backups"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/gzip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Backups"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/backups/upload": {
+      "post": {
+        "tags": [
+          "Backups"
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              },
+              "encoding": {
+                "file": {
+                  "style": "form"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupInfo"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupInfo"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/backups/{name}/restore": {
+      "post": {
+        "tags": [
+          "Backups"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreResult"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreResult"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/auth/customer/register": {
       "post": {
         "tags": [
@@ -2010,6 +2300,128 @@
         },
         "additionalProperties": false
       },
+      "BackupInfo": {
+        "required": [
+          "createdAt",
+          "kind",
+          "name",
+          "size"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BackupKind"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "cmsVersion": {
+            "type": "string",
+            "nullable": true
+          },
+          "mediaCount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "error": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "BackupInterval": {
+        "enum": [
+          "off",
+          "daily",
+          "weekly"
+        ],
+        "type": "string"
+      },
+      "BackupKind": {
+        "enum": [
+          "auto",
+          "manual",
+          "pre-restore",
+          "upload"
+        ],
+        "type": "string"
+      },
+      "BackupSettingsResponse": {
+        "required": [
+          "directory",
+          "interval",
+          "maxUploadBytes",
+          "retention",
+          "timeOfDay",
+          "weekday"
+        ],
+        "type": "object",
+        "properties": {
+          "interval": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BackupInterval"
+              }
+            ]
+          },
+          "timeOfDay": {
+            "type": "string"
+          },
+          "weekday": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "retention": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "lastRunAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastError": {
+            "type": "string",
+            "nullable": true
+          },
+          "nextRunAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "directory": {
+            "type": "string"
+          },
+          "hostPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "freeBytes": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "maxUploadBytes": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "additionalProperties": false
+      },
       "Block": {
         "required": [
           "attributes",
@@ -2910,6 +3322,18 @@
         },
         "additionalProperties": false
       },
+      "RestoreResult": {
+        "required": [
+          "preRestoreBackup"
+        ],
+        "type": "object",
+        "properties": {
+          "preRestoreBackup": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "SiteConfigResponse": {
         "required": [
           "fields",
@@ -3035,6 +3459,36 @@
             "type": "string"
           },
           "pageCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateBackupSettingsRequest": {
+        "required": [
+          "interval",
+          "retention",
+          "timeOfDay",
+          "weekday"
+        ],
+        "type": "object",
+        "properties": {
+          "interval": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BackupInterval"
+              }
+            ]
+          },
+          "timeOfDay": {
+            "type": "string"
+          },
+          "weekday": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "retention": {
             "type": "integer",
             "format": "int32"
           }
@@ -3214,6 +3668,9 @@
     }
   ],
   "tags": [
+    {
+      "name": "Backups"
+    },
     {
       "name": "CustomerAuth"
     },

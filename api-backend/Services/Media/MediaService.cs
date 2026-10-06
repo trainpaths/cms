@@ -49,6 +49,10 @@ public partial class MediaService(AppDbContext db, IBlobStorage blobs, ILogger<M
 
 	public static string PublicUrl(string storageKey) => PublicUrlPrefix + storageKey;
 
+	/// <summary>Content type of a valid storage key, from its extension (a backup restore re-uploads bare blobs).</summary>
+	public static string ContentTypeOf(string storageKey) =>
+		Formats.First(f => storageKey.EndsWith("." + f.Ext, StringComparison.Ordinal)).ContentType;
+
 	/// <summary>The asset as blocks and the site config reference it (public URL + alt).</summary>
 	public static MediaRef ToRef(MediaAsset asset) => new(asset.Id, PublicUrl(asset.StorageKey), asset.Alt);
 

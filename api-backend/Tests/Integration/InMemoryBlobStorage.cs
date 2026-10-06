@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using api_backend.Services.Media;
 
 namespace api_backend.Tests.Integration;
@@ -19,6 +20,13 @@ public class InMemoryBlobStorage : IBlobStorage
 		Task.FromResult(Blobs.TryGetValue(key, out var blob)
 			? new BlobObject(new MemoryStream(blob.Bytes), blob.ContentType, blob.Bytes.Length)
 			: null);
+
+	public async IAsyncEnumerable<string> ListKeysAsync([EnumeratorCancellation] CancellationToken ct)
+	{
+		foreach (var key in Blobs.Keys)
+			yield return key;
+		await Task.CompletedTask;
+	}
 
 	public Task DeleteAsync(string key, CancellationToken ct)
 	{

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using api_backend.Models.Auth;
 using api_backend.Models.Auth.JWT;
+using api_backend.Models.Backup;
 using api_backend.Models.Dto;
 using api_backend.Models.Media;
 using api_backend.Models.Menus;
@@ -28,6 +29,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 	public DbSet<PageTag> PageTags => Set<PageTag>();
 	public DbSet<Menu> Menus => Set<Menu>();
 	public DbSet<RenderedPage> RenderedPages => Set<RenderedPage>();
+	public DbSet<BackupSettings> BackupSettings => Set<BackupSettings>();
 
 	// camelCase in the jsonb column, matching the API and the frontend BlockInstance shape.
 	private static readonly JsonSerializerOptions BlockJson = new(JsonSerializerDefaults.Web);
@@ -251,6 +253,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 			e.Property(x => x.Slug).HasMaxLength(100).IsRequired();
 			e.Property(x => x.RendererVersion).HasMaxLength(64).IsRequired();
 			e.HasOne(x => x.Page).WithOne().HasForeignKey<RenderedPage>(x => x.PageId).OnDelete(DeleteBehavior.Cascade);
+		});
+
+		b.Entity<BackupSettings>(e =>
+		{
+			e.ToTable(BackupTables.Settings);
+			e.HasKey(x => x.Id);
+			e.Property(x => x.Id).ValueGeneratedNever();
+			e.Property(x => x.Interval).HasConversion<string>().HasMaxLength(16);
+			e.Property(x => x.Weekday).HasConversion<string>().HasMaxLength(16);
+			e.Property(x => x.LastError).HasMaxLength(2000);
 		});
 
 		// Stable GUIDs → deterministic migrations.
