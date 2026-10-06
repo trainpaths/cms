@@ -7,6 +7,8 @@ import { documentTitle } from '../../../public/head'
 import { useEditorStore } from '../../../stores/editor'
 import { useSiteConfigStore } from '../../../stores/siteConfig'
 import { useTagsStore } from '../../../stores/tags'
+import { pageExportFileName, toPageExport } from '../../pageExport'
+import { saveJson } from '../../download'
 
 const store = useEditorStore()
 const tags = useTagsStore()
@@ -26,6 +28,21 @@ watch(
 	() => store.pageSlug,
 	(slug) => (slugDraft.value = slug),
 )
+
+// what's on screen, saved or not
+function downloadJson() {
+	saveJson(
+		toPageExport({
+			title: store.pageTitle,
+			slug: store.pageSlug,
+			metaTitle: store.pageMetaTitle,
+			metaDescription: store.pageMetaDescription,
+			tags: store.pageTags,
+			blocks: store.blocks,
+		}),
+		pageExportFileName(store.pageSlug),
+	)
+}
 
 async function commitSlug() {
 	const slug = slugDraft.value.trim().toLowerCase()
@@ -134,6 +151,18 @@ async function commitSlug() {
 					{{ store.pageStatus === 'published' ? 'Unpublish' : 'Publish' }}
 				</button>
 			</div>
+		</SettingsSection>
+		<SettingsSection title="Export">
+			<button
+				class="cursor-pointer rounded border border-gray-300 bg-white px-12 py-4 text-xs text-gray-700 hover:bg-gray-50"
+				data-testid="page-download-json"
+				@click="downloadJson"
+			>
+				Download JSON
+			</button>
+			<p class="mt-8 mb-0 text-xs text-gray-400">
+				A copy of this page. Import it on the Pages list to create a new draft.
+			</p>
 		</SettingsSection>
 	</div>
 </template>

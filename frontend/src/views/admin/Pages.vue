@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Alert, Badge, Button, EmptyState, Input, Loading, useConfirm } from '@trainpaths/nb-ui'
-import { deleteApiPagesById, postApiPages } from '../../api/sdk.gen'
+import { Alert, Badge, Button, EmptyState, Input, Loading, useConfirm, useToast } from '@trainpaths/nb-ui'
+import { deleteApiPagesById, getApiPagesById, postApiPages, postApiPagesImport } from '../../api/sdk.gen'
 import { errorMessage as describe, type PageSummary } from '../../lib/web-editor'
 import { usePagesStore } from '../../stores/pages'
 import { useTagsStore } from '../../stores/tags'
 import { usePageFilter } from '../../composables/usePageFilter'
 import PageFilters from '../../components/PageFilters.vue'
 import PageEditDialog from '../../components/PageEditDialog.vue'
+import { PageExportError, pageExportFileName, parsePageExport, toPageExport } from '../../lib/pageExport'
+import { saveJson } from '../../lib/download'
 
 const router = useRouter()
 
@@ -21,6 +23,9 @@ const tagsStore = useTagsStore()
 const { search, tag, status, sort, active: filtering, filtered, reset } = usePageFilter(() => pages.items)
 const editing = ref<PageSummary | null>(null)
 const { confirm } = useConfirm()
+const { toast } = useToast()
+const importInput = ref<HTMLInputElement | null>(null)
+const importing = ref(false)
 
 onMounted(async () => {
 	tagsStore.load()
@@ -48,6 +53,43 @@ function viewHref(page: PageSummary): string {
 	return page.status === 'published'
 		? router.resolve({ name: 'public-page', params: { slug: page.slug } }).href
 		: router.resolve({ name: 'admin-page-preview', params: { id: page.id } }).href
+}
+
+async function handleDownloadPage(page: PageSummary) {
+	try {
+		const { data } = await getApiPagesById({ path: { id: page.id } })
+		pages.remember(data)
+		saveJson(toPageExport(data), pageExportFileName(data.slug))
+	} catch (err: unknown) {
+		errorMessage.value = describe(err, 'Failed to download page')
+	}
+}
+
+// always a new draft, never overwrites (slug deduplicated by the API)
+async function handleImportFile(event: Event) {
+	const input = event.target as HTMLInputElement
+	const file = input.files?.[0]
+	input.value = '' // same file can be picked again
+	if (!file) return
+	importing.value = true
+	try {
+		const body = parsePageExport(await file.text())
+		const { data } = await postApiPagesImport({ body })
+		pages.add(data.page)
+		tagsStore.refresh()
+		const missing = data.missingMediaIds.length
+		toast({
+			message:
+				`Imported as draft /${data.page.slug}` +
+				(missing ? `; ${missing} image${missing === 1 ? '' : 's'} not found in the media library` : ''),
+			type: missing ? 'warning' : 'success',
+		})
+		await router.push({ name: 'admin-page-editor', params: { id: data.page.id } })
+	} catch (err: unknown) {
+		errorMessage.value = err instanceof PageExportError ? err.message : describe(err, 'Failed to import page')
+	} finally {
+		importing.value = false
+	}
 }
 
 async function handleDeletePage(page: PageSummary) {
@@ -88,12 +130,32 @@ async function handleDeletePage(page: PageSummary) {
 		<div>
 			<div class="mb-12 flex items-center justify-between">
 				<h2 class="mb-0 text-lg">All pages</h2>
-				<Button
-					bg="primary"
-					@click="showNewPageInput = true"
-				>
-					+ New Page
-				</Button>
+				<div class="flex gap-8">
+					<Button
+						variant="outline"
+						text="primary"
+						title="Create a draft page from an exported page file (.json)"
+						:loading="importing"
+						data-testid="page-import"
+						@click="importInput?.click()"
+					>
+						Import page
+					</Button>
+					<input
+						ref="importInput"
+						type="file"
+						accept="application/json,.json"
+						class="hidden"
+						data-testid="page-import-file"
+						@change="handleImportFile"
+					/>
+					<Button
+						bg="primary"
+						@click="showNewPageInput = true"
+					>
+						+ New Page
+					</Button>
+				</div>
 			</div>
 			<div
 				v-if="showNewPageInput"
@@ -254,6 +316,36 @@ async function handleDeletePage(page: PageSummary) {
 							cx="12"
 							cy="12"
 							r="3"
+						/>
+					</svg>
+				</Button>
+				<Button
+					variant="ghost"
+					text="secondary"
+					square
+					title="Download as JSON"
+					aria-label="Download page as JSON"
+					data-testid="page-download"
+					@click="handleDownloadPage(page)"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="16"
+						height="16"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+						<polyline points="7 10 12 15 17 10" />
+						<line
+							x1="12"
+							y1="15"
+							x2="12"
+							y2="3"
 						/>
 					</svg>
 				</Button>
