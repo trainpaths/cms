@@ -1,5 +1,7 @@
 .env
 .git
+# backup archives (BACKUP_DIR bind mount)
+backups
 .vscode
 .idea
 
