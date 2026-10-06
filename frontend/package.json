@@ -1,6 +1,6 @@
 {
 	"name": "@trainpaths/cms",
-	"version": "0.1.0",
+	"version": "0.4.0",
 	"description": "Block-based CMS (admin SPA, block editor, server-rendered public site), shipped as source to instance apps",
 	"license": "MIT",
 	"type": "module",
