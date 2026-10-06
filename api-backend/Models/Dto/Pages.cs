@@ -45,6 +45,21 @@ public record CreatePageRequest(
 	[MaxLength(100)] string? Slug,
 	List<Block>? Blocks);
 
+/// <summary>
+/// A page from an exported page file (frontend <c>lib/pageExport.ts</c>). Always creates a new draft; the slug is
+/// deduplicated instead of rejected.
+/// </summary>
+public record ImportPageRequest(
+	[Required, MaxLength(200)] string Title,
+	[MaxLength(100)] string? Slug,
+	[Required] List<Block> Blocks,
+	[MaxLength(PageService.MaxMetaTitleLength)] string? MetaTitle,
+	[MaxLength(PageService.MaxMetaDescriptionLength)] string? MetaDescription,
+	[MaxLength(TagLimits.MaxPerPage)] List<string>? Tags);
+
+/// <summary><see cref="MissingMediaIds"/>: <c>mediaId</c>s in the blocks that this site's media library doesn't have.</summary>
+public record ImportPageResult(PageDetail Page, List<Guid> MissingMediaIds);
+
 /// <summary>Partial update: only non-null fields are applied (empty meta strings clear them).</summary>
 public record UpdatePageRequest(
 	[MaxLength(200)] string? Title,

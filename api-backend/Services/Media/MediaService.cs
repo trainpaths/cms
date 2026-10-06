@@ -150,13 +150,20 @@ public partial class MediaService(AppDbContext db, IBlobStorage blobs, ILogger<M
 	/// </summary>
 	public static async Task<List<MediaRef>> ResolveRefsAsync(AppDbContext db, List<Block> blocks, CancellationToken ct)
 	{
-		var ids = new HashSet<Guid>();
-		Collect(blocks);
+		var ids = CollectIds(blocks);
 		if (ids.Count == 0)
 			return [];
 
 		var assets = await db.MediaAssets.AsNoTracking().Where(m => ids.Contains(m.Id)).ToListAsync(ct);
 		return assets.Select(ToRef).ToList();
+	}
+
+	/// <summary>Every <c>mediaId</c> attribute in the tree that holds a GUID.</summary>
+	public static HashSet<Guid> CollectIds(List<Block> blocks)
+	{
+		var ids = new HashSet<Guid>();
+		Collect(blocks);
+		return ids;
 
 		void Collect(List<Block> level)
 		{

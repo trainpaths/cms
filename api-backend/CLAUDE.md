@@ -35,6 +35,8 @@ PagesController        /api/pages            [Authorize(StaffOnly)], rate limit 
   GET    /                     → PageSummary[] (incl. blockCount, newest updated first)
   GET    /{id}                 → PageDetail | 404
   POST   /                     CreatePageRequest(title, slug?, blocks?) → 201 PageDetail | 400 | 409 slug taken
+  POST   /import               ImportPageRequest(title, slug?, blocks, metaTitle?, metaDescription?, tags?) → 201
+                                 ImportPageResult(page, missingMediaIds) | 400 — always a new draft, never overwrites
   PUT    /{id}                 UpdatePageRequest(title?, slug?, blocks?) — partial → PageDetail | 400 (incl. locked slug,
                                  non-editable blocks) | 404 | 409
   PUT    /{id}/tags            UpdatePageTagsRequest(tags[]) — full replace → PageDetail | 400 | 404 (UpdatedAt untouched)
@@ -67,6 +69,10 @@ TagsController         /api/tags             [Authorize(StaffOnly)], rate limit 
   `Services/Cms/DefaultPages.cs` = the default config's pages: **Home** (`home`, served at `/`), **Privacy Policy**
   (`privacy-policy`), **Legal** (`legal`), the last two `footer`. Block attributes must match the frontend blocks'
   `attributes` (`blocks/*/index.ts`).
+- Import (`PageService.ImportAsync`, page export files of `frontend/src/lib/pageExport.ts`): same validation as create +
+  meta + tags (validated before anything is written); slug = the given one (or the title) through `UniqueSlugFromAsync`,
+  so taken/reserved/invalid slugs get a free variant instead of 409. `missingMediaIds` = `mediaId`s
+  (`MediaService.CollectIds`) not in `media_assets`: kept in the blocks, image renders empty.
 - Page meta: `MetaTitle` (≤70) / `MetaDescription` (≤200), columns (default ''), edited in the editor (partial PUT; empty
   clears), served in `PageDetail` + `PublicPage`; the public `<head>` builds the title "{meta} - {firm name}" from them.
 - Config pages (`CmsConfig`): **locked** (`locked` or `template`) → slug change / delete = 400; `editable: false` → block
@@ -335,6 +341,7 @@ ResetPasswordRequest        Token, NewPassword(min8)
 PageSummary / PageDetail    Id, Title, Slug, Status, Tags, BlockCount | Blocks + Media, CreatedAt, UpdatedAt, PublishedAt,
                             Locked (summary) | Template?, Locked, Editable (detail; from the instance config), MetaTitle, MetaDescription
 CreatePageRequest           Title(≤200), Slug?(≤100), Blocks?
+ImportPageRequest           Title, Slug?, Blocks, MetaTitle?, MetaDescription?, Tags?   ImportPageResult  Page, MissingMediaIds
 UpdatePageRequest           Title?, Slug?, Blocks?, MetaTitle?(≤70), MetaDescription?(≤200)   (partial)
 PublicPage                  Title, Slug, Blocks, Media, PublishedAt, Template?, MetaTitle, MetaDescription
 InstanceConfig              PublicAuth, ExcludedBlocks, SiteConfig (SiteConfigSchema: fields[], groups[])
