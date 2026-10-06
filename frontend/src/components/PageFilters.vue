@@ -42,7 +42,7 @@ const statusOptions: { value: PageStatusFilter; label: string }[] = [
 				v-model="tag"
 				:options="tagOptions"
 				class="min-w-0 flex-1"
-				:class="{ 'min-w-160': !compact }"
+				:class="{ 'min-w-110 sm:min-w-160': !compact }"
 				aria-label="Filter by tag"
 				data-testid="page-filter-tag"
 			/>
@@ -51,7 +51,7 @@ const statusOptions: { value: PageStatusFilter; label: string }[] = [
 				v-model="status"
 				:options="statusOptions"
 				class="min-w-0 flex-1"
-				:class="{ 'min-w-160': !compact }"
+				:class="{ 'min-w-100 sm:min-w-160': !compact }"
 				aria-label="Filter by status"
 				data-testid="page-filter-status"
 			/>

@@ -367,7 +367,7 @@ async function handleDeletePage(page: PageSummary) {
 					:items="rowActions(page)"
 					:label="`Actions for ${page.title}`"
 					test-id="page-actions"
-					class="mr-8"
+					class="mr-2"
 				/>
 			</div>
 		</div>
