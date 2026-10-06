@@ -145,7 +145,7 @@ weekday for weekly + biweekly, day 1-28 for monthly), storage folder (`hostPath`
 | `/forgot-password` | `ForgotPassword.vue` | guest |
 | `/reset-password` | `ResetPassword.vue` (`?token=`) | public |
 | `/verify-email` | `VerifyEmail.vue` (`?token=`) | public |
-| `/admin/pages` | `admin/Pages.vue` (list with search / tag filter / status filter (All statuses / Published / Not published; only here, `v-model:status` shows it) / updatedAt sort toggle (clock + arrow icon button, down = newest first) (`PageFilters` + `composables/usePageFilter.ts`), tag chips, row = view/preview link + "…" `components/ActionMenu.vue` (Edit → modal `components/PageEditDialog.vue` (slug, published, tags; saves only what changed via slug PUT → publish/unpublish → tags PUT), Duplicate (fetch + `POST /api/pages/import` as "<title> (copy)", slug `-2`…, stays on the list), Export (JSON of the saved page), Delete (confirm; disabled for locked pages)); "+ New Page" opens a row: Import (primary outline, download icon + "Import", icon only below sm; file → `parsePageExport` → `POST /api/pages/import` → editor of the new draft, toast warns about missing images), title input, Create, cancel (x icon)) | staff |
+| `/admin/pages` | `admin/Pages.vue` (list with search / tag filter / status filter (All statuses / Published / Not published; only here, `v-model:status` shows it) / updatedAt sort toggle (clock + arrow icon button, down = newest first) (`PageFilters` + `composables/usePageFilter.ts`), tag chips, row = view/preview link + "…" `components/ActionMenu.vue` (Edit → modal `components/PageEditDialog.vue` (slug, published, tags; saves only what changed via slug PUT → publish/unpublish → tags PUT), Duplicate (fetch + `POST /api/pages/import` as "<title> (copy)", slug `-2`…, stays on the list), Export (JSON of the saved page), Delete (confirm; disabled for locked pages)); "+ New Page" opens a row: Import (primary outline, upload icon + "Import", icon only below sm; file → `parsePageExport` → `POST /api/pages/import` → editor of the new draft, toast warns about missing images), title input, Create, cancel (x icon)) | staff |
 | `/admin/pages/:id` | `admin/PageEditor.vue` → `WebEditor` (no nav) | staff |
 | `/admin/pages/:id/preview` | `admin/PagePreview.vue` (draft preview, no nav) | staff |
 | `/admin/media` | `admin/Media.vue` (rename + alt; library grid 3/4/6 cols; details in a fixed right sidebar on lg+, modal below; click again to close) | staff |
@@ -225,6 +225,9 @@ Bumping nb-ui = devDependency + peerDependency here + `playground/package.json` 
 `EmptyState`, `useConfirm()` (every delete; never `window.confirm`; e2e clicks `confirm-ok`). Also available: `Textarea`,
 `Checkbox`, `RadioGroup`, `Dropdown`, `Tooltip`, `Tabs`, `Table`, `Pagination`, `Avatar`, `Skeleton`, `ProgressBar`, `Icon`.
 Colour props (`bg`, `text`, `border`) take theme colour names. `App.vue` mounts the global `ToastContainer` + `ConfirmDialog`.
+- UI icons: nb-ui `Icon`, no inline SVGs (exceptions: block-type `…Icon.vue`s, the `PageFilters` sort icon). Directional
+  shapes exist once pointing left (`chevron`, `arrow`, `panel`) + `rotate` (90 up, 180 right, 270 down). Missing
+  icon → add it to nb-ui's `Icon.vue`.
 - `Button` renders `type="button"` by default: submit buttons need `type="submit"` (outside the form: `form="<id>"`).
 - **Override** a component (per instance): create `src/overrides/ui/<Name>.vue` in the app (restart dev server). It
   replaces the library's file everywhere, incl. inside the library. Wrap the original via
@@ -258,7 +261,7 @@ src/style.css          Tailwind import + nb-ui theme.css + @source of the packag
 src/lib/web-editor/     block editor library (own CLAUDE.md)
 src/views/             route views (admin/ = page management)
 src/components/        app shell pieces (AppNav, AdminBar, SiteHeader + site/, SiteFooter, ConfigImageField, PageFilters,
-                       PageEditDialog, ActionMenu ("…" menu like nb-ui Dropdown, own edit/copy/download/trash icons),
+                       PageEditDialog, ActionMenu ("…" menu like nb-ui Dropdown + per-item title/testid; nb-ui icon names),
                        menus/ tree editor, ProfileDetails, backups/BackupsPanel)
 src/composables/       usePageFilter (search/tag/status/sort over PageSummary[])
 src/lib/menus/tree.ts  pure menu tree ops (locate, move, indent/outdent, depth checks)

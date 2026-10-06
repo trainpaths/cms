@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
+import { Icon } from '@trainpaths/nb-ui'
 import { useEditorStore } from '../../../stores/editor'
 
 const props = defineProps<{
@@ -37,21 +38,7 @@ function handleTitleBlur() {
 				aria-label="Back"
 				@click="emit('back')"
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					width="18"
-					height="18"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					aria-hidden="true"
-				>
-					<path d="M19 12H5" />
-					<path d="m12 19-7-7 7-7" />
-				</svg>
+				<Icon name="arrow" :size="18" />
 			</button>
 			<button
 				class="header-icon-btn"
@@ -62,27 +49,7 @@ function handleTitleBlur() {
 				data-testid="toggle-left-sidebar"
 				@click="store.toggleInserterSidebar()"
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					width="18"
-					height="18"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					aria-hidden="true"
-				>
-					<rect
-						x="3"
-						y="3"
-						width="18"
-						height="18"
-						rx="2"
-					/>
-					<path d="M9 3v18" />
-				</svg>
+				<Icon name="panel" :size="18" />
 			</button>
 			<!-- < sm: hidden, no room (title + publish live in the Page tab there) -->
 			<input
@@ -122,22 +89,7 @@ function handleTitleBlur() {
 				:aria-label="isPublished ? 'View' : 'Preview'"
 				target="_blank"
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					width="18"
-					height="18"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					aria-hidden="true"
-				>
-					<path d="M15 3h6v6" />
-					<path d="M10 14 21 3" />
-					<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-				</svg>
+				<Icon name="external-link" :size="18" />
 			</RouterLink>
 			<!-- < sm: hidden, Page tab has the publish toggle -->
 			<button
@@ -155,24 +107,7 @@ function handleTitleBlur() {
 				:disabled="store.saveStatus === 'saving'"
 				@click="store.savePage()"
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					width="18"
-					height="18"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					aria-hidden="true"
-				>
-					<path
-						d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"
-					/>
-					<path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7" />
-					<path d="M7 3v4a1 1 0 0 0 1 1h7" />
-				</svg>
+				<Icon name="save" :size="18" />
 			</button>
 			<button
 				class="header-icon-btn"
@@ -183,27 +118,7 @@ function handleTitleBlur() {
 				data-testid="toggle-right-sidebar"
 				@click="store.toggleSettingsPanel()"
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					width="18"
-					height="18"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					aria-hidden="true"
-				>
-					<rect
-						x="3"
-						y="3"
-						width="18"
-						height="18"
-						rx="2"
-					/>
-					<path d="M15 3v18" />
-				</svg>
+				<Icon name="panel" :size="18" :rotate="180" />
 			</button>
 		</div>
 	</header>

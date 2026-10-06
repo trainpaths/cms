@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue'
+import { Icon } from '@trainpaths/nb-ui'
 import { useEditorStore } from '../../../stores/editor'
 import { getBlockType } from '../core/blockRegistry'
 import type { BlockInstance } from '../core/types'
@@ -44,21 +45,7 @@ async function select() {
 				:aria-label="expanded ? 'Collapse' : 'Expand'"
 				@click="outline.toggle(block.id)"
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					width="12"
-					height="12"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2.5"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					class="transition-transform"
-					:class="{ 'rotate-90': expanded }"
-				>
-					<polyline points="9 6 15 12 9 18" />
-				</svg>
+				<Icon name="chevron" :size="12" :rotate="expanded ? 270 : 180" class="transition-transform" />
 			</button>
 			<span
 				v-else

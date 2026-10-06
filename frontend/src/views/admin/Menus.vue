@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
-import { Button, Loading, UnsavedChangesDialog, useConfirm, useToast, useUnsavedChanges } from '@trainpaths/nb-ui'
+import { Button, Icon, Loading, UnsavedChangesDialog, useConfirm, useToast, useUnsavedChanges } from '@trainpaths/nb-ui'
 import { deleteApiMenusById, getApiMenus, getApiMenusById, postApiMenus, putApiMenusById } from '../../api/sdk.gen'
 import {
 	MENU_HANDLE_MAX,
@@ -424,19 +424,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 							data-testid="menu-picker-add"
 							@click="addPage(page)"
 						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								width="18"
-								height="18"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2.5"
-								stroke-linecap="round"
-								aria-hidden="true"
-							>
-								<path d="M12 5v14M5 12h14" />
-							</svg>
+							<Icon name="plus" :size="18" />
 						</button>
 					</li>
 				</ul>
