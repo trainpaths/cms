@@ -1,7 +1,7 @@
 import { test as base, type Locator, type Page, expect } from '@playwright/test'
 
 // Staff accounts can't self-register; the editor specs log in as the bootstrap super admin.
-// Locally: set BOOTSTRAP_SUPERADMIN_* in the root .env (docker-compose) and export the same
+// Locally: set BOOTSTRAP_SUPERADMIN_* in the root .env (docker compose) and export the same
 // values when running Playwright. CI sets both (see .github/workflows/ci.yml).
 export const staffCredentials = {
 	email: process.env.E2E_STAFF_EMAIL ?? process.env.BOOTSTRAP_SUPERADMIN_EMAIL ?? '',

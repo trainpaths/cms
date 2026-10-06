@@ -38,7 +38,7 @@ src/style.css          @import '@trainpaths/cms/style.css'; + the site theme
 src/blocks/<name>/     instance blocks
 src/templates/<name>.vue   template pages
 src/overrides/<Name>.vue   component overrides (nb-ui components: src/overrides/ui/<Name>.vue)
-Dockerfile, docker-compose.yml, .env.example
+Dockerfile, compose.yaml, .env.example
 ```
 Build: `vue-tsc -b && vite build && vite build --ssr src/entry-server.ts --outDir dist-ssr`.
 
@@ -200,10 +200,17 @@ paragraph. Link-preview image: the page's first image, else the share image from
   `dist-ssr/`; run from that directory), **api** (`FROM ghcr.io/trainpaths/cms-api:<version>` +
   `COPY cms.config.json /app/`).
 - Environment: the CMS repo's `.env.example` lists every variable (DB, JWT key, S3 keys, SMTP, first admin).
+- **Network** (the starter's `compose.yaml`): postgres + seaweedfs on an internal `backend` network (only the api joins
+  it; seaweedfs's master/filer ports have no auth), frontend + api ports published on **127.0.0.1 only** (Docker
+  ports bypass ufw). The api port is only for the Vite dev proxy. Serve the site through a reverse proxy on the host
+  (TLS) → `127.0.0.1:FRONTEND_PORT`, which must set X-Forwarded-For (Caddy does by default): the CMS `nginx.conf`
+  trusts it from the Docker gateway (`172.16.0.0/12`) so rate limits see each visitor's IP.
 - **Backups** (super admins: Profile → Backups) are written to `/backups` in the api container. Mount it, or archives
-  vanish with the container: `- ${BACKUP_DIR:-backups}:/backups` on the api service (+ a `backups:` volume, and
-  `Backup__HostPath: ${BACKUP_DIR:-}` so the admin can show the host folder). A host folder must be writable by uid
-  1654 (`sudo chown 1654 ./backups`). Copy archives off the server (download, or sync the folder). The api image
+  vanish with the container: `- ${BACKUP_DIR:-./backups}:/backups` on the api service, plus
+  `Backup__HostPath: ${BACKUP_DIR:-./backups}` so the admin can show the host folder. The api runs as uid 1654 and
+  Docker creates a missing folder as root, so the starter adds a one-shot `backups-init` service (`busybox`,
+  `chown 1654:1654 /backups`, api `depends_on` it with `service_completed_successfully`). Keep `backups` in
+  `.gitignore` and `.dockerignore`. Copy archives off the server (download, or sync the folder). The api image
   ships the PostgreSQL 18 client tools for this; with a managed Postgres the DB user must own the `public` schema.
 
 ## Upgrading

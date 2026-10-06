@@ -270,6 +270,6 @@ src/lib/pageExport.ts  page export file (`{format: "cms-page", version, exported
                        on-screen state, the row menu's Export the saved copy
 src/lib/download.ts    saveBlob / saveJson (browser file download)
 src/lib/backupUpload.ts uploadBackup (XHR for progress; ensureSession + bearer itself) + formatBytes
-nginx.conf             `/` + `/{slug}` → API HTML endpoint (X-Accel-Redirect to index.html/public.html), SPA fallback, /api proxy (64k; /api/pages 2m; /api/menus 512k; /api/media 11m; /api/backups 2g, unbuffered, 15 min timeouts), CSP (img-src 'self' only: uploads are same-origin)
+nginx.conf             `/` + `/{slug}` → API HTML endpoint (X-Accel-Redirect to index.html/public.html), SPA fallback, /api proxy (64k; /api/pages 2m; /api/menus 512k; /api/media 11m; /api/backups 2g, unbuffered, 15 min timeouts; proxy headers set once at server level; real client IP from the host proxy's X-Forwarded-For, trusted from 172.16.0.0/12), CSP (img-src 'self' only: uploads are same-origin)
 public/favicon.svg     CMS admin icon (emitted by cms() unless the instance has its own)
 ```

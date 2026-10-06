@@ -154,7 +154,7 @@ builder.Services.AddSingleton(sp => CmsConfigLoader.Load(
 // CMS pages (block editor)
 builder.Services.AddScoped<PageService>();
 
-// Media library: bytes in S3-compatible storage (SeaweedFS in docker-compose)
+// Media library: bytes in S3-compatible storage (SeaweedFS in the compose stack)
 // Validated at host start (not eagerly) so test config overrides apply.
 var s3Options = builder.Services.AddOptions<S3StorageOptions>()
 	.Bind(builder.Configuration.GetSection(S3StorageOptions.SectionName));

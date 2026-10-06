@@ -51,7 +51,8 @@ playground/              instance app on `workspace:*` (cms.config.json, index.h
 api-backend/             .NET API (+ Tests/: xUnit unit + Testcontainers integration)
 package.json, pnpm-workspace.yaml   pnpm workspace root (frontend + playground; ESLint, all repo scripts)
 Dockerfile               5-stage build: api-build → frontend-build (playground) → api → renderer → frontend
-docker-compose.yml       postgres + seaweedfs + api + renderer + frontend (the playground instance)
+compose.yaml             postgres + seaweedfs (internal `backend` network) + api + renderer + frontend (the playground
+                         instance); ports on 127.0.0.1 only; `backups-init` chowns the backups bind mount
 .env.example             copy to .env (git-ignored)
 ```
 
@@ -87,10 +88,12 @@ none; CI installs them): build an SDK image with `postgresql-client-18` (same ap
 stage) and run the command above with it.
 
 ## .env vars
-`.env` is read by docker-compose (`${VAR}` interpolation) and Vite (`loadEnv`). Host-side
-`dotnet run` does **not** read it; it uses `appsettings*.json`. Postgres and SeaweedFS are not exposed to the host.
+`.env` is read by docker compose (`${VAR}` interpolation) and Vite (`loadEnv`). Host-side
+`dotnet run` does **not** read it; it uses `appsettings*.json`. Postgres and SeaweedFS are not exposed to the host and
+sit on the internal `backend` network (only the api joins both). Production: a reverse proxy on the host → `127.0.0.1:FRONTEND_PORT`
+(nginx trusts its X-Forwarded-For, see ARCHITECTURE.md → Networking).
 ```
-API_PORT=5183 / FRONTEND_PORT=5173     host ports
+API_PORT=5183 / FRONTEND_PORT=5173     host ports (bound to 127.0.0.1; API_PORT only matters for `pnpm dev`)
 DB_NAME, DB_USER, DB_PASSWORD          postgres + api connection string
 ASPNETCORE_ENVIRONMENT                 Production (default) | Development
 CORS_ORIGINS                           → Cors:Origins
@@ -102,10 +105,10 @@ FORWARDED_KNOWN_NETWORKS               → ForwardedHeaders:KnownNetworks
 AUTH_SECURE_COOKIE                     → Auth:SecureCookie
 BOOTSTRAP_SUPERADMIN_EMAIL/PASSWORD    first staff account (= site owner who can use the editor)
 S3_ACCESS_KEY/S3_SECRET_KEY (required), S3_BUCKET   SeaweedFS admin identity → Storage:S3:* (endpoint fixed: http://seaweedfs:8333)
-BACKUP_DIR                             host folder for backup archives (→ /backups in the api; empty = volume `backups`)
+BACKUP_DIR                             host folder for backup archives (→ /backups in the api; empty = ./backups)
 SMTP_*, EMAIL_FROM, EMAIL_FROM_NAME, APP_BASE_URL   email (empty SMTP_HOST → console sender); APP_BASE_URL is also
                                        the public origin in canonical/OG tags (→ Renderer:PublicBaseUrl)
-VITE_API_BASE_URL                      Vite dev proxy target only
+VITE_API_BASE_URL                      Vite dev proxy target only (http://127.0.0.1:API_PORT; the port is IPv4-only)
 ```
 
 ## Data flow

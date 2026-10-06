@@ -1,11 +1,11 @@
 # playground — the in-repo CMS instance
 
 A minimal instance app of `@trainpaths/cms` (`workspace:*` → `../frontend`), shaped like a client site repo
-(the `cms-starter` template): CMS development, the docker-compose stack and the e2e suite run against it.
+(the `cms-starter` template): CMS development, the compose stack and the e2e suite run against it.
 Package internals: `frontend/CLAUDE.md`. Why instances: `claude-context/ARCHITECTURE.md` → Framework and instances.
 
 ```
-cms.config.json     instance config (API; `site.lang` also read by cms() at build time; docker-compose mounts it at /app/cms.config.json in the api container,
+cms.config.json     instance config (API; `site.lang` also read by cms() at build time; compose.yaml mounts it at /app/cms.config.json in the api container,
                     restart the api after editing): publicAuth on (e2e uses customer accounts), site.lang en, site config field
                     `vatId` + group `socials` (instagram/linkedin/facebook, no custom entries), the default pages
                     + `imprint` (template page)
@@ -52,8 +52,9 @@ The full suite exceeds the default rate limits (per IP): run the stack with rais
 `RATE_LIMIT_PERMIT=10000 RATE_LIMIT_GENERAL_PERMIT=10000 RATE_LIMIT_PAGES_PERMIT=10000 docker compose up -d --build`
 (shell env overrides `.env`; CI does the same via `.env`).
 Thousands of leftover e2e pages make the pages list slow enough to fail timing-sensitive specs; CI starts fresh. To get a
-fresh stack next to the dev one: `docker compose -p cmse2e -f docker-compose.yml -f <override setting other container_name
-values>` with other `FRONTEND_PORT`/`API_PORT`, `PLAYWRIGHT_BASE_URL` pointing at it, then `down -v` (only that project's volumes).
+fresh stack next to the dev one: `FRONTEND_PORT=5373 API_PORT=5383 BACKUP_DIR=/tmp/cmse2e-backups docker compose -p cmse2e
+up -d --build` (own BACKUP_DIR: the default ./backups is shared), `PLAYWRIGHT_BASE_URL` pointing at it, then
+`docker compose -p cmse2e down -v` (only that project's volumes).
 After changing frontend code, rebuild `frontend` **and** `renderer` together: the renderer's public.html must reference the
 same asset hashes, else public pages render unstyled and never hydrate.
 Editor specs need staff credentials in the Playwright env — the same values as the stack's

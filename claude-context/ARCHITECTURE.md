@@ -48,7 +48,8 @@ cost for no real gain. Decision: **Postgres only**.
 ## Media: SeaweedFS (S3 API) behind the API
 Chosen over MinIO (community edition archived Apr 2026, images pulled), RustFS (1.0 GA only Sept 2026)
 and Garage (AGPL, no bucket policies/versioning): SeaweedFS is Apache 2.0, mature, one container, light.
-- docker-compose service `seaweedfs` (`server -s3`, volume `seaweed-data`). **Not published to the host**;
+- compose service `seaweedfs` (`server -s3`, volume `seaweed-data`). **Not published to the host**, on the internal
+  `backend` network (see Networking); `-ip.bind=0.0.0.0` only means all interfaces of its own container;
   S3 credentials come from `S3_ACCESS_KEY`/`S3_SECRET_KEY` (→ SeaweedFS admin identity), anonymous S3
   access is denied. The master/filer/volume ports have no auth, so it must stay on the internal network.
 - The API is the only client (`IBlobStorage` → `S3BlobStorage`, AWSSDK.S3, path-style; bucket created on
@@ -65,6 +66,17 @@ and Garage (AGPL, no bucket policies/versioning): SeaweedFS is Apache 2.0, matur
   a page renders without extra requests. Deleting media removes blob + row; blocks still pointing at it
   render nothing (editor shows "deleted" placeholder). No usage tracking yet.
 
+## Networking (compose)
+- Two networks: `backend` (`internal: true`: no egress, no other containers) holds postgres + seaweedfs; the api joins
+  `backend` and `default` (renderer, frontend, SMTP egress). The renderer only receives POSTs from the api.
+- Only frontend (`FRONTEND_PORT`) and api (`API_PORT`, for `pnpm dev`'s Vite proxy only) publish ports, both on
+  **127.0.0.1**: Docker-published ports bypass host firewalls like ufw, so `0.0.0.0` would expose them.
+- Production: a reverse proxy on the host (TLS) → `127.0.0.1:FRONTEND_PORT`. Its connections reach nginx from the
+  Docker gateway, so `nginx.conf` trusts X-Forwarded-For from `172.16.0.0/12` (`real_ip_recursive`: the rightmost
+  untrusted entry = the visitor) and passes only that IP on; the API's `ForwardedHeaders:KnownNetworks` trusts nginx.
+  Without this every visitor would share the gateway IP and one rate-limit bucket. X-Forwarded-Proto from the proxy
+  is passed through. The host proxy must set X-Forwarded-For (Caddy does by default; nginx: `$proxy_add_x_forwarded_for`).
+
 ## Backups: one archive = pg_dump + every media blob
 Super admins (Profile → Backups) back up on demand or on a daily/weekly/biweekly/monthly schedule, and restore; staff can also export
 single pages as JSON (`lib/pageExport.ts`, `POST /api/pages/import`, always a new draft). Code: `api-backend/Services/Backup/`.
@@ -72,7 +84,8 @@ single pages as JSON (`lib/pageExport.ts`, `POST /api/pages/import`, always a ne
   version, CMS version, newest EF migration, media count; the list reads only this entry), `db.dump` (`pg_dump -Fc`),
   `media/<storageKey>` per blob, `missing-media.json` when blobs were gone. The folder is the source of truth (no table).
 - **Where**: fixed container path (`Backup:Directory`); the instance's compose file decides the host side
-  (`BACKUP_DIR` → bind mount, default a named volume). The app can't change its own mount, so the admin only shows it.
+  (`BACKUP_DIR` bind mount, default `./backups`; the one-shot `backups-init` service chowns it to the api's uid 1654,
+  as Docker creates a missing folder as root). The app can't change its own mount, so the admin only shows it.
 - **Why the API runs pg_dump** (postgresql-client-18 in the image) instead of a DB-level or volume snapshot: works the
   same against a managed Postgres and any S3 store; blobs go through `IBlobStorage`, never SeaweedFS internals.
 - **Consistent backup**: a REPEATABLE READ transaction exports its snapshot (`pg_export_snapshot()`), reads the media
