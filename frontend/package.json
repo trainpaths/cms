@@ -49,7 +49,7 @@
 		"@trainpaths/nb-ui": "github:trainpaths/nb-ui#v1.0.0",
 		"pinia": "^4.0.3",
 		"tailwindcss": "^4.3.3",
-		"vite": "^8.3.1",
+		"vite": "^8.3.3",
 		"vue": "^3.5.43",
 		"vue-router": "^5.3.1"
 	},
@@ -57,19 +57,19 @@
 		"@tailwindcss/vite": "^4.3.3",
 		"@vitejs/plugin-vue": "^6.0.9",
 		"@vue/tsconfig": "^0.9.1",
-		"nanoid": "^6.0.1"
+		"nanoid": "^6.0.2"
 	},
 	"devDependencies": {
 		"@hey-api/openapi-ts": "0.99.0",
 		"@trainpaths/nb-ui": "github:trainpaths/nb-ui#v1.0.0",
-		"@types/node": "^26.6.2",
+		"@types/node": "^26.6.4",
 		"pinia": "^4.0.3",
 		"tailwindcss": "^4.3.3",
 		"typescript": "~6.0.3",
-		"vite": "^8.3.1",
+		"vite": "^8.3.3",
 		"vitest": "^5.0.3",
 		"vue": "^3.5.43",
 		"vue-router": "^5.3.1",
-		"vue-tsc": "^3.3.11"
+		"vue-tsc": "^3.3.12"
 	}
 }
