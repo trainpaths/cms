@@ -35,25 +35,19 @@ function choose(mediaId: string) {
 			:show="selected"
 			:block-id="block.id"
 		>
-			<div class="flex flex-wrap items-center gap-8">
-				<MediaActions
-					dark
-					:replace="!!src"
-					@select="choose($event.id)"
+			<!-- media actions: placeholder below, replace in the settings sidebar -->
+			<div class="flex items-center gap-4">
+				<span class="text-xs text-gray-400">W:</span>
+				<input
+					:value="width"
+					type="number"
+					min="1"
+					max="100"
+					class="toolbar-input w-48"
+					aria-label="Width"
+					@change="width = Number(($event.target as HTMLInputElement).value)"
 				/>
-				<div class="flex items-center gap-4">
-					<span class="text-xs text-gray-400">W:</span>
-					<input
-						:value="width"
-						type="number"
-						min="1"
-						max="100"
-						class="toolbar-input w-64"
-						aria-label="Width"
-						@change="width = Number(($event.target as HTMLInputElement).value)"
-					/>
-					<span class="text-xs text-gray-400">%</span>
-				</div>
+				<span class="text-xs text-gray-400">%</span>
 			</div>
 		</InlineToolbar>
 

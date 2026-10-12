@@ -25,7 +25,7 @@ const colorClass = computed(() => (props.block.attributes.textColor ? '' : 'text
 			<input
 				v-model="url"
 				type="url"
-				class="toolbar-input w-240"
+				class="toolbar-input w-160"
 				placeholder="https://..."
 			/>
 		</InlineToolbar>
