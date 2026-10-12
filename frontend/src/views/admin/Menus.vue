@@ -39,6 +39,7 @@ const loaded = ref(false)
 const loadFailed = ref(false)
 const loadingMenu = ref(false)
 const saving = ref(false)
+const creating = ref(false)
 const errorMessage = ref<string | null>(null)
 const newHandle = ref('')
 const showNewMenu = ref(false)
@@ -133,7 +134,8 @@ onMounted(async () => {
 
 async function createMenu() {
 	const handle = newHandlePreview.value
-	if (!handle || !(await unsaved.confirmLeave())) return
+	if (!handle || creating.value || !(await unsaved.confirmLeave())) return
+	creating.value = true
 	try {
 		const { data: menu } = await postApiMenus({ body: { handle } })
 		menus.value.push({ id: menu.id, handle: menu.handle, itemCount: 0, updatedAt: menu.updatedAt })
@@ -142,6 +144,8 @@ async function createMenu() {
 		apply(menu)
 	} catch (err: unknown) {
 		errorMessage.value = describe(err, 'Failed to create menu')
+	} finally {
+		creating.value = false
 	}
 }
 
@@ -288,6 +292,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 						v-model="newHandle"
 						class="input-field mt-0 font-mono"
 						:maxlength="MENU_HANDLE_MAX"
+						:disabled="creating"
 						placeholder="e.g. footer"
 						aria-label="New menu handle"
 						data-testid="menu-new-handle"
@@ -304,6 +309,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 							size="sm"
 							type="submit"
 							:disabled="!newHandlePreview"
+							:loading="creating"
 							data-testid="menu-new-create"
 							>Create</Button
 						>
@@ -312,6 +318,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 							type="button"
 							variant="ghost"
 							text="primary"
+							:disabled="creating"
 							@click="showNewMenu = false"
 							>Cancel</Button
 						>
