@@ -5,14 +5,16 @@ A minimal instance app of `@trainpaths/cms` (`workspace:*` → `../frontend`), s
 Package internals: `frontend/CLAUDE.md`. Why instances: `claude-context/ARCHITECTURE.md` → Framework and instances.
 
 ```
-cms.config.json     instance config (API; `site.lang` also read by cms() at build time; compose.yaml mounts it at /app/cms.config.json in the api container,
-                    restart the api after editing): publicAuth on (e2e uses customer accounts), site.lang en, site config field
+cms.config.json     instance config (API; `site.lang` + `theme.colors` also read by cms() at build time; compose.yaml mounts it at /app/cms.config.json in the api container,
+                    restart the api after editing): publicAuth on (e2e uses customer accounts), site.lang en, theme.colors (primary, accent, dark, light,
+                    white: block-fixes.spec picks them), site config field
                     `vatId` + group `socials` (instagram/linkedin/facebook, no custom entries), the default pages
                     + `imprint` (template page)
 index.html          admin SPA shell (boot loader) → src/main.ts
 public.html         public site template: <!--app-head-->, <!--app-html-->, <!--app-state--> placeholders (filled by the
                     renderer / dev SSR) → src/entry-client.ts
-src/style.css       @import '@trainpaths/cms/style.css' + site theme (`--color-brand` token, .site-theme primary = brand)
+src/style.css       @import '@trainpaths/cms/style.css' + site theme (`--color-brand` token for the callout block, .site-theme
+                    primary-dark; primary comes from cms.config.json theme.colors)
 src/main.ts         ./style.css + createAdmin()      from @trainpaths/cms/admin
 src/entry-client.ts ./style.css + hydratePublic()    from @trainpaths/cms/public/client
 src/entry-server.ts export { render }      from @trainpaths/cms/public/server (vite build --ssr → dist-ssr/)

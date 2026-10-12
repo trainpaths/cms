@@ -9,14 +9,15 @@ Design decisions behind pages: `claude-context/ARCHITECTURE.md` (repo root).
 ## Instance config (`Services/Cms/`)
 The client site's developer config, baked into its API image (`/app/cms.config.json`; the playground mounts it in
 compose.yaml). The API is its **only runtime reader**: the admin gets what it needs from `/api/public/instance`. Exception:
-`site.lang` is applied at frontend build time by the `cms()` Vite plugin (the API still validates it).
+`site.lang` and `theme.colors` are applied at frontend build time by the `cms()` Vite plugin (the API still validates them).
 ```
-CmsConfig.cs        records CmsConfig { publicAuth, site.lang, blocks.exclude, pages[], siteConfig } + CmsPageConfig { slug, title, template?,
+CmsConfig.cs        records CmsConfig { publicAuth, site.lang, blocks.exclude, theme.colors {key: colour}, pages[], siteConfig } + CmsPageConfig { slug, title, template?,
                     locked, editable, footer, blocks }; IsLocked = locked || template; SiteConfigSchema() (core + instance)
 CmsConfigLoader.cs  Load (path = Cms:ConfigPath relative to the content root, default cms.config.json; missing →
                     CmsConfig.Default = DefaultPages + public auth off), Parse (strict JSON: unknown keys fail,
                     `$schema`/comments/trailing commas ok), Validate (slugs via PageService.ValidateSlug, unique, title,
                     kebab template, editable:false needs a template, blocks via ValidateBlocks, exclude names, lang tag,
+                    theme colour keys kebab + values hex/colour function (ColorPattern, mirrors frontend/server/theme.js),
                     site config keys camelCase + unique, defaults/required ⊆ presets) → InvalidOperationException listing problems
 SiteConfigSchema.cs SiteConfigSchema + ConfigFieldDef/ConfigGroupDef/ConfigPresetDef + CoreSiteConfig (firmName, contact): see Site config
 DefaultPages.cs     the default config's pages (see Pages)
