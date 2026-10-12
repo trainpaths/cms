@@ -121,7 +121,7 @@ function onDragStart(e: DragEvent) {
 		>
 			<div
 				ref="toolbarRef"
-				class="font-cms z-20 flex flex-wrap items-center gap-4 bg-gray-900 p-8 text-white transition-opacity"
+				class="font-cms z-20 flex flex-wrap items-center gap-2 bg-gray-900 p-6 text-white transition-opacity"
 				:class="toolbarClass"
 			>
 				<span
@@ -141,7 +141,7 @@ function onDragStart(e: DragEvent) {
 					/>
 				</span>
 				<!-- narrow canvas (column < 320px): icon only, keeps the toolbar on one row -->
-				<span class="text-md mr-8 text-gray-300 @max-xs:hidden">{{ blockType.title }}</span>
+				<span class="text-md mr-6 text-gray-300 @max-xs:hidden">{{ blockType.title }}</span>
 				<button
 					class="floating-toolbar-btn"
 					title="Move up"
@@ -200,6 +200,6 @@ function onDragStart(e: DragEvent) {
 }
 
 .floating-toolbar-btn {
-	@apply cursor-pointer rounded border-none bg-transparent px-5 text-gray-300 hover:bg-gray-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-30;
+	@apply cursor-pointer rounded border-none bg-transparent px-3 text-gray-300 hover:bg-gray-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-30;
 }
 </style>

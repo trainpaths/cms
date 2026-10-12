@@ -28,6 +28,17 @@
 	.toolbar-input {
 		@apply rounded border-none bg-gray-800 px-10 py-6 text-sm text-white outline-hidden placeholder:text-gray-500;
 	}
+
+	/* number inputs: no spinner arrows (too small to hit in the toolbar) */
+	.toolbar-input[type='number'] {
+		appearance: textfield;
+
+		&::-webkit-inner-spin-button,
+		&::-webkit-outer-spin-button {
+			appearance: none;
+			margin: 0;
+		}
+	}
 }
 
 @utility scrollbar-stable {
