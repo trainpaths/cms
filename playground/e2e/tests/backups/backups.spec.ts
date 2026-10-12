@@ -41,6 +41,14 @@ test('schedule, back up now, download', async ({ staffPage: page }) => {
 	await newest.getByTestId('backup-download').click()
 	expect((await pending).suggestedFilename()).toMatch(/^manual-\d{8}-\d{6}(-\d+)?\.tar\.gz$/)
 
+	// dashboard summary while the schedule is on
+	await page.goto('/admin')
+	const card = page.getByTestId('dashboard-backups')
+	await expect(card.getByTestId('dashboard-backups-schedule')).toHaveText('Monthly on day 15, 04:00 UTC')
+	await expect(card.getByTestId('dashboard-backups-count')).toContainText(/\d+ backups?/)
+	await card.getByTestId('dashboard-backups-link').click()
+	await expect(page).toHaveURL(/\/profile\?tab=backups/)
+
 	// leave the schedule off for the rest of the suite
 	await page.getByTestId('backup-interval').selectOption('off')
 	await page.getByTestId('backup-settings-save').click()
@@ -71,7 +79,7 @@ test('restore brings back the backed-up state and signs out', async ({ staffPage
 	await expect(rows(page).filter({ hasText: 'Before restore' }).first()).toBeVisible()
 })
 
-test('staff without super admin role see no Backups tab', async ({ page, request }) => {
+test('staff without super admin role see no Backups tab or dashboard card', async ({ page, request }) => {
 	test.skip(!staffCredentials.email, 'needs the bootstrap super admin to create the account')
 	const login = await request.post('/api/auth/staff/login', {
 		data: { email: staffCredentials.email, password: staffCredentials.password },
@@ -90,6 +98,7 @@ test('staff without super admin role see no Backups tab', async ({ page, request
 	await page.getByPlaceholder('Password').fill(password)
 	await page.getByRole('button', { name: /^Log in$/ }).click()
 	await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+	await expect(page.getByTestId('dashboard-backups')).toHaveCount(0)
 
 	await page.goto('/profile?tab=backups')
 	await expect(page.getByText(email)).toBeVisible()

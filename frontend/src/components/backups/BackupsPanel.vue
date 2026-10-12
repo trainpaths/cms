@@ -29,6 +29,7 @@ import type { BackupInfo, BackupInterval, BackupKind, BackupSettingsResponse } f
 import { errorMessage } from '../../api-error'
 import { saveBlob } from '../../lib/download'
 import { formatBytes, uploadBackup } from '../../lib/backupUpload'
+import { backupIntervals, weekdayNames } from '../../lib/backupSchedule'
 import { useAuthStore } from '../../stores/auth'
 import { loginRouteFor } from '../../router'
 
@@ -51,19 +52,9 @@ const uploadProgress = ref<number | null>(null)
 const restoring = ref<string | null>(null)
 const uploadInput = ref<HTMLInputElement | null>(null)
 
-const intervals: { value: BackupInterval; label: string }[] = [
-	{ value: 'off', label: 'Off' },
-	{ value: 'daily', label: 'Daily' },
-	{ value: 'weekly', label: 'Weekly' },
-	{ value: 'biweekly', label: 'Every 2 weeks' },
-	{ value: 'monthly', label: 'Monthly' },
-]
 // 1-28: every month has the day
 const monthDays = Array.from({ length: 28 }, (_, i) => ({ value: i + 1, label: `${i + 1}.` }))
-const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((label, value) => ({
-	value,
-	label,
-}))
+const weekdays = weekdayNames.map((label, value) => ({ value, label }))
 const kindLabels: Record<BackupKind, string> = {
 	auto: 'Automatic',
 	manual: 'Manual',
@@ -270,7 +261,7 @@ function formatDate(iso: string | null | undefined): string {
 					<FormField label="Interval">
 						<Select
 							v-model="form.interval"
-							:options="intervals"
+							:options="backupIntervals"
 							data-testid="backup-interval"
 						/>
 					</FormField>
