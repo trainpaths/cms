@@ -40,6 +40,23 @@
 				}
 			}
 		},
+		"theme": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"colors": {
+					"description": "Site palette: the only text/background colours the editor offers. Each becomes --color-<key> on .site-theme (public pages + editor canvas; 'primary' recolours the site's primary). Blocks store the key, so changing a value recolours existing content. Applied at frontend build time by the cms() Vite plugin: rebuild after changing it.",
+					"type": "object",
+					"propertyNames": {
+						"$ref": "#/$defs/name"
+					},
+					"additionalProperties": {
+						"type": "string",
+						"pattern": "^(?:#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|[a-z]+\\([0-9a-zA-Z.,%/ +-]*\\))$"
+					}
+				}
+			}
+		},
 		"pages": {
 			"description": "Pages the CMS seeds, published: all on a fresh install, locked/template pages on every start when missing. Omitted: Home, Privacy Policy, Legal.",
 			"type": "array",

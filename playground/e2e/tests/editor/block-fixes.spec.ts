@@ -25,20 +25,28 @@ test.describe('Block editor fixes', () => {
 		await expect.poll(async () => (await text.boundingBox())!.height).toBeGreaterThan(before * 2)
 	})
 
-	test('paragraph text colour applies', async ({ staffPage: page }) => {
+	test('colours: theme palette only (cms.config.json theme.colors)', async ({ staffPage: page }) => {
 		await insertBlock(page, 'Paragraph')
-		const text = page.getByPlaceholder('Click to add text...')
-		await section(page, 'Text Color').getByPlaceholder('Custom...').fill('#ff0000')
-		await expect(text).toHaveCSS('color', 'rgb(255, 0, 0)')
+		const textColor = section(page, 'Text Color')
+		await expect(textColor.getByTestId('color-swatch')).toHaveCount(5)
+		await expect(textColor.locator('input')).toHaveCount(0)
+		await textColor.getByRole('button', { name: 'accent', exact: true }).click()
+		await expect(page.getByPlaceholder('Click to add text...')).toHaveCSS('color', 'rgb(245, 158, 11)')
+		await textColor.getByRole('button', { name: 'None', exact: true }).click()
+		await expect(page.getByPlaceholder('Click to add text...')).not.toHaveCSS('color', 'rgb(245, 158, 11)')
 	})
 
 	test('card background and text colour apply to the card', async ({ staffPage: page }) => {
 		await insertBlock(page, 'Card')
-		await section(page, 'Background Color').getByPlaceholder('Custom...').fill('#00ff00')
-		await section(page, 'Text Color').getByPlaceholder('Custom...').fill('#0000ff')
+		await section(page, 'Background Color').getByRole('button', { name: 'light', exact: true }).click()
+		await section(page, 'Text Color').getByRole('button', { name: 'dark', exact: true }).click()
 		const card = main(page).locator('[data-block-id] div.rounded-lg.shadow-xs').first()
 		await expect(card).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
-		await expect(page.getByPlaceholder('Click to add title...')).toHaveCSS('color', 'rgb(0, 0, 255)')
+		await expect(main(page).locator('[data-block-id]').first().locator(':scope > div.rounded-lg')).toHaveCSS(
+			'background-color',
+			'rgb(243, 244, 246)',
+		)
+		await expect(page.getByPlaceholder('Click to add title...')).toHaveCSS('color', 'rgb(31, 41, 55)')
 	})
 
 	test('image settings in sidebar sync with toolbar; alt comes from the media object', async ({

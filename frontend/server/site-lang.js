@@ -26,16 +26,24 @@ export function readSiteLang(root) {
  * @returns {string}
  */
 export function siteLang(json, source = 'cms.config.json') {
-	let config
-	try {
-		config = JSON.parse(stripJsonc(json))
-	} catch (e) {
-		throw new Error(`${source}: ${/** @type {Error} */ (e).message}`)
-	}
+	const config = parseConfig(json, source)
 	const lang = config?.site?.lang ?? DEFAULT_LANG
 	if (typeof lang !== 'string' || !LANG_TAG.test(lang))
 		throw new Error(`${source}: site.lang '${lang}' is not a language tag (e.g. en, de, en-GB).`)
 	return lang
+}
+
+/**
+ * @param {string} json cms.config.json content (comments + trailing commas allowed, like the API)
+ * @param {string} source for error messages
+ * @returns {import('./site-lang.d.ts').CmsConfigJson}
+ */
+export function parseConfig(json, source) {
+	try {
+		return JSON.parse(stripJsonc(json))
+	} catch (e) {
+		throw new Error(`${source}: ${/** @type {Error} */ (e).message}`)
+	}
 }
 
 /**
