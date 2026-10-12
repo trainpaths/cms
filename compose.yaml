@@ -52,6 +52,7 @@ services:
   api:
     build:
       target: api
+    restart: unless-stopped
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
     # host port only for `pnpm dev` (Vite on the host proxies /api); in the stack nginx reaches api:8080 directly
