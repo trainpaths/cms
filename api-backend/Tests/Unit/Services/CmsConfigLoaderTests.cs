@@ -17,6 +17,7 @@ public class CmsConfigLoaderTests
 		cms.PublicAuth.Should().BeFalse();
 		cms.Site.Lang.Should().Be("en");
 		cms.Blocks.Exclude.Should().BeEmpty();
+		cms.Theme.Colors.Should().BeEmpty();
 		cms.Pages.Select(p => p.Slug).Should().Equal(DefaultPages.HomeSlug, DefaultPages.PrivacySlug, DefaultPages.LegalSlug);
 		cms.Pages.Where(p => p.Footer).Select(p => p.Slug).Should().Equal(DefaultPages.PrivacySlug, DefaultPages.LegalSlug);
 	}
@@ -31,6 +32,7 @@ public class CmsConfigLoaderTests
 				"publicAuth": true,
 				"site": { "lang": "de-AT" },
 				"blocks": { "exclude": ["list", "list-item"] },
+				"theme": { "colors": { "primary": "#0f766e", "light-gray": "oklch(0.97 0 0 / 80%)" } },
 				"pages": [
 					{ "slug": "imprint", "title": "Imprint", "template": "imprint", "editable": false, "footer": true },
 					{ "slug": "about", "title": "About",
@@ -42,6 +44,7 @@ public class CmsConfigLoaderTests
 		cms.PublicAuth.Should().BeTrue();
 		cms.Site.Lang.Should().Be("de-AT");
 		cms.Blocks.Exclude.Should().Equal("list", "list-item");
+		cms.Theme.Colors.Should().Equal(new Dictionary<string, string> { ["primary"] = "#0f766e", ["light-gray"] = "oklch(0.97 0 0 / 80%)" });
 		var imprint = cms.Page("imprint")!;
 		imprint.IsLocked.Should().BeTrue("a template page's slug is what the site's code relies on");
 		imprint.Editable.Should().BeFalse();
@@ -97,6 +100,10 @@ public class CmsConfigLoaderTests
 	[InlineData("""{ "pages": [{ "slug": "a", "title": "A", "blocks": [{ "id": "", "name": "x" }] }] }""", "*pages[0] (a)*")]
 	[InlineData("""{ "blocks": { "exclude": ["List"] } }""", "*blocks.exclude*")]
 	[InlineData("""{ "site": { "lang": "German" } }""", "*site.lang*")]
+	[InlineData("""{ "theme": { "colors": { "Brand": "#000" } } }""", "*kebab-case*")]
+	[InlineData("""{ "theme": { "colors": { "brand": "red" } } }""", "*theme.colors.brand*")]
+	[InlineData("""{ "theme": { "colors": { "brand": "#000;} body{x:y" } } }""", "*not a colour*")]
+	[InlineData("""{ "theme": { "colors": { "brand": "#12345" } } }""", "*not a colour*")]
 	[InlineData("""{ "siteConfig": { "fields": [{ "key": "firm-name", "label": "X" }] } }""", "*camelCase*")]
 	[InlineData("""{ "siteConfig": { "fields": [{ "key": "office", "label": "X", "type": "address" }] } }""", "*group entries only*")]
 	[InlineData("""{ "siteConfig": { "groups": [{ "key": "a", "label": "A" }, { "key": "a", "label": "B" }] } }""", "*duplicate key*")]

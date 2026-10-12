@@ -24,6 +24,8 @@ public sealed record CmsConfig
 
 	public CmsBlocksConfig Blocks { get; init; } = new();
 
+	public CmsThemeConfig Theme { get; init; } = new();
+
 	/// <summary>Pages the CMS seeds; omitted = <see cref="DefaultPages"/> (Home, Privacy Policy, Legal).</summary>
 	public List<CmsPageConfig> Pages { get; init; } = DefaultPages.Create();
 
@@ -53,6 +55,16 @@ public sealed record CmsSiteMeta
 	/// <c>cms()</c> Vite plugin (server/site-lang.js); the API only validates it, so a bad tag fails here too.
 	/// </summary>
 	public string Lang { get; init; } = "en";
+}
+
+public sealed record CmsThemeConfig
+{
+	/// <summary>
+	/// Site palette, key → CSS colour (<c>"primary": "#111111"</c>). Applied at frontend build time by the <c>cms()</c>
+	/// Vite plugin (server/theme.js: <c>.site-theme { --color-primary: #111111 }</c>, the editor's colour swatches); the
+	/// API only validates it. Blocks store the key, so changing a value recolours existing content.
+	/// </summary>
+	public Dictionary<string, string> Colors { get; init; } = [];
 }
 
 public sealed record CmsBlocksConfig

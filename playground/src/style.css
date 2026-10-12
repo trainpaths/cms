@@ -7,8 +7,8 @@
 	--color-brand-dark: #115e59;
 }
 
-/* site theme: public pages + the editor canvas only; the admin keeps the CMS look */
+/* site theme: public pages + the editor canvas only; the admin keeps the CMS look.
+   The palette (primary, accent...) comes from cms.config.json theme.colors; tokens outside it go here */
 .site-theme {
-	--color-primary: var(--color-brand);
 	--color-primary-dark: var(--color-brand-dark);
 }

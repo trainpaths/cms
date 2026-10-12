@@ -27,6 +27,11 @@ public static partial class CmsConfigLoader
 	[GeneratedRegex("^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$")]
 	private static partial Regex LangPattern();
 
+	// hex or a plain CSS colour function (rgb, oklch...): ends up in a <style> tag, so no ; } < etc.
+	// keep in sync with frontend/server/theme.js
+	[GeneratedRegex(@"^(?:#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|[a-z]+\([0-9a-zA-Z.,%/ +-]*\))$")]
+	private static partial Regex ColorPattern();
+
 	// site config keys are read in code: config.fields.firmName
 	[GeneratedRegex("^[a-z][a-zA-Z0-9]*$")]
 	private static partial Regex IdentifierPattern();
@@ -89,6 +94,13 @@ public static partial class CmsConfigLoader
 			errors.Add($"site.lang: '{cms.Site.Lang}' is not a language tag (e.g. en, de, en-GB).");
 		foreach (var name in cms.Blocks.Exclude.Where(n => !NamePattern().IsMatch(n)))
 			errors.Add($"blocks.exclude: '{name}' is not a block name.");
+		foreach (var (key, value) in cms.Theme.Colors)
+		{
+			if (!NamePattern().IsMatch(key))
+				errors.Add($"theme.colors: key '{key}' must be kebab-case (it becomes --color-{key}).");
+			if (!ColorPattern().IsMatch(value))
+				errors.Add($"theme.colors.{key}: '{value}' is not a colour (hex like #0f766e or a function like oklch(...)).");
+		}
 		ValidateSiteConfig(cms.SiteConfig, errors);
 		return errors;
 	}

@@ -4,6 +4,7 @@ import { description, documentTitle } from './head'
 import type { PublicState } from './state'
 import { splice } from '../../server/template'
 import { setHtmlLang, siteLang } from '../../server/site-lang'
+import { injectThemeStyle, themeColors, themeStyle } from '../../server/theme'
 import type { BlockInstance } from '../lib/web-editor'
 
 const block = (
@@ -103,6 +104,19 @@ describe('render', () => {
 		expect(JSON.parse(json).page.blocks[1].attributes.text).toContain('</script>')
 	})
 
+	it('renders theme colour keys as site theme variables, legacy hex as is, drops anything else', async () => {
+		const page = {
+			...state().page!,
+			blocks: [
+				block('paragraph', { text: 'a', textColor: 'brand-dark', backgroundColor: '#ff0000' }),
+				block('paragraph', { text: 'b', textColor: 'red;position:fixed' }),
+			],
+		}
+		const { html } = await render(state({ page }))
+		expect(html).toContain('background-color:#ff0000;color:var(--color-brand-dark);')
+		expect(html).not.toContain('position:fixed')
+	})
+
 	it('renders the not-found page as noindex', async () => {
 		const { html, head } = await render(state({ slug: 'nope', page: null }))
 		expect(html).toContain('Page not found')
@@ -168,5 +182,29 @@ describe('site lang (build time)', () => {
 		expect(setHtmlLang("<html lang='en'>", 'de')).toBe('<html lang="de">')
 		expect(setHtmlLang('<html lang=en>', 'de')).toBe('<html lang="de">')
 		expect(setHtmlLang('<html>', 'de')).toBe('<html lang="de">')
+	})
+})
+
+describe('theme colours (build time)', () => {
+	it('reads theme.colors, none by default', () => {
+		expect(themeColors('{}')).toEqual({})
+		expect(themeColors('{ "theme": { "colors": { "primary": "#111", "soft-bg": "oklch(0.97 0 0 / 80%)", }, }, }')).toEqual({
+			primary: '#111',
+			'soft-bg': 'oklch(0.97 0 0 / 80%)',
+		})
+	})
+
+	it('rejects bad keys and values that could escape the style tag', () => {
+		expect(() => themeColors('{ "theme": { "colors": { "Brand": "#000" } } }')).toThrow(/kebab-case/)
+		expect(() => themeColors('{ "theme": { "colors": { "brand": "red" } } }')).toThrow(/theme.colors.brand/)
+		expect(() => themeColors('{ "theme": { "colors": { "brand": "#000}</style>" } } }')).toThrow(/not a colour/)
+		expect(() => themeColors('{ "theme": { "colors": ["#000"] } }')).toThrow(/must be an object/)
+	})
+
+	it('injects the variables into <head>, nothing without colours', () => {
+		const style = themeStyle({ primary: '#111', brand: '#0f766e' })
+		expect(style).toBe('<style data-cms-theme>:root .site-theme{--color-primary:#111;--color-brand:#0f766e}</style>')
+		expect(injectThemeStyle('<head><title>x</title></head>', style)).toBe(`<head><title>x</title>${style}</head>`)
+		expect(injectThemeStyle('<head></head>', themeStyle({}))).toBe('<head></head>')
 	})
 })

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { BlockInstance } from '../core/types'
+import { blockColorStyle } from '../core/colors'
 
 const props = defineProps<{ block: BlockInstance }>()
 
@@ -17,14 +18,7 @@ const widthClass = computed(() => {
 	}
 })
 
-const blockStyles = computed(() => {
-	const styles: Record<string, string> = {}
-	const bg = props.block.attributes.backgroundColor as string
-	const text = props.block.attributes.textColor as string
-	if (bg) styles.backgroundColor = bg
-	if (text) styles.color = text
-	return styles
-})
+const blockStyles = computed(() => blockColorStyle(props.block.attributes))
 </script>
 
 <template>

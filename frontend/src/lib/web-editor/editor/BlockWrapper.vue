@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { Icon } from '@trainpaths/nb-ui'
 import type { BlockInstance } from '../core/types'
 import { getBlockType } from '../core/blockRegistry'
+import { blockColorStyle } from '../core/colors'
 import { useEditorStore } from '../../../stores/editor'
 import { useSelection } from '../composables/useSelection'
 import { useToolbarPosition } from '../composables/useToolbarPosition'
@@ -85,14 +86,7 @@ const widthClass = computed(() => {
 	}
 })
 
-const blockStyles = computed(() => {
-	const styles: Record<string, string> = {}
-	const bg = props.block.attributes.backgroundColor as string
-	const text = props.block.attributes.textColor as string
-	if (bg) styles.backgroundColor = bg
-	if (text) styles.color = text
-	return styles
-})
+const blockStyles = computed(() => blockColorStyle(props.block.attributes))
 
 // drag only via handle: whole-block draggable hijacks text selection in inputs
 function onDragStart(e: DragEvent) {
