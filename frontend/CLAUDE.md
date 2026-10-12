@@ -11,8 +11,8 @@ with every change to `cms.config.json`, exports, extension/override points or th
 **A package, not an app:** shipped as raw source (no build step, like nb-ui), installed by instance apps from a git
 tag (`github:trainpaths/cms#vX.Y.Z&path:/frontend`); in this repo `playground/` uses it via `workspace:*`. The
 instance owns `index.html`, `public.html`, `vite.config.ts` (`plugins: [cms()]`), `src/style.css` (imports
-`@trainpaths/cms/style.css` + its site theme), `cms.config.json` (read by the API; `cms()` reads only `site.lang`, at
-build time) and three stubs that import the stylesheet and call the package entries. Why: `claude-context/ARCHITECTURE.md` → Framework and instances.
+`@trainpaths/cms/style.css` + its site theme), `cms.config.json` (read by the API; `cms()` reads only `site.lang` and
+`theme.colors`, at build time) and three stubs that import the stylesheet and call the package entries. Why: `claude-context/ARCHITECTURE.md` → Framework and instances.
 
 ## Package surface (`package.json` exports)
 ```
@@ -39,7 +39,10 @@ vue + tailwind + `nbUi({ dir: 'src/overrides/ui' })` + dev SSR (`server/dev-ssr.
 `public.html` of the app root; `ssr.noExternal` (build: all, dev: this package + nb-ui); `/api` proxy to
 `VITE_API_BASE_URL` (app's envDir) or `cms({ apiTarget })`; `resolve.dedupe` vue/router/pinia; package `public/`
 files (CMS favicon) served/emitted unless the app's publicDir has them; `transformIndexHtml` sets `<html lang>` of both
-HTML files from `cms.config.json` `site.lang` (`server/site-lang.js`, read per transform so dev picks up edits).
+HTML files from `cms.config.json` `site.lang` (`server/site-lang.js`, read per transform so dev picks up edits);
+`theme.colors` (`server/theme.js`) → `<style data-cms-theme>` with `--color-<key>` on `:root .site-theme` in both HTML
+files (outranks the instance's `.site-theme` rules) + `define` `__CMS_THEME_COLORS__` (editor palette,
+`lib/web-editor/core/colors.ts`); the dev server restarts when the palette changes (watches cms.config.json).
 **Instance extension points** (conventions in the app's `src/`):
 - `src/blocks/<folder>/` — app blocks, same format as built-ins. `core/blockTypes.ts` / `core/blockViews.ts` glob
   `/src/blocks/*` (root-relative = the app's Vite root) after the built-ins: a block with a built-in's `name`
@@ -80,7 +83,8 @@ render.test.ts      Vitest: render output, escaping (vitest.config.ts: vue + nbU
 server/render-server.js  renderer service: POST /render, GET /version (hash of template + SSR bundle), /health; reads
                          dist/public.html + dist-ssr/entry-server.js from the working directory (= instance app root)
 server/template.js       splice(): fills public.html placeholders (function replacers: content may contain `$&`); types in .d.ts
-server/site-lang.js      build time, part of cms(): site.lang of cms.config.json (JSONC, validated) → <html lang>
+server/site-lang.js      build time, part of cms(): parseConfig (JSONC), site.lang (validated) → <html lang>
+server/theme.js          build time, part of cms(): theme.colors (validated like the API) → themeStyle <style> + palette
 server/dev-ssr.js        part of cms(): dev server-renders published pages via the app's /src/entry-server.ts
                          (falls through to the SPA otherwise)
 ```
@@ -138,7 +142,7 @@ Base layer restores v3 defaults: gray-200 border colour, gray-400 placeholders, 
 | `/admin/login` | `admin/AdminLogin.vue` ("Admin Login" for staff; Back → `/`, no register/forgot links) | guest |
 | `/register` | `Register.vue` (customer signup) | guest |
 | `/` | `home`: hand-off to the public site (full page load; `toPublicSite` guard; first navigation → not-found) | public |
-| `/admin` | `Dashboard.vue` (welcome + profile links; name `dashboard`) | auth |
+| `/admin` | `Dashboard.vue` (welcome + profile links; super admins: `components/backups/BackupsSummary.vue` = schedule (`lib/backupSchedule.ts` scheduleSummary), next/last run, retention, saved count + automatic + total size, latest, free space, last error, "Manage backups" → `/profile?tab=backups`; name `dashboard`) | auth |
 | `/profile` | `Profile.vue`: super admins get tabs (`?tab=backups`) **Profile** (`components/ProfileDetails.vue`) + **Backups** (`components/backups/BackupsPanel.vue`: schedule off/daily/weekly/every 2 weeks/monthly (UTC, local time hint;
 weekday for weekly + biweekly, day 1-28 for monthly), storage folder (`hostPath`, else "Developer has not set backup folder"), back up now, upload with progress (`lib/backupUpload.ts`, XHR), list rows: Restore (primary) / download + delete icons (download = blob; restore = confirm → logout → admin login)); others just ProfileDetails | auth |
 | `/change-password` | `ChangePassword.vue` | auth |
@@ -262,13 +266,14 @@ src/lib/web-editor/     block editor library (own CLAUDE.md)
 src/views/             route views (admin/ = page management)
 src/components/        app shell pieces (AppNav, AdminBar, SiteHeader + site/, SiteFooter, ConfigImageField, PageFilters,
                        PageEditDialog, ActionMenu ("…" menu like nb-ui Dropdown + per-item title/testid; nb-ui icon names),
-                       menus/ tree editor, ProfileDetails, backups/BackupsPanel)
+                       menus/ tree editor, ProfileDetails, backups/BackupsPanel + BackupsSummary (dashboard))
 src/composables/       usePageFilter (search/tag/status/sort over PageSummary[])
 src/lib/menus/tree.ts  pure menu tree ops (locate, move, indent/outdent, depth checks)
 src/lib/pageExport.ts  page export file (`{format: "cms-page", version, exportedAt, page}`): toPageExport, parsePageExport
                        (throws PageExportError = user-facing message) + Vitest; editor PageSettings "Export" downloads the
                        on-screen state, the row menu's Export the saved copy
 src/lib/download.ts    saveBlob / saveJson (browser file download)
+src/lib/backupSchedule.ts  interval/weekday labels + scheduleSummary (panel + dashboard)
 src/lib/backupUpload.ts uploadBackup (XHR for progress; ensureSession + bearer itself) + formatBytes
 nginx.conf             `/` + `/{slug}` → API HTML endpoint (X-Accel-Redirect to index.html/public.html), SPA fallback, /api proxy (64k; /api/pages 2m; /api/menus 512k; /api/media 11m; /api/backups 2g, unbuffered, 15 min timeouts; proxy headers set once at server level; real client IP from the host proxy's X-Forwarded-For, trusted from 172.16.0.0/12), CSP (img-src 'self' only: uploads are same-origin)
 public/favicon.svg     CMS admin icon (emitted by cms() unless the instance has its own)

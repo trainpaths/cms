@@ -53,6 +53,9 @@ No file = defaults. Full schema: `node_modules/@trainpaths/cms/cms.config.schema
 	"publicAuth": false,                 // customer accounts (/login, /register...); off: screens + API gone
 	"site": { "lang": "de" },            // <html lang> (set by cms() at build time: rebuild the frontend)
 	"blocks": { "exclude": ["list"] },   // built-in blocks hidden from the inserters
+	"theme": {                           // site palette (see Theme; set by cms() at build time: rebuild the frontend)
+		"colors": { "primary": "#0f766e", "accent": "#f59e0b", "light": "#f3f4f6" }
+	},
 	"siteConfig": {                      // what the owner fills in under Configuration (see Site config)
 		"fields": [{ "key": "vatId", "label": "VAT ID" }],
 		"groups": [{
@@ -144,7 +147,15 @@ import Base from '@trainpaths/cms/src/components/SiteFooter.vue'
 
 ## Theme
 
-`src/style.css`:
+**Palette** (`cms.config.json` → `theme.colors`, key → hex or colour function like `oklch(...)`): the only text and
+background colours the editor offers (no custom colours; none configured = no swatches). `cms()` writes each one as
+`--color-<key>` on `.site-theme` into `index.html` + `public.html` (it outranks `.site-theme` rules in `style.css`), so a
+nb-ui token key (`primary`, `accent`, `white`...) also recolours the site's components. Blocks store the key and render
+`var(--color-<key>)`: changing a value recolours existing content; removing a key leaves those blocks uncoloured.
+Rebuild the frontend after changing it (the dev server restarts by itself). The palette sets CSS variables only: for
+utilities like `bg-brand` in your own blocks, also declare the token in `@theme`.
+
+`src/style.css` (everything else):
 ```css
 @import '@trainpaths/cms/style.css';
 
@@ -153,7 +164,7 @@ import Base from '@trainpaths/cms/src/components/SiteFooter.vue'
 }
 
 .site-theme {                  /* the public site + the editor canvas; the admin keeps the CMS look */
-	--color-primary: var(--color-brand);
+	--color-primary-dark: #115e59; /* tokens outside the palette */
 	--font-sans: 'Inter Variable', sans-serif;
 }
 ```

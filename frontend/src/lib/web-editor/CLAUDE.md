@@ -24,6 +24,8 @@ core/blockTypes.ts  registerAllBlocks(): globs blocks/*/index.ts + the instance 
 core/blockViews.ts  getBlockView(name): globs blocks/*/*View.vue + /src/blocks/*/*View.vue (named via block.json); public
                     site + preview. Separate so the public site has no editor code
 core/defineBlock.ts defineBlock(meta, definition): block.json + editor definition → BlockType
+core/colors.ts      block colours: `themeColors` (palette from `__CMS_THEME_COLORS__`, defined by cms(); {} in Vitest),
+                    colorValue (key → var(--color-key), legacy hex as is, else none), blockColorStyle (both wrappers)
 core/serializer.ts  serialize/parse helpers (unused by the store, kept for import/export)
 blocks/<name>/      block.json (name, title, category, description, supports, parent?) + index.ts (`export default defineBlock(meta, {icon,
                     attributes, edit, settings?})`) + <Name>Edit/View/Icon.vue [+ <Name>Settings.vue]. Picked up
@@ -47,7 +49,8 @@ editor/BlockList.vue      recursive list + HTML5 drag/drop (move + create from s
                           rendered; active line (bg-primary) grows 0 → 4px, 3px space each side: no layout shift. Root list with no blocks renders the
                           "Start adding blocks" placeholder, which is the drop target for the first block
 editor/BlockWrapper.vue   selection/hover ring (no padding/border: blocks pad themselves), data-block-id, floating toolbar (grip = only drag source), #inline-toolbar-{id}
-                          target, width/colours; no overflow-hidden (would clip child toolbars). Mobile: toolbar
+                          target, width/colours; toolbar: grip, icon, title, ↑ ↓ duplicate remove (compact, gap-2) + the
+                          block's inline toolbar; no overflow-hidden (would clip child toolbars). Mobile: toolbar
                           `<Teleport :disabled>` into `#editor-mobile-toolbar` when selected, no hover toolbars.
                           wide/full overhang only when `main` has room (`@min-[784px]/canvas`, `@min-[816px]/canvas`;
                           ViewBlockWrapper uses the same widths as viewport variants)
@@ -70,7 +73,8 @@ editor/PageSettings.vue   title (< sm only), slug (saved on blur/Enter via store
                           (store.pageMetaTitle/-Description); tags (`TagInput`, saved right away via store.updateTags,
                           not part of undo) + publish toggle
 editor/ToolbarDropdown.vue  compact inline-toolbar choice (current value + menu); paragraph align, heading level
-editor/ColorPicker.vue, SettingsSection.vue   settings UI pieces
+editor/ColorPicker.vue    theme palette swatches + none (no custom colours), model = palette key
+editor/SettingsSection.vue  settings section
 view/ViewBlockList.vue → ViewBlockRenderer.vue (looks up `getBlockView(name)`, core/blockViews.ts) → ViewBlockWrapper.vue
 composables/        useIsMobile (shared matchMedia ref, < 768px; store + BlockWrapper), useSelection (select/clear/prev/next/parent/child), useKeyboardNav (arrows, Esc, Delete;
                     undo Ctrl/Cmd+Z, redo Ctrl/Cmd+Shift+Z or Ctrl+Y), useToolbarPosition,
@@ -101,7 +105,8 @@ web-editor.css       @apply component classes (.input-field, .field-label, .inne
   and count towards autosave (every 4 changes). Saves are serialized in `savePage`.
 - The editor store is a singleton: `Editor.vue` calls `loadPage` on mount / id change and `closePage` on back.
 - SFC `<style>` blocks using `@apply` need `@reference "<relative path>/style.css";` (Tailwind v4).
-- Block colours are user-chosen hex values, so wrappers use inline `:style` — the one allowed inline style.
+- Block colours are palette keys rendered as `var(--color-<key>)` inline on the wrappers (`core/colors.ts`) — the one
+  allowed inline style. Old pages may hold hex values: still rendered.
 - The canvas `<main>` is `.site-theme` (instance site theme). Editor chrome inside it (selection ring, drop lines,
   toolbar) uses `cms-primary` / `font-cms`, never `primary` / `font-sans`, or a site theme recolours it.
 - Editor store page flags from the instance config: `pageTemplate`, `pageLocked` (slug input disabled),
@@ -109,14 +114,17 @@ web-editor.css       @apply component classes (.input-field, .field-label, .inne
 - Tailwind v3→v4 renames were applied during the port (`outline-none`→`outline-hidden`, `shadow-sm`→`shadow-xs`);
   write v4 class names.
 - Wrappers add no spacing; each block pads its own root, same class in Edit and View (edit/view parity).
-- Image `width` is a percent number (1–100); `blocks/image/width.ts` also reads legacy `"70%"` strings.
+- Image `width` is a percent number (1–100); `blocks/image/width.ts` also reads legacy `"70%"` strings. The image
+  toolbar has only the width (number inputs in `.toolbar-input` have no spinners); upload/choose live in the empty
+  placeholder, replace in the settings panel (`MediaField`). Link toolbar: URL input `w-160`.
 - Images reference media by id in the `mediaId` attribute (image + card; `media/useMediaImage`). Alt text
   lives on the media object (edited in the settings panel or `/admin/media`), fallback `"image"`; the caption
   is not an alt fallback. No external image URLs: nginx CSP is `img-src 'self'`.
 - `data-testid`s used by e2e: `page-title`, `page-slug`, `publish-toggle`, `page-row`, `block-drag-handle`, `inserter-block`, `drop-indicator`,
   `media-upload`, `media-upload-input`, `media-choose`, `media-replace`, `media-picker`, `media-item`, `media-alt`, `media-name`, `media-details`, `media-save`, `media-delete`,
   `sidebar-tab-blocks`, `sidebar-tab-outline`, `outline-item`, `toggle-left-sidebar`, `toggle-right-sidebar`,
-  `sidebar-close-left`, `sidebar-close-right`, `sidebar-tab-page`, `sidebar-tab-block`, `mobile-block-toolbar`, `page-title-mobile`.
+  `sidebar-close-left`, `sidebar-close-right`, `sidebar-tab-page`, `sidebar-tab-block`, `mobile-block-toolbar`, `page-title-mobile`,
+  `color-swatch`.
 - Blocks use container-query variants (`@md:`), never viewport `md:` (see BLOCK_SYSTEM.md). A `@container`
   element loses its content-based width: give it an explicit width (`w-full`) inside flex/shrink-to-fit parents.
 - Mobile sidebar rules live in the editor store: closed by default on mobile, opening one closes the other,

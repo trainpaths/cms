@@ -50,6 +50,9 @@ inner blocks are structured, repeatable children with their own editing (a card'
   areas like `.inner-blocks-container` stay transparent so the block's background shows through.
 - Shared attributes handled by wrappers, not by blocks: `blockWidth` (default/wide/full),
   `backgroundColor`, `textColor` → `editor/BlockWrapper.vue` and `view/ViewBlockWrapper.vue`.
+- Colour attributes hold a **theme palette key** (`cms.config.json` `theme.colors`, picked in `editor/ColorPicker.vue`),
+  rendered as `var(--color-<key>)` by `core/colors.ts` `blockColorStyle` (legacy hex values pass, anything else is
+  dropped); `cms()` defines the variables on `.site-theme` (`frontend/server/theme.js`).
 - Colours are set inline on the wrapper and **inherited**: a block's own default text/bg class
   (`text-gray-700`, `bg-white`, ...) must only apply when the attribute is empty, or it overrides the choice.
 
