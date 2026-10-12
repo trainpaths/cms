@@ -1,10 +1,14 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { storeToRefs } from 'pinia'
 import { Link } from '@trainpaths/nb-ui'
+import BackupsSummary from '../components/backups/BackupsSummary.vue'
 
 const authStore = useAuthStore()
 const { user, authType } = storeToRefs(authStore)
+// backups API is super admin only
+const isSuperAdmin = computed(() => authType.value === 'staff' && !!user.value?.roles?.includes('super_admin'))
 </script>
 
 <template>
@@ -19,5 +23,10 @@ const { user, authType } = storeToRefs(authStore)
 		</div>
 
 		<p class="mt-24 text-sm text-black opacity-50">Logged in as {{ authType }}</p>
+
+		<BackupsSummary
+			v-if="isSuperAdmin"
+			class="mt-24"
+		/>
 	</div>
 </template>
