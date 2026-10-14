@@ -80,16 +80,22 @@ public class PagesController(PageService pages, IRenderQueue render) : Controlle
 		var result = await pages.DeleteAsync(id, ct);
 		if (result.Error is not null)
 			return ToProblem(result);
-		render.Page(id); // the worker widens to all (quietly): the page left the public site
+		// the page left the public site: re-render all quietly, other pages marked right away
+		render.Refresh();
 		return NoContent();
 	}
 
-	// menus + footer links on every page resolve published pages only: the worker widens to all (quietly) when
-	// the page left the public site or is new there
+	// menus + footer links on every page resolve published pages only: re-render all quietly, other pages marked right
+	// away (a page loaded before the worker picks the job up would show the old menu without the client refresh).
+	// Page(id) too: HTML stored before an unpublish must not come back on a republish (draft edits render nothing).
 	private async Task<ActionResult<PageDetail>> SetStatusAsync(Guid id, PageStatus status, CancellationToken ct)
 	{
 		var result = await pages.SetStatusAsync(id, status, CurrentUserId, ct);
-		if (result.Error is null) render.Page(id);
+		if (result.Error is null)
+		{
+			render.Page(id);
+			render.Refresh();
+		}
 		return Map(result);
 	}
 

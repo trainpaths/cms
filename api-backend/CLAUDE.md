@@ -139,9 +139,9 @@ PublicHtmlController   /api/public/html      [AllowAnonymous], rate limit "pages
                                  | X-Accel-Redirect: /public.html (no fresh HTML yet → client-rendered shell)
 ```
 - `Services/Rendering/`: `RenderQueue` (`IRenderQueue`, called by controllers after a successful write: `Page(id)` =
-  that page's content/publish state (stale → shell until re-rendered; the worker widens to all quietly when it left/joined
-  the public site or changed title/slug), `Refresh()` = main menu, site config, media alt/delete (all pages, stored HTML
-  stays servable), `All()` = backup restore only (everything stale); `Requeue(id?)` = worker-internal, no invalidation),
+  that page's content (stale → shell until re-rendered; the worker widens to all quietly on a title/slug change),
+  `Refresh()` = main menu, site config, media alt/delete, page publish/unpublish (+ `Page(id)`)/delete (all pages,
+  stored HTML stays servable, marked right away), `All()` = backup restore only (everything stale); `Requeue(id?)` = worker-internal, no invalidation),
   `RenderStatus` (singleton: renderer `CurrentVersion`, in-memory `NotFoundHtml`, change timestamps → `IsFresh`,
   refresh marker → `NeedsRefresh`: `PublicHtmlController` adds `data-refresh` to `#__STATE__` and an `-r` ETag suffix,
   the public client then refetches the main menu + site config),
