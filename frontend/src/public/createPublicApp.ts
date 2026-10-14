@@ -21,5 +21,5 @@ export function createPublicApp(state: PublicState, history: RouterHistory, ssr:
 
 	const router = createPublicRouter(history, pinia)
 	app.use(router)
-	return { app, router }
+	return { app, router, pinia }
 }
