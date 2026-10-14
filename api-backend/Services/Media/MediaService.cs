@@ -19,6 +19,8 @@ public record MediaResult<T>(T? Value, MediaError? Error = null, string? Detail 
 	public static MediaResult<T> Fail(MediaError error, string? detail = null) => new(default, error, detail);
 }
 
+public record MediaUpdate(MediaItem Item, bool AltChanged);
+
 /// <summary>
 /// Media library: uploads (validated by magic bytes, never by the client's Content-Type), alt text,
 /// deletion, and resolving the <c>mediaId</c> attributes of a block tree for page responses.
@@ -114,22 +116,25 @@ public partial class MediaService(AppDbContext db, IBlobStorage blobs, ILogger<M
 		return MediaResult<MediaItem>.Ok(ToItem(asset));
 	}
 
-	public async Task<MediaResult<MediaItem>> UpdateAsync(Guid id, UpdateMediaRequest req, CancellationToken ct)
+	/// <summary><see cref="MediaUpdate.AltChanged"/>: rendered pages show the alt text, the display name they don't.</summary>
+	public async Task<MediaResult<MediaUpdate>> UpdateAsync(Guid id, UpdateMediaRequest req, CancellationToken ct)
 	{
 		var asset = await db.MediaAssets.FirstOrDefaultAsync(m => m.Id == id, ct);
 		if (asset is null)
-			return MediaResult<MediaItem>.Fail(MediaError.NotFound);
+			return MediaResult<MediaUpdate>.Fail(MediaError.NotFound);
 
 		if (req.FileName is not null)
 		{
 			var name = new string(req.FileName.Where(c => !char.IsControl(c)).ToArray()).Trim();
 			if (name.Length == 0)
-				return MediaResult<MediaItem>.Fail(MediaError.Invalid, "File name must not be empty.");
+				return MediaResult<MediaUpdate>.Fail(MediaError.Invalid, "File name must not be empty.");
 			asset.FileName = name;
 		}
-		asset.Alt = req.Alt?.Trim() ?? "";
+		var alt = req.Alt?.Trim() ?? "";
+		var altChanged = alt != asset.Alt;
+		asset.Alt = alt;
 		await db.SaveChangesAsync(ct);
-		return MediaResult<MediaItem>.Ok(ToItem(asset));
+		return MediaResult<MediaUpdate>.Ok(new MediaUpdate(ToItem(asset), altChanged));
 	}
 
 	/// <summary>Deletes the blob, then the row: a failed blob delete leaves the entry for a retry.</summary>

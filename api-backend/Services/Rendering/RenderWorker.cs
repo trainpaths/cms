@@ -119,8 +119,10 @@ public sealed class RenderWorker(
 
 	private async Task RenderAsync(bool all, HashSet<Guid> ids, CancellationToken ct)
 	{
-		// before reading any data: a change committed during this render stays newer than its HTML
-		var startedAt = DateTimeOffset.UtcNow;
+		// before reading any data: a change committed during this render stays newer than its HTML. Truncated to
+		// microseconds (Postgres precision), so the stored RenderedAt equals it.
+		var now = DateTimeOffset.UtcNow;
+		var startedAt = now.AddTicks(-(now.UtcTicks % 10));
 		using var scope = scopeFactory.CreateScope();
 		var services = scope.ServiceProvider;
 		var db = services.GetRequiredService<AppDbContext>();
@@ -150,6 +152,9 @@ public sealed class RenderWorker(
 					break;
 				}
 			}
+			// quiet: other pages keep their stored HTML, marked so the client refetches the menu/config meanwhile
+			// (just before startedAt: HTML from this render isn't marked)
+			if (all) status.MarkRefreshed(startedAt.AddTicks(-1));
 		}
 
 		var menu = await services.GetRequiredService<MenuService>().GetPublicAsync(Menu.MainHandle, ct);

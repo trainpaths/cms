@@ -25,6 +25,9 @@ public class PublicHtmlController(AppDbContext db, RenderStatus status) : Contro
 	public const string SpaShell = "/index.html";
 	public const string PublicShell = "/public.html";
 
+	/// <summary>On <c>#__STATE__</c> of stored HTML rendered before a quiet change (see <c>entry-client.ts</c>).</summary>
+	public const string RefreshAttribute = "data-refresh";
+
 	// renderer not reached yet (startup) or failed
 	private const string FallbackNotFound =
 		"<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><meta name=\"robots\" content=\"noindex\">" +
@@ -66,12 +69,23 @@ public class PublicHtmlController(AppDbContext db, RenderStatus status) : Contro
 		if (rendered is null || !status.IsFresh(page.Id, rendered.RenderedAt))
 			return Accel(PublicShell);
 
-		var etag = $"W/\"{rendered.RenderedAt.UtcTicks:x}\"";
+		// rendered before a quiet change (menu, site config, ...): the client refetches those after hydration. The
+		// suffix keeps browsers from reusing a marked copy after the re-render, or an unmarked one during it.
+		var refresh = status.NeedsRefresh(rendered.RenderedAt);
+		var etag = $"W/\"{rendered.RenderedAt.UtcTicks:x}{(refresh ? "-r" : "")}\"";
 		Response.Headers.ETag = etag;
 		Response.Headers.CacheControl = "no-cache";
 		if (Request.Headers.IfNoneMatch == etag)
 			return StatusCode(304);
-		return Html(rendered.Html, 200);
+		return Html(refresh ? MarkRefresh(rendered.Html) : rendered.Html, 200);
+	}
+
+	/// <summary><c>#__STATE__</c> is the contract between <c>public.html</c> and the client (first occurrence).</summary>
+	private static string MarkRefresh(string html)
+	{
+		const string state = "id=\"__STATE__\"";
+		var at = html.IndexOf(state, StringComparison.Ordinal);
+		return at < 0 ? html : html.Insert(at + state.Length, " " + RefreshAttribute);
 	}
 
 	private ContentResult Html(string html, int statusCode) =>

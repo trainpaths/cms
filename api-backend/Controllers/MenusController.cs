@@ -1,5 +1,6 @@
 using api_backend.Models.Auth.JWT;
 using api_backend.Models.Dto;
+using api_backend.Models.Menus;
 using api_backend.Services.Menus;
 using api_backend.Services.Pages;
 using api_backend.Services.Rendering;
@@ -46,7 +47,8 @@ public class MenusController(MenuService menus, IRenderQueue render) : Controlle
 		var result = await menus.UpdateAsync(id, req, User.GetUserId(), ct);
 		if (result.Error is not null)
 			return ToProblem(result);
-		render.All();
+		// only main is in the rendered state; other menus exist only client-side
+		if (result.Value!.Handle == Menu.MainHandle) render.Refresh();
 		return Ok(result.Value);
 	}
 
@@ -56,7 +58,7 @@ public class MenusController(MenuService menus, IRenderQueue render) : Controlle
 		var result = await menus.DeleteAsync(id, ct);
 		if (result.Error is not null)
 			return ToProblem(result);
-		render.All();
+		// nothing to render: the main menu can't be deleted, other menus aren't in stored HTML
 		return NoContent();
 	}
 

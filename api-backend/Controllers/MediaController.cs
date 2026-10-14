@@ -48,8 +48,9 @@ public class MediaController(MediaService media, IRenderQueue render) : Controll
 		var result = await media.UpdateAsync(id, req, ct);
 		if (result.Error is not null)
 			return ToProblem(result);
-		render.All(); // alt text is in rendered pages (no usage tracking to narrow it)
-		return Ok(result.Value);
+		// alt text is in rendered pages (no usage tracking to narrow it); a display-name rename isn't
+		if (result.Value!.AltChanged) render.Refresh();
+		return Ok(result.Value.Item);
 	}
 
 	/// <summary>Blocks still referencing the asset render nothing afterwards.</summary>
@@ -58,7 +59,7 @@ public class MediaController(MediaService media, IRenderQueue render) : Controll
 	{
 		if (!await media.DeleteAsync(id, ct))
 			return NotFoundProblem();
-		render.All();
+		render.Refresh(); // pages that used it show a broken image until re-rendered
 		return NoContent();
 	}
 

@@ -15,9 +15,34 @@ public sealed class RenderStatus
 	public volatile string? NotFoundHtml;
 
 	private long _allChangedAt;
+	private long _refreshedAt;
 	private readonly ConcurrentDictionary<Guid, DateTimeOffset> _pageChangedAt = new();
 
+	/// <summary>
+	/// Restore only: <c>rendered_pages</c> is excluded from backups (empty after a restore), but a render in flight
+	/// during the restore could store pre-restore HTML afterwards; this makes that row stale.
+	/// </summary>
 	public void MarkAllChanged() => Interlocked.Exchange(ref _allChangedAt, DateTimeOffset.UtcNow.UtcTicks);
+
+	/// <summary>
+	/// Quiet change (menu, site config, media, publish state): stored HTML stays servable, but HTML rendered before
+	/// it gets the refresh marker (<see cref="NeedsRefresh"/>). Separate from <see cref="MarkAllChanged"/> on purpose:
+	/// that one means "serve the shell instead", this one only "serve it, the client refetches menu/config". An API
+	/// restart during the re-render drops the marker for pages not re-rendered yet (old menu for seconds, harmless).
+	/// </summary>
+	public void MarkRefreshed() => MarkRefreshed(DateTimeOffset.UtcNow);
+
+	/// <summary>Moves the marker forward to <paramref name="at"/> (never back).</summary>
+	public void MarkRefreshed(DateTimeOffset at)
+	{
+		long current;
+		do
+		{
+			current = Interlocked.Read(ref _refreshedAt);
+			if (current >= at.UtcTicks)
+				return;
+		} while (Interlocked.CompareExchange(ref _refreshedAt, at.UtcTicks, current) != current);
+	}
 
 	public void MarkChanged(Guid pageId) => _pageChangedAt[pageId] = DateTimeOffset.UtcNow;
 
@@ -30,4 +55,8 @@ public sealed class RenderStatus
 		var all = new DateTimeOffset(Interlocked.Read(ref _allChangedAt), TimeSpan.Zero);
 		return renderedAt > all && (!_pageChangedAt.TryGetValue(pageId, out var page) || renderedAt > page);
 	}
+
+	/// <summary>Stored HTML rendered before the last quiet change: served, but the client refetches menu/config.</summary>
+	public bool NeedsRefresh(DateTimeOffset renderedAt) =>
+		renderedAt.UtcTicks <= Interlocked.Read(ref _refreshedAt);
 }
