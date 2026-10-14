@@ -80,15 +80,16 @@ public class PagesController(PageService pages, IRenderQueue render) : Controlle
 		var result = await pages.DeleteAsync(id, ct);
 		if (result.Error is not null)
 			return ToProblem(result);
-		render.All();
+		render.Page(id); // the worker widens to all (quietly): the page left the public site
 		return NoContent();
 	}
 
-	// menus + footer links on every page resolve published pages only
+	// menus + footer links on every page resolve published pages only: the worker widens to all (quietly) when
+	// the page left the public site or is new there
 	private async Task<ActionResult<PageDetail>> SetStatusAsync(Guid id, PageStatus status, CancellationToken ct)
 	{
 		var result = await pages.SetStatusAsync(id, status, CurrentUserId, ct);
-		if (result.Error is null) render.All();
+		if (result.Error is null) render.Page(id);
 		return Map(result);
 	}
 

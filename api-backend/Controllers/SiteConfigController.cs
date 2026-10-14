@@ -25,7 +25,7 @@ public class SiteConfigController(SiteConfigService siteConfig, IRenderQueue ren
 		var result = await siteConfig.UpdateAsync(req, User.GetUserId(), ct);
 		if (result.Error is not null)
 			return Problem(statusCode: 400, title: "Invalid configuration.", detail: result.Error);
-		render.All();
+		render.Refresh();
 		return Ok(result.Value);
 	}
 }
