@@ -57,9 +57,17 @@ public class PagesController(PageService pages, IRenderQueue render) : Controlle
 	public async Task<ActionResult<PageDetail>> Update(Guid id, UpdatePageRequest req, CancellationToken ct)
 	{
 		var result = await pages.UpdateAsync(id, req, CurrentUserId, ct);
-		// no draft copy: edits to a published page are live (worker widens to all on title/slug change)
-		if (result.Value?.Status == PageStatus.Published) render.Page(id);
-		return Map(result);
+		if (result.Error is not null)
+			return ToProblem(result);
+		var (page, renamed) = result.Value!;
+		// no draft copy: edits to a published page are live; a new title/slug shows in menus + footer links on every
+		// page: re-render all quietly, other pages marked right away
+		if (page.Status == PageStatus.Published)
+		{
+			render.Page(id);
+			if (renamed) render.Refresh();
+		}
+		return Ok(page);
 	}
 
 	[HttpPut("{id:guid}/tags")]

@@ -24,6 +24,9 @@ public record PageResult<T>(T? Value, PageError? Error = null, string? Detail = 
 	public static PageResult<T> Fail(PageError error, string? detail = null) => new(default, error, detail);
 }
 
+/// <summary><see cref="Renamed"/>: title or slug changed (menus + footer links on every page show those).</summary>
+public record PageUpdate(PageDetail Page, bool Renamed);
+
 /// <summary>
 /// Page CRUD, publish, slug rules, block validation. Pages declared in the instance config (<see cref="CmsConfig"/>) can be
 /// locked (fixed slug, undeletable) and template-rendered; those flags are looked up by slug, not stored.
@@ -174,18 +177,19 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		return PageResult<ImportPageResult>.Ok(new ImportPageResult(detail, missing));
 	}
 
-	public async Task<PageResult<PageDetail>> UpdateAsync(Guid id, UpdatePageRequest req, Guid staffId, CancellationToken ct)
+	public async Task<PageResult<PageUpdate>> UpdateAsync(Guid id, UpdatePageRequest req, Guid staffId, CancellationToken ct)
 	{
 		var page = await db.Pages.FirstOrDefaultAsync(p => p.Id == id, ct);
 		if (page is null)
-			return PageResult<PageDetail>.Fail(PageError.NotFound);
+			return PageResult<PageUpdate>.Fail(PageError.NotFound);
 		var config = cms.Page(page.Slug);
+		var (oldTitle, oldSlug) = (page.Title, page.Slug);
 
 		if (req.Title is not null)
 		{
 			var title = req.Title.Trim();
 			if (title.Length == 0)
-				return PageResult<PageDetail>.Fail(PageError.Invalid, "Title cannot be empty.");
+				return PageResult<PageUpdate>.Fail(PageError.Invalid, "Title cannot be empty.");
 			page.Title = title;
 		}
 
@@ -193,17 +197,17 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		{
 			var slug = req.Slug.Trim().ToLowerInvariant();
 			if (ValidateSlug(slug) is { } slugError)
-				return PageResult<PageDetail>.Fail(PageError.Invalid, slugError);
+				return PageResult<PageUpdate>.Fail(PageError.Invalid, slugError);
 			if (slug != page.Slug && config is { IsLocked: true })
-				return PageResult<PageDetail>.Fail(PageError.Invalid, "This page's slug is fixed by the site configuration.");
+				return PageResult<PageUpdate>.Fail(PageError.Invalid, "This page's slug is fixed by the site configuration.");
 			if (slug != page.Slug && await db.Pages.AnyAsync(p => p.Slug == slug, ct))
-				return PageResult<PageDetail>.Fail(PageError.SlugTaken, $"Slug '{slug}' is already in use.");
+				return PageResult<PageUpdate>.Fail(PageError.SlugTaken, $"Slug '{slug}' is already in use.");
 			page.Slug = slug;
 		}
 
 		if ((MetaError(req.MetaTitle, MaxMetaTitleLength, "Meta title")
 			?? MetaError(req.MetaDescription, MaxMetaDescriptionLength, "Meta description")) is { } metaError)
-			return PageResult<PageDetail>.Fail(PageError.Invalid, metaError);
+			return PageResult<PageUpdate>.Fail(PageError.Invalid, metaError);
 		if (req.MetaTitle is not null)
 			page.MetaTitle = req.MetaTitle.Trim();
 		if (req.MetaDescription is not null)
@@ -212,16 +216,17 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		if (req.Blocks is not null)
 		{
 			if (config is { Editable: false })
-				return PageResult<PageDetail>.Fail(PageError.Invalid, "This page's content comes from its template.");
+				return PageResult<PageUpdate>.Fail(PageError.Invalid, "This page's content comes from its template.");
 			if (ValidateBlocks(req.Blocks) is { } blockError)
-				return PageResult<PageDetail>.Fail(PageError.Invalid, blockError);
+				return PageResult<PageUpdate>.Fail(PageError.Invalid, blockError);
 			page.Blocks = req.Blocks;
 		}
 
 		page.UpdatedAt = DateTimeOffset.UtcNow;
 		page.UpdatedById = staffId;
 		await db.SaveChangesAsync(ct);
-		return PageResult<PageDetail>.Ok(await ToDetailAsync(page, ct));
+		var renamed = page.Title != oldTitle || page.Slug != oldSlug;
+		return PageResult<PageUpdate>.Ok(new PageUpdate(await ToDetailAsync(page, ct), renamed));
 	}
 
 	public async Task<PageResult<PageDetail>> SetStatusAsync(Guid id, PageStatus status, Guid staffId, CancellationToken ct)
