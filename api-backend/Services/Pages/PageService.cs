@@ -76,12 +76,28 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		var normalized = slug.ToLowerInvariant();
 		var page = await db.Pages.AsNoTracking()
 			.FirstOrDefaultAsync(p => p.Slug == normalized && p.Status == PageStatus.Published, ct);
-		return page is null
-			? null
-			: new PublicPage(page.Title, page.Slug, page.Blocks,
-				await MediaService.ResolveRefsAsync(db, page.Blocks, ct), page.PublishedAt, cms.Page(page.Slug)?.Template,
-				page.MetaTitle, page.MetaDescription);
+		return page is null ? null : ToPublic(page, await MediaService.ResolveRefsAsync(db, page.Blocks, ct));
 	}
+
+	/// <summary>Published pages among <paramref name="ids"/> (others absent): two queries, media refs shared.</summary>
+	public async Task<Dictionary<Guid, PublicPage>> GetPublishedByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct)
+	{
+		var list = await db.Pages.AsNoTracking()
+			.Where(p => ids.Contains(p.Id) && p.Status == PageStatus.Published)
+			.ToListAsync(ct);
+		var mediaIds = list.SelectMany(p => MediaService.CollectIds(p.Blocks)).ToHashSet();
+		var media = mediaIds.Count == 0
+			? new Dictionary<Guid, MediaRef>()
+			: await db.MediaAssets.AsNoTracking()
+				.Where(m => mediaIds.Contains(m.Id))
+				.ToDictionaryAsync(m => m.Id, MediaService.ToRef, ct);
+		return list.ToDictionary(p => p.Id, p => ToPublic(p,
+			MediaService.CollectIds(p.Blocks).Where(media.ContainsKey).Select(id => media[id]).ToList()));
+	}
+
+	private PublicPage ToPublic(Page page, List<MediaRef> media) =>
+		new(page.Title, page.Slug, page.Blocks, media, page.PublishedAt, cms.Page(page.Slug)?.Template,
+			page.MetaTitle, page.MetaDescription);
 
 	public async Task<PageResult<PageDetail>> CreateAsync(CreatePageRequest req, Guid staffId, CancellationToken ct)
 	{

@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using api_backend.Models.Dto;
 using api_backend.Models.Menus;
 using api_backend.Models.Pages;
 using api_backend.Models.Rendering;
@@ -24,6 +26,7 @@ public sealed class RenderWorker(
 	ILogger<RenderWorker> logger) : BackgroundService
 {
 	private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(30);
+	private const int ChunkSize = 20;
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
@@ -162,17 +165,46 @@ public sealed class RenderWorker(
 		var pages = services.GetRequiredService<PageService>();
 		var baseUrl = options.Value.PublicBaseUrl.TrimEnd('/');
 
+		var stopwatch = Stopwatch.StartNew();
 		var targets = await db.Pages.AsNoTracking()
 			.Where(p => all ? p.Status == PageStatus.Published : ids.Contains(p.Id))
-			.Select(p => new { p.Id, p.Slug })
+			.Select(p => p.Id)
 			.ToListAsync(ct);
 
-		foreach (var target in targets)
+		// per chunk: pages + media refs in two queries, existing rows in one, one commit (one POST per page: Node
+		// renders one at a time anyway). A page is fresh once its chunk commits.
+		var count = 0;
+		foreach (var chunk in targets.Chunk(ChunkSize))
 		{
-			var page = await pages.GetPublishedBySlugAsync(target.Slug, ct);
-			if (page is null) continue; // unpublished meanwhile; the queued All covers it
-			var result = await renderer.RenderAsync(new RenderState(target.Slug, page, menu, config, baseUrl), ct);
-			await StoreAsync(db, target.Id, page, result, startedAt, ct);
+			var published = await pages.GetPublishedByIdsAsync(chunk, ct);
+			var rows = await db.RenderedPages.Where(r => chunk.Contains(r.PageId)).ToDictionaryAsync(r => r.PageId, ct);
+			var results = new List<(Guid Id, PublicPage Page, RenderResult Result)>();
+			foreach (var id in chunk)
+			{
+				// unpublished meanwhile: its queued job widens to all and cleans up
+				if (!published.TryGetValue(id, out var page)) continue;
+				var result = await renderer.RenderAsync(new RenderState(page.Slug, page, menu, config, baseUrl), ct);
+				results.Add((id, page, result));
+				if (!rows.TryGetValue(id, out var row))
+				{
+					row = NewRow(id);
+					db.RenderedPages.Add(row);
+				}
+				Apply(row, page, result, startedAt);
+			}
+			try
+			{
+				await db.SaveChangesAsync(ct);
+			}
+			catch (DbUpdateException)
+			{
+				// a page deleted mid-render (FK): store the chunk one by one, skipping that one
+				db.ChangeTracker.Clear();
+				foreach (var (id, page, result) in results)
+					await StoreAsync(db, id, page, result, startedAt, ct);
+			}
+			db.ChangeTracker.Clear(); // don't keep every page's HTML tracked
+			count += results.Count;
 		}
 
 		if (all)
@@ -182,32 +214,41 @@ public sealed class RenderWorker(
 			status.NotFoundHtml = notFound.Html;
 			status.CurrentVersion = notFound.Version;
 		}
-		logger.LogInformation("Rendered {Count} public page(s){All}.", targets.Count, all ? " (all)" : "");
+		logger.LogInformation("Rendered {Count} public page(s){All} in {Milliseconds} ms.",
+			count, all ? " (all)" : "", stopwatch.ElapsedMilliseconds);
 	}
 
 	private static async Task StoreAsync(
-		AppDbContext db, Guid pageId, Models.Dto.PublicPage page, RenderResult result, DateTimeOffset renderedAt,
+		AppDbContext db, Guid pageId, PublicPage page, RenderResult result, DateTimeOffset renderedAt,
 		CancellationToken ct)
 	{
 		var row = await db.RenderedPages.FirstOrDefaultAsync(r => r.PageId == pageId, ct);
 		if (row is null)
 		{
-			row = new RenderedPage { PageId = pageId, Html = "", Title = "", Slug = "", RendererVersion = "" };
+			row = NewRow(pageId);
 			db.RenderedPages.Add(row);
 		}
-		row.Html = result.Html;
-		row.Title = page.Title;
-		row.Slug = page.Slug;
-		row.RendererVersion = result.Version;
-		row.RenderedAt = renderedAt;
+		Apply(row, page, result, renderedAt);
 		try
 		{
 			await db.SaveChangesAsync(ct);
 		}
 		catch (DbUpdateException)
 		{
-			// page deleted mid-render (FK): its queued All cleans up
+			// page deleted mid-render (FK): its queued job cleans up
 			db.ChangeTracker.Clear();
 		}
+	}
+
+	private static RenderedPage NewRow(Guid pageId) =>
+		new() { PageId = pageId, Html = "", Title = "", Slug = "", RendererVersion = "" };
+
+	private static void Apply(RenderedPage row, PublicPage page, RenderResult result, DateTimeOffset renderedAt)
+	{
+		row.Html = result.Html;
+		row.Title = page.Title;
+		row.Slug = page.Slug;
+		row.RendererVersion = result.Version;
+		row.RenderedAt = renderedAt;
 	}
 }
