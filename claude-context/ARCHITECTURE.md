@@ -192,12 +192,28 @@ staff save ─► API IRenderQueue ─► RenderWorker ─POST /render─► ren
 - The public site is a separate small Vue app (`frontend/src/public/`, template = the instance's `public.html`) built from the same
   view components as the editor preview, rendered with `vue/server-renderer` and **hydrated** in the browser
   (client navigation between public pages fetches `/api/public/pages/{slug}`). It ships no editor code.
-- Render triggers (controllers call `IRenderQueue`): content edit of a published page → that page; publish,
-  unpublish, delete, menu, site config, media edit/delete → all pages. A one-page job widens to all when the
-  page's title/slug differs from what it was rendered with (menus and footer show those). Debounced 1 s.
-- **Freshness:** a change marks HTML rendered before it stale right away (`RenderStatus`); until re-rendered the
-  API serves the client-rendered shell (`/public.html`, fetches live data). So edits are visible immediately and
-  rendered HTML never shows old content. In-memory state: assumes **one API instance**.
+- Render triggers (controllers call `IRenderQueue`): content edit, publish, unpublish, delete of a page →
+  `Page(id)`; a one-page job widens to all (quietly, see below) when the page left the public site, is new there, or
+  its title/slug differs from what it was rendered with (menus and footer show those). Main menu, site config, media
+  alt edit/delete → `Refresh()` (all pages, quietly); other menus, a media rename and uploads render nothing (not in
+  stored HTML). Backup restore → `All()`. Debounced 1 s.
+- **Freshness** (`RenderStatus`, in memory: assumes **one API instance**):
+  - Own content changed (`Page(id)`): that page's stored HTML is stale right away; until re-rendered the API serves the
+    client-rendered shell (`/public.html`, fetches live data), so the edit is visible immediately.
+  - Something around the body changed (menu, footer, head tags, publish state of another page, media): stored HTML
+    keeps being served while a **quiet re-render** runs. HTML rendered before the change gets `data-refresh` on its
+    `#__STATE__` (string replace on the response, ETag suffix `-r`), and the public client then refetches the main menu
+    and site config after hydration (`entry-client.ts`), so header/footer show the change right away. Unmarked pages
+    (the normal case) cause no extra requests. Crawlers see the old menu/head tags for a few seconds; a click on a link
+    to a just unpublished/renamed page can 404 in that window; a deleted image is broken until re-rendered.
+    Splitting the header into its own stored fragment was rejected (separate Vue app, active link after mount, split
+    state, breaking `public.html` change for instances).
+  - `All()` (restore only) marks everything stale: `rendered_pages` isn't in backups, but a render in flight during
+    the restore could store pre-restore HTML afterwards.
+- **Batched writes:** the worker processes pages in chunks of 20: pages + media refs in two queries, existing rows in
+  one, one `POST /render` per page (Node renders one at a time; a batch endpoint would hit the 4 MB body limit), one
+  commit per chunk (a page is fresh once its chunk commits). An FK violation (page deleted mid-render) falls back to
+  row-by-row for that chunk. The log line `Rendered {n} public page(s) in {ms} ms` shows what a full render costs.
 - **Deploys:** stored HTML names hashed asset files of its build. The renderer reports a version (hash of
   template + SSR bundle); only HTML of the current version is served, and a version change re-renders everything
   (periodic check, 60 s; also on API start). The not-found page lives in memory (re-rendered with everything).

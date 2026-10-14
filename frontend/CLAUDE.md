@@ -67,7 +67,7 @@ files (outranks the instance's `.site-theme` rules) + `define` `__CMS_THEME_COLO
 ## Public site (`src/public/`, `server/`)
 ```
 state.ts            PublicState {slug, page|null, menu, config, baseUrl}: what a page renders from (API RenderState mirrors it)
-createPublicApp.ts  app factory (SSR app or client app), seeds stores (publicPage, menus, siteConfig)
+createPublicApp.ts  app factory (SSR app or client app), seeds stores (publicPage, menus, siteConfig); returns app, router, pinia
 PublicApp.vue       .site-theme root: AdminBar (client-only) + SiteHeader + PageView (template or PageContent; or NotFound) + SiteFooter
 templates.ts        getTemplate(name): the instance's src/templates/*.vue; TemplatePage / TemplateProps types
 router.ts           routes `home` / `/home` redirect / `public-page` / catch-all; first navigation keeps the server
@@ -78,7 +78,9 @@ head.ts             <head> tags: title via documentTitle ("{metaTitle} - {firmNa
                     paragraph), canonical, OG/Twitter (og:title = meta or page title, og:site_name = firm, og:image =
                     first image, else config.shareImage), icon; serializeState
 entry-server.ts     render(state) → {head, html, state}   (built with `vite build --ssr` → dist-ssr/)
-entry-client.ts     hydrates from #__STATE__; without it (shell) fetches page/menu/config, adds head tags
+entry-client.ts     hydrates from #__STATE__; without it (shell) fetches page/menu/config, adds head tags; after mounting,
+                    a `data-refresh` on #__STATE__ (stored HTML older than a menu/config change, set by the API during
+                    the quiet re-render) → refresh('main') + site config refresh() (not awaited, no hydration mismatch)
 render.test.ts      Vitest: render output, escaping (vitest.config.ts: vue + nbUi only)
 server/render-server.js  renderer service: POST /render, GET /version (hash of template + SSR bundle), /health; reads
                          dist/public.html + dist-ssr/entry-server.js from the working directory (= instance app root)
@@ -198,14 +200,15 @@ their server-rendered `<head>` (`headTags()` in `src/public/head.ts`, falls back
   (on page-row hover/focus) / `add` / `forget`. The editor store shows the cached detail first, then applies
   the server copy only if nothing was edited meanwhile, and remembers every save/publish/slug response.
 - `src/stores/siteConfig.ts` — `useSiteConfigStore`: public site `config`, `load()` once (single-flight, never throws),
-  `set()` after the admin form saves.
+  `refresh()` (refetch, keeps the current value on failure; `data-refresh` pages), `set()` after the admin form saves.
 - `src/stores/instance.ts` — `useInstanceStore`: `config` = `InstanceConfig` (publicAuth, excludedBlocks, siteConfig) +
   `isOffered(blockName)` (not in excludedBlocks), from
   `/api/public/instance`, `load()` once in `createAdmin()` (failure keeps the API defaults: auth off, nothing hidden).
 - `src/stores/tags.ts` — `useTagsStore`: tags in use + page counts (`names`, `popular` = top 3); `load()` once per
   session, `refresh()` after every tag write.
 - `src/stores/menus.ts` — `usePublicMenusStore`: public menus by handle, `load(handle)` once per session (never throws),
-  `invalidate()` after the admin saves a menu.
+  `refresh(handle)` (refetch, keeps the current entry on failure; `data-refresh` pages), `invalidate()` after the admin
+  saves a menu. Both refreshes: Vitest `stores/refresh.test.ts`.
 - `src/stores/media.ts` — `useMediaStore`: library `items` (`load`, `upload`, `update` (alt + optional fileName), `remove`) and a
   `byId` cache that image blocks render from (seeded from page responses via `seed`).
 

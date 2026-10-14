@@ -145,6 +145,11 @@ import Base from '@trainpaths/cms/src/components/SiteFooter.vue'
 `before`/`after`), every block's `*View.vue` / `*Edit.vue` (`block`), and nb-ui components
 (`src/overrides/ui/<Name>.vue`). Overriding anything else works, but may break on any upgrade.
 
+Header/footer overrides and templates should read the menu and site config **reactively** (the props, or
+`usePublicMenusStore().menus.main` / `useSiteConfigStore().config` from `@trainpaths/cms/site`), not copy them once in
+setup: after a menu or site config change, pages still waiting for their background re-render refetch both after
+loading and update the stores, so the new menu/footer appears right away.
+
 ## Theme
 
 **Palette** (`cms.config.json` → `theme.colors`, key → hex or colour function like `oklch(...)`): the only text and

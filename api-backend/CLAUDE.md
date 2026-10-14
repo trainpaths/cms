@@ -95,6 +95,8 @@ PublicMediaController  /api/public/media     [AllowAnonymous], rate limit "pages
 ```
 - `Services/Media/IBlobStorage.cs` (Put/Get/Delete, `BlobObject`) → `S3BlobStorage` (AWSSDK.S3, path-style,
   SDK v4 checksums set to WHEN_REQUIRED, bucket auto-created on first put). Singleton.
+- Renders: alt change (`MediaService.UpdateAsync` → `MediaUpdate(Item, AltChanged)`) and delete → `Refresh()`;
+  a display-name rename, the same alt or an upload render nothing.
 - `MediaService`: sniffs magic bytes (JPEG/PNG/GIF/WebP/AVIF, **no SVG**), key `{id:N}.{ext}`, buffers
   uploads (≤10 MB); a failed DB insert deletes the orphaned blob. `ResolveRefsAsync(db, blocks)` collects
   `mediaId` attributes → `MediaRef[]`; `PageService` puts it in `PageDetail.Media` /
@@ -118,6 +120,7 @@ PublicMenusController  /api/public/menus     [AllowAnonymous], rate limit "pages
   `footer-links`, frontend mirror `normalizeHandle`) and never changes afterwards (site code loads menus by it).
   `MenuItem(Id, Label, PageId?, Url?, Children)`: page link, URL (absolute http(s) or same-site path `/about`,
   `MenuService.IsMenuUrl`; `//host` rejected), or neither = groups its children.
+- Renders: updating `main` → `Refresh()`; other menus are client-side only (not in stored HTML), nothing to render.
 - `main` (`Menu.MainHandle`) = the public main navigation: seeded on startup by `MenuService.EnsureMainAsync` (after
   the pages, always on; Home + Login, Login only with `publicAuth`), can't be deleted.
 - Validation (`MenuLimits`): depth ≤10, ≤200 items, unique item ids, label ≤100 (required unless page link: empty =
@@ -135,12 +138,17 @@ PublicHtmlController   /api/public/html      [AllowAnonymous], rate limit "pages
                                  | 301 → / (`home`) | X-Accel-Redirect: /index.html (ReservedSlugs → admin SPA)
                                  | X-Accel-Redirect: /public.html (no fresh HTML yet → client-rendered shell)
 ```
-- `Services/Rendering/`: `RenderQueue` (`IRenderQueue.Page(id)` / `All()`, called by Pages/Menus/SiteConfig/Media
-  controllers after a successful write; `Requeue(id?)` = worker-internal, no invalidation), `RenderStatus`
-  (singleton: renderer `CurrentVersion`, in-memory `NotFoundHtml`, change timestamps → `IsFresh`),
+- `Services/Rendering/`: `RenderQueue` (`IRenderQueue`, called by controllers after a successful write: `Page(id)` =
+  that page's content/publish state (stale → shell until re-rendered; the worker widens to all quietly when it left/joined
+  the public site or changed title/slug), `Refresh()` = main menu, site config, media alt/delete (all pages, stored HTML
+  stays servable), `All()` = backup restore only (everything stale); `Requeue(id?)` = worker-internal, no invalidation),
+  `RenderStatus` (singleton: renderer `CurrentVersion`, in-memory `NotFoundHtml`, change timestamps → `IsFresh`,
+  refresh marker → `NeedsRefresh`: `PublicHtmlController` adds `data-refresh` to `#__STATE__` and an `-r` ETag suffix,
+  the public client then refetches the main menu + site config),
   `HttpRendererClient` (`IRendererClient`, typed HttpClient to the Node renderer; `RenderState` mirrors
   `frontend/src/public/state.ts`), `RenderWorker` (hosted: debounced render loop + version check every
-  `CheckIntervalSeconds`; failures retry after 30 s).
+  `CheckIntervalSeconds`; failures retry after 30 s; chunks of 20 pages: `PageService.GetPublishedByIdsAsync`, rows
+  loaded and committed per chunk, row by row after an FK violation; logs the duration).
 - `Models/Rendering/RenderedPage.cs` → `rendered_pages` (PK/FK `PageId`, cascade): `Html`, the `Title`/`Slug` it was
   rendered with (a difference widens a one-page job to all), `RendererVersion`, `RenderedAt` (= render start, compared
   with change timestamps). Only rows of the current renderer version and newer than the last change are served.
