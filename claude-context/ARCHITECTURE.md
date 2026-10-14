@@ -192,10 +192,11 @@ staff save ─► API IRenderQueue ─► RenderWorker ─POST /render─► ren
 - The public site is a separate small Vue app (`frontend/src/public/`, template = the instance's `public.html`) built from the same
   view components as the editor preview, rendered with `vue/server-renderer` and **hydrated** in the browser
   (client navigation between public pages fetches `/api/public/pages/{slug}`). It ships no editor code.
-- Render triggers (controllers call `IRenderQueue`): content edit → `Page(id)`; a one-page job widens to all (quietly,
-  see below) when the page's title/slug differs from what it was rendered with (menus and footer show those).
-  Publish/unpublish → `Page(id)` + `Refresh()`, delete → `Refresh()` (the marker must be set at save time: a page
-  loaded before the worker picks the job up would otherwise show the old menu without the client refresh). Main menu,
+- Render triggers (controllers call `IRenderQueue`): content edit → `Page(id)`, plus `Refresh()` when the title/slug
+  changed (menus and footer show those). Publish/unpublish → `Page(id)` + `Refresh()`, delete → `Refresh()`. The
+  refresh marker is always set at save time: a page loaded before the worker picks the job up would otherwise show the
+  old menu without the client refresh. (The worker still widens a one-page job to all when the page left/joined the
+  public site or its title/slug differs from what it was rendered with: safety net.) Main menu,
   site config, media alt edit/delete → `Refresh()` (all pages, quietly); other menus, a media rename and uploads render nothing (not in
   stored HTML). Backup restore → `All()`. Debounced 1 s.
 - **Freshness** (`RenderStatus`, in memory: assumes **one API instance**):

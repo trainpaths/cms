@@ -263,6 +263,28 @@ public class RenderingTests(ApiFactory factory) : IClassFixture<ApiFactory>
 	}
 
 	[Fact]
+	public async Task Rename_MarksOtherPagesRightAway_ContentEditDoesNot()
+	{
+		await using var site = await StartAsync();
+		var (id, slug) = await CreatePublishedAsync(site, "Rename me");
+		var (_, other) = await CreatePublishedAsync(site, "Bystander");
+		await WaitForAsync(site, $"/api/public/html/{slug}", (_, body) => body.Contains("Rename me"));
+		await WaitForAsync(site, $"/api/public/html/{other}", (_, body) => body.Contains("Bystander") && !Marked(body));
+
+		var hold = Hold(site);
+		await SendAsync(site, HttpMethod.Put, $"/api/pages/{id}", new JsonObject { ["blocks"] = Blocks(2) });
+		Marked(await site.Client.GetStringAsync($"/api/public/html/{other}", Ct)).Should().BeFalse();
+
+		await SendAsync(site, HttpMethod.Put, $"/api/pages/{id}", new JsonObject { ["title"] = "Renamed" });
+		var during = await site.Client.GetStringAsync($"/api/public/html/{other}", Ct);
+		during.Should().Contain("Bystander");
+		Marked(during).Should().BeTrue();
+		Release(site, hold);
+
+		await WaitForAsync(site, $"/api/public/html/{other}", (_, body) => !Marked(body));
+	}
+
+	[Fact]
 	public async Task AfterAChange_OldHtmlIsNeverServed()
 	{
 		await using var site = await StartAsync();

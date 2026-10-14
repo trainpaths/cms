@@ -79,9 +79,10 @@ public class PageServiceTests
 
 		var updated = await service.UpdateAsync(created.Value!.Id, new UpdatePageRequest("Renamed", null, null), StaffId, Ct);
 
-		updated.Value!.Title.Should().Be("Renamed");
-		updated.Value.Slug.Should().Be("page");
-		updated.Value.Blocks.Should().ContainSingle(b => b.Name == "paragraph");
+		updated.Value!.Renamed.Should().BeTrue();
+		updated.Value.Page.Title.Should().Be("Renamed");
+		updated.Value.Page.Slug.Should().Be("page");
+		updated.Value.Page.Blocks.Should().ContainSingle(b => b.Name == "paragraph");
 	}
 
 	[Fact]

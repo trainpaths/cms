@@ -25,24 +25,12 @@ public sealed class RenderStatus
 	public void MarkAllChanged() => Interlocked.Exchange(ref _allChangedAt, DateTimeOffset.UtcNow.UtcTicks);
 
 	/// <summary>
-	/// Quiet change (menu, site config, media, publish state): stored HTML stays servable, but HTML rendered before
+	/// Quiet change (menu, site config, media, publish state, a title/slug), set at save time: stored HTML stays servable, but HTML rendered before
 	/// it gets the refresh marker (<see cref="NeedsRefresh"/>). Separate from <see cref="MarkAllChanged"/> on purpose:
 	/// that one means "serve the shell instead", this one only "serve it, the client refetches menu/config". An API
 	/// restart during the re-render drops the marker for pages not re-rendered yet (old menu for seconds, harmless).
 	/// </summary>
-	public void MarkRefreshed() => MarkRefreshed(DateTimeOffset.UtcNow);
-
-	/// <summary>Moves the marker forward to <paramref name="at"/> (never back).</summary>
-	public void MarkRefreshed(DateTimeOffset at)
-	{
-		long current;
-		do
-		{
-			current = Interlocked.Read(ref _refreshedAt);
-			if (current >= at.UtcTicks)
-				return;
-		} while (Interlocked.CompareExchange(ref _refreshedAt, at.UtcTicks, current) != current);
-	}
+	public void MarkRefreshed() => Interlocked.Exchange(ref _refreshedAt, DateTimeOffset.UtcNow.UtcTicks);
 
 	public void MarkChanged(Guid pageId) => _pageChangedAt[pageId] = DateTimeOffset.UtcNow;
 

@@ -130,8 +130,9 @@ public sealed class RenderWorker(
 		var services = scope.ServiceProvider;
 		var db = services.GetRequiredService<AppDbContext>();
 
-		// a single page widens to all when it left the public site, is new there, or changed its title/slug
-		// (menus + footer links on every page show those)
+		// a single page widens to all when it left the public site, is new there, or changed its title/slug (menus +
+		// footer links on every page show those). Safety net: the controllers queue Refresh() for those already (it
+		// marks other pages for the client refresh at save time).
 		if (!all)
 		{
 			foreach (var id in ids)
@@ -155,9 +156,6 @@ public sealed class RenderWorker(
 					break;
 				}
 			}
-			// quiet: other pages keep their stored HTML, marked so the client refetches the menu/config meanwhile
-			// (just before startedAt: HTML from this render isn't marked)
-			if (all) status.MarkRefreshed(startedAt.AddTicks(-1));
 		}
 
 		var menu = await services.GetRequiredService<MenuService>().GetPublicAsync(Menu.MainHandle, ct);
