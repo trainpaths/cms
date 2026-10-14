@@ -294,7 +294,10 @@ public class RenderingTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
 		var other = await site.Client.GetAsync($"/api/public/html/{a}", Ct);
 		Accel(other).Should().BeNull();
-		(await other.Content.ReadAsStringAsync(Ct)).Should().Contain("Stays");
+		var body = await other.Content.ReadAsStringAsync(Ct);
+		body.Should().Contain("Stays");
+		// marked right away, not only once the worker picks the job up: the client drops B from the menu
+		Marked(body).Should().BeTrue();
 		Release(site, hold);
 	}
 
@@ -421,7 +424,9 @@ public class RenderingTests(ApiFactory factory) : IClassFixture<ApiFactory>
 		var b = (await publish.Content.ReadFromJsonAsync<PageDetail>(Ct))!.Slug;
 		var other = await site.Client.GetAsync($"/api/public/html/{a}", Ct);
 		Accel(other).Should().BeNull();
-		(await other.Content.ReadAsStringAsync(Ct)).Should().Contain("Page A");
+		var body = await other.Content.ReadAsStringAsync(Ct);
+		body.Should().Contain("Page A");
+		Marked(body).Should().BeTrue();
 		Accel(await site.Client.GetAsync($"/api/public/html/{b}", Ct)).Should().Be(PublicHtmlController.PublicShell);
 		site.Renderer.Rendered.Clear();
 		Release(site, hold);
