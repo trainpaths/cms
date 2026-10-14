@@ -23,9 +23,19 @@ export const usePublicMenusStore = defineStore('publicMenus', () => {
 		return request
 	}
 
+	/** Refetches a menu (stored HTML older than a menu change); keeps the current one on failure. Never throws. */
+	async function refresh(handle: string): Promise<void> {
+		try {
+			const { data } = await getApiPublicMenusByHandle({ path: { handle } })
+			menus.value[handle] = data
+		} catch {
+			// keep what the page was rendered with
+		}
+	}
+
 	function invalidate(): void {
 		menus.value = {}
 	}
 
-	return { menus, load, invalidate }
+	return { menus, load, refresh, invalidate }
 })

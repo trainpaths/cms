@@ -5,6 +5,8 @@ import { getApiPublicMenusByHandle, getApiPublicPagesBySlug, getApiPublicSiteCon
 import { createPublicApp } from './createPublicApp'
 import { headTags } from './head'
 import type { PublicState } from './state'
+import { usePublicMenusStore } from '../stores/menus'
+import { useSiteConfigStore } from '../stores/siteConfig'
 
 function embeddedState(): PublicState | null {
 	try {
@@ -45,7 +47,13 @@ export async function hydratePublic(): Promise<void> {
 	client.interceptors.error.use(toApiError)
 	const embedded = embeddedState()
 	const state = embedded ?? (await fetchState())
-	const { app, router } = createPublicApp(state, createWebHistory(), !!embedded)
+	const { app, router, pinia } = createPublicApp(state, createWebHistory(), !!embedded)
 	await router.isReady()
 	app.mount('#app')
+	// stored HTML older than a menu/site config change (the API marks it while the quiet re-render runs): refetch
+	// both after hydration (no mismatch); header/footer read the stores. The fallback shell fetched fresh data already.
+	if (embedded && document.getElementById('__STATE__')?.hasAttribute('data-refresh')) {
+		void usePublicMenusStore(pinia).refresh('main')
+		void useSiteConfigStore(pinia).refresh()
+	}
 }

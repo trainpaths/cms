@@ -21,9 +21,19 @@ export const useSiteConfigStore = defineStore('siteConfig', () => {
 		return pending
 	}
 
+	/** Refetches the config (stored HTML older than a config change); keeps the current one on failure. Never throws. */
+	async function refresh(): Promise<void> {
+		try {
+			const { data } = await getApiPublicSiteConfig()
+			config.value = data
+		} catch {
+			// keep what the page was rendered with
+		}
+	}
+
 	function set(value: SiteConfig): void {
 		config.value = value
 	}
 
-	return { config, load, set }
+	return { config, load, refresh, set }
 })
