@@ -38,22 +38,26 @@ PagesController        /api/pages            [Authorize(StaffOnly)], rate limit 
   POST   /                     CreatePageRequest(title, slug?, blocks?) → 201 PageDetail | 400 | 409 slug taken
   POST   /import               ImportPageRequest(title, slug?, blocks, metaTitle?, metaDescription?, tags?) → 201
                                  ImportPageResult(page, missingMediaIds) | 400 — always a new draft, never overwrites
-  PUT    /{id}                 UpdatePageRequest(title?, slug?, blocks?) — partial → PageDetail | 400 (incl. locked slug,
-                                 non-editable blocks) | 404 | 409
-  PUT    /{id}/tags            UpdatePageTagsRequest(tags[]) — full replace → PageDetail | 400 | 404 (UpdatedAt untouched)
-  POST   /{id}/publish         → PageDetail (sets PublishedAt)
-  POST   /{id}/unpublish       → PageDetail (clears PublishedAt)
+  PUT    /{id}                 UpdatePageRequest(title?, slug?, blocks?, metaTitle?, metaDescription?, status?, tags?) —
+                                 partial, all validated before any change, one SaveChanges → PageSummary (slim: no
+                                 blocks echo) | 400 (incl. locked slug, non-editable blocks) | 404 | 409. status sets/
+                                 clears PublishedAt; tags = full replace (tags only: UpdatedAt untouched, no render)
+  POST   /{id}/duplicate       → 201 PageDetail: draft "{title} (copy)", slug UniqueSlugFrom(source slug), blocks/meta/tags
   DELETE /{id}                 → 204 | 400 (locked config page) | 404
   POST/PUT carry [RequestSizeLimit(2 MB)] (global cap is 64 KB)
 PublicPagesController  /api/public/pages     [AllowAnonymous], rate limit "pages"
   GET    /{slug}               → PublicPage (published only) | 404
+PublicStateController  /api/public/state     [AllowAnonymous], rate limit "pages"
+  GET    / | /{slug}           → PublicStateResponse(page? (published, null when unknown/draft/no slug), menu? (main),
+                                 config) — menu + config from PublicCache; the public shell, data-refresh, dev SSR
 TagsController         /api/tags             [Authorize(StaffOnly)], rate limit "pages"
   GET    /                     → TagUsage[] (name, pageCount; most used first)
 ```
 - Tags: `Models/Pages/Tag.cs` (`tags`: one `Name` column, always stored normalized by `Tag.Normalize` = trim +
   lowercase; single words, whitespace inside → 400; unique) + `PageTag` junction (`page_tags`, cascade both ways). `TagLimits`: ≤32 chars,
-  ≤20 per page. `PageService.SetTagsAsync` creates missing tags and deletes tags left without pages (also after a
-  page delete), so `/api/tags` only lists tags in use. `PageSummary`/`PageDetail.Tags` sorted by name.
+  ≤20 per page. `PageService.UpdateAsync` (tags sent) diffs against the page's `page_tags`, creates missing tags and,
+  when one was removed, deletes tags left without pages in one `DELETE` (also after deleting a tagged page), so
+  `/api/tags` only lists tags in use. `PageSummary`/`PageDetail.Tags` sorted by name.
 - `Models/Pages/Page.cs` (entity, `PageStatus` Draft|Published stored as string, `BlockCount` = `PageService.CountBlocks`
   of `Blocks`, set on every blocks write + by the seeder; `AddPageBlockCount.BackfillSql` = the same count in SQL, so
   `GET /api/pages` never reads `Blocks`), `Models/Pages/Block.cs`
@@ -72,9 +76,12 @@ TagsController         /api/tags             [Authorize(StaffOnly)], rate limit 
   `Services/Cms/DefaultPages.cs` = the default config's pages: **Home** (`home`, served at `/`), **Privacy Policy**
   (`privacy-policy`), **Legal** (`legal`), the last two `footer`. Block attributes must match the frontend blocks'
   `attributes` (`blocks/*/index.ts`).
+- Render triggers of `PUT` (`PageUpdate(Summary, Renamed, StatusChanged, ContentChanged)`): status changed →
+  `Page(id)` + `Refresh()`; else published + a non-tag field sent → `Page(id)` (+ `Refresh()` when renamed); tags only →
+  nothing.
 - Import (`PageService.ImportAsync`, page export files of `frontend/src/lib/pageExport.ts`): same validation as create +
   meta + tags (validated before anything is written); slug = the given one (or the title) through `UniqueSlugFromAsync`,
-  so taken/reserved/invalid slugs get a free variant instead of 409. `missingMediaIds` = `mediaId`s
+  so taken/reserved/invalid slugs get a free variant instead of 409. Shares `CreateDraftAsync` with `DuplicateAsync`. `missingMediaIds` = `mediaId`s
   (`MediaService.CollectIds`) not in `media_assets`: kept in the blocks, image renders empty.
 - Page meta: `MetaTitle` (≤70) / `MetaDescription` (≤200), columns (default ''), edited in the editor (partial PUT; empty
   clears), served in `PageDetail` + `PublicPage`; the public `<head>` builds the title "{meta} - {firm name}" from them.
@@ -109,7 +116,7 @@ PublicMediaController  /api/public/media     [AllowAnonymous], rate limit "pages
 ## Menus
 ```
 MenusController        /api/menus            [Authorize(StaffOnly)], rate limit "pages"
-  GET    /                     → MenuSummary[] (main first, then by handle)
+  GET    /                     → MenuDetail[] with items (main first, then by handle; the admin switches without a fetch)
   GET    /{id}                 → MenuDetail | 404
   POST   /                     CreateMenuRequest(handle) → 201 | 400 | 409 handle taken
   PUT    /{id}                 UpdateMenuRequest(items) — full replace, 512 KB → MenuDetail | 400 | 404
@@ -149,7 +156,7 @@ PublicHtmlController   /api/public/html      [AllowAnonymous], rate limit "pages
   the public client then refetches the main menu + site config),
   `PublicCache` (singleton: resolved public menus by handle + `SiteConfigResponse`, generation-checked; invalidated by
   `RenderQueue.Refresh()/All()` and every `MenusController` write; readers: public menu/site-config endpoints, the
-  worker; tests writing the DB directly must `Invalidate()`),
+  worker, `PublicStateController`; tests writing the DB directly must `Invalidate()`),
   `HttpRendererClient` (`IRendererClient`, typed HttpClient to the Node renderer; `RenderState` mirrors
   `frontend/src/public/state.ts`), `RenderWorker` (hosted: debounced render loop + version check every
   `CheckIntervalSeconds`; failures retry after 30 s; widen check = one query over the queued ids; chunks of 20 pages:
@@ -274,7 +281,7 @@ CustomerAuthService   Scoped      customer register + shared flows (PrincipalAut
 StaffAuthService      Scoped      staff register + shared flows (PrincipalAuthService)
 AccountService        Scoped      customer email-verification + password-reset flows
 CmsConfig             Singleton   instance config (CmsConfigLoader.Load), see Instance config
-PageService           Scoped      CMS pages: CRUD, publish, slug rules, block validation, config page rules
+PageService           Scoped      CMS pages: CRUD (one partial update incl. status + tags), duplicate, slug rules, block validation, config page rules
 MediaService          Scoped      media library: upload validation, alt, delete, resolve block media refs
 SiteConfigService       Scoped      site config: get / replace, field + media validation
 RenderQueue/IRenderQueue, RenderStatus  Singleton  public-page render jobs + freshness state
@@ -392,11 +399,12 @@ PageSummary / PageDetail    Id, Title, Slug, Status, Tags, BlockCount | Blocks +
                             Locked (summary) | Template?, Locked, Editable (detail; from the instance config), MetaTitle, MetaDescription
 CreatePageRequest           Title(≤200), Slug?(≤100), Blocks?
 ImportPageRequest           Title, Slug?, Blocks, MetaTitle?, MetaDescription?, Tags?   ImportPageResult  Page, MissingMediaIds
-UpdatePageRequest           Title?, Slug?, Blocks?, MetaTitle?(≤70), MetaDescription?(≤200)   (partial)
+UpdatePageRequest           Title?, Slug?, Blocks?, MetaTitle?(≤70), MetaDescription?(≤200), Status?, Tags?(≤20)   (partial)
+PublicStateResponse         Page?, Menu?, Config
 PublicPage                  Title, Slug, Blocks, Media, PublishedAt, Template?, MetaTitle, MetaDescription
 InstanceConfig              PublicAuth, ExcludedBlocks, SiteConfig (SiteConfigSchema: fields[], groups[])
-UpdatePageTagsRequest       Tags[] (≤20)   TagUsage  Name, PageCount
-MenuSummary / MenuDetail    Id, Handle, ItemCount | Items, CreatedAt, UpdatedAt
+TagUsage                    Name, PageCount
+MenuDetail                  Id, Handle, Items, CreatedAt, UpdatedAt
 CreateMenuRequest           Handle(≤50)   UpdateMenuRequest  Items
 PublicMenu / PublicMenuItem Handle, Items | Label, Slug?, Url?, Children
 MediaItem                   Id, Url, FileName, ContentType, Size, Alt(≤100), CreatedAt

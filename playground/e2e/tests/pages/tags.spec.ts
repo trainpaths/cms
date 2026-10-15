@@ -6,9 +6,12 @@ function row(page: Page, title: string) {
 	return page.getByTestId('page-row').filter({ hasText: title })
 }
 
-// the editor saves tags right away; a full navigation would abort the request
+// the editor saves tags right away (a page PUT); a full navigation would abort the request. No content edits in
+// these tests, so the only page PUT is the tag save (the fetch body isn't visible to Playwright)
 const tagsSaved = (page: Page) =>
-	page.waitForResponse((r) => r.url().endsWith('/tags') && r.request().method() === 'PUT' && r.ok())
+	page.waitForResponse(
+		(r) => /\/api\/pages\/[^/]+$/.test(new URL(r.url()).pathname) && r.request().method() === 'PUT' && r.ok(),
+	)
 
 async function addTag(scope: ReturnType<Page['getByTestId']>, tag: string) {
 	await scope.getByTestId('tag-text').fill(tag)

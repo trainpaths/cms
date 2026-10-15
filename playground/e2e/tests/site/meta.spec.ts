@@ -32,9 +32,13 @@ test('meta title + description set in the editor end up in the server-rendered h
 
 		// rendered HTML replaces the shell once the renderer ran
 		await expect
-			.poll(async () => (await (await request.get(`/${slug}`)).text()).includes('<title>Our team - ACME Meta</title>'), {
-				timeout: 15_000,
-			})
+			.poll(
+				async () =>
+					(await (await request.get(`/${slug}`)).text()).includes('<title>Our team - ACME Meta</title>'),
+				{
+					timeout: 15_000,
+				},
+			)
 			.toBe(true)
 		const html = await (await request.get(`/${slug}`)).text()
 		expect(html).toContain('<meta name="description" content="Who builds ACME.">')
@@ -47,7 +51,11 @@ test('meta title + description set in the editor end up in the server-rendered h
 		await expect(page.getByTestId('page-meta-title')).toHaveValue('Our team')
 		await expect(page.getByTestId('page-meta-description')).toHaveValue('Who builds ACME.')
 	} finally {
-		// other specs expect page titles without a firm name
+		// other specs expect page titles without a firm name. Stored HTML keeps the old <head> until the quiet
+		// re-render (debounce + render) has run: wait for it, no-JS specs read the head as served
 		await setFirmName(page, '')
+		await expect
+			.poll(async () => (await request.get('/privacy-policy')).text(), { timeout: 15_000 })
+			.not.toContain('ACME Meta')
 	}
 })

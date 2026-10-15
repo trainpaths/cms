@@ -3,12 +3,6 @@ using api_backend.Models.Menus;
 
 namespace api_backend.Models.Dto;
 
-public record MenuSummary(
-	Guid Id,
-	string Handle,
-	int ItemCount,
-	DateTimeOffset UpdatedAt);
-
 public record MenuDetail(
 	Guid Id,
 	string Handle,

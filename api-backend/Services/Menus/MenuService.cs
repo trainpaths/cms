@@ -35,13 +35,13 @@ public partial class MenuService(AppDbContext db)
 		await db.SaveChangesAsync(ct);
 	}
 
-	public async Task<List<MenuSummary>> ListAsync(CancellationToken ct)
+	/// <summary>Every menu with its items (main first, then alphabetical): the admin switches menus without a fetch.</summary>
+	public async Task<List<MenuDetail>> ListAsync(CancellationToken ct)
 	{
 		var menus = await db.Menus.AsNoTracking().ToListAsync(ct);
-		// main first, then alphabetical
 		return menus
 			.OrderBy(m => m.Handle != Menu.MainHandle).ThenBy(m => m.Handle)
-			.Select(m => new MenuSummary(m.Id, m.Handle, Count(m.Items), m.UpdatedAt))
+			.Select(ToDetail)
 			.ToList();
 	}
 
@@ -217,8 +217,6 @@ public partial class MenuService(AppDbContext db)
 			}
 		}
 	}
-
-	private static int Count(List<MenuItem> items) => items.Sum(i => 1 + Count(i.Children));
 
 	private static MenuDetail ToDetail(Menu m) => new(m.Id, m.Handle, m.Items, m.CreatedAt, m.UpdatedAt);
 }

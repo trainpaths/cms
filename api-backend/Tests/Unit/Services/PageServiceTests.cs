@@ -82,7 +82,7 @@ public class PageServiceTests
 		updated.Value!.Renamed.Should().BeTrue();
 		updated.Value.Page.Title.Should().Be("Renamed");
 		updated.Value.Page.Slug.Should().Be("page");
-		updated.Value.Page.Blocks.Should().ContainSingle(b => b.Name == "paragraph");
+		updated.Value.Page.BlockCount.Should().Be(1);
 	}
 
 	[Fact]
@@ -103,12 +103,13 @@ public class PageServiceTests
 
 		(await service.GetPublishedBySlugAsync("visible", Ct)).Should().BeNull();
 
-		var published = await service.SetStatusAsync(page.Id, PageStatus.Published, StaffId, Ct);
-		published.Value!.Status.Should().Be(PageStatus.Published);
-		published.Value.PublishedAt.Should().NotBeNull();
+		var published = await service.UpdateAsync(page.Id, new UpdatePageRequest(null, null, null, Status: PageStatus.Published), StaffId, Ct);
+		published.Value!.StatusChanged.Should().BeTrue();
+		published.Value.Page.Status.Should().Be(PageStatus.Published);
+		published.Value.Page.PublishedAt.Should().NotBeNull();
 		(await service.GetPublishedBySlugAsync("visible", Ct)).Should().NotBeNull();
 
-		await service.SetStatusAsync(page.Id, PageStatus.Draft, StaffId, Ct);
+		await service.UpdateAsync(page.Id, new UpdatePageRequest(null, null, null, Status: PageStatus.Draft), StaffId, Ct);
 		(await service.GetPublishedBySlugAsync("visible", Ct)).Should().BeNull();
 	}
 

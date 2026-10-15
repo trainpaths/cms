@@ -2,7 +2,7 @@
 
 import { type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { DeleteApiBackupsByNameData, DeleteApiBackupsByNameResponses, DeleteApiMediaByIdData, DeleteApiMediaByIdResponses, DeleteApiMenusByIdData, DeleteApiMenusByIdResponses, DeleteApiPagesByIdData, DeleteApiPagesByIdResponses, GetApiAuthCustomerMeData, GetApiAuthCustomerMeResponses, GetApiAuthStaffMeData, GetApiAuthStaffMeResponses, GetApiBackupsByNameData, GetApiBackupsByNameResponses, GetApiBackupsData, GetApiBackupsResponses, GetApiBackupsSettingsData, GetApiBackupsSettingsResponses, GetApiMediaByIdData, GetApiMediaByIdResponses, GetApiMediaData, GetApiMediaResponses, GetApiMenusByIdData, GetApiMenusByIdResponses, GetApiMenusData, GetApiMenusResponses, GetApiPagesByIdData, GetApiPagesByIdResponses, GetApiPagesData, GetApiPagesResponses, GetApiPublicInstanceData, GetApiPublicInstanceResponses, GetApiPublicMediaByKeyData, GetApiPublicMediaByKeyErrors, GetApiPublicMediaByKeyResponses, GetApiPublicMenusByHandleData, GetApiPublicMenusByHandleResponses, GetApiPublicPagesBySlugData, GetApiPublicPagesBySlugResponses, GetApiPublicSiteConfigData, GetApiPublicSiteConfigResponses, GetApiSiteConfigData, GetApiSiteConfigResponses, GetApiTagsData, GetApiTagsResponses, PostApiAuthCustomerChangePasswordData, PostApiAuthCustomerChangePasswordResponses, PostApiAuthCustomerConfirmEmailData, PostApiAuthCustomerConfirmEmailResponses, PostApiAuthCustomerForgotPasswordData, PostApiAuthCustomerForgotPasswordResponses, PostApiAuthCustomerLoginData, PostApiAuthCustomerLoginResponses, PostApiAuthCustomerLogoutData, PostApiAuthCustomerLogoutResponses, PostApiAuthCustomerProfileData, PostApiAuthCustomerProfileResponses, PostApiAuthCustomerRefreshData, PostApiAuthCustomerRefreshResponses, PostApiAuthCustomerRegisterData, PostApiAuthCustomerRegisterResponses, PostApiAuthCustomerRequestVerificationData, PostApiAuthCustomerRequestVerificationResponses, PostApiAuthCustomerResetPasswordData, PostApiAuthCustomerResetPasswordResponses, PostApiAuthStaffChangePasswordData, PostApiAuthStaffChangePasswordResponses, PostApiAuthStaffLoginData, PostApiAuthStaffLoginResponses, PostApiAuthStaffLogoutData, PostApiAuthStaffLogoutResponses, PostApiAuthStaffProfileData, PostApiAuthStaffProfileResponses, PostApiAuthStaffRefreshData, PostApiAuthStaffRefreshResponses, PostApiAuthStaffRegisterData, PostApiAuthStaffRegisterResponses, PostApiBackupsByNameRestoreData, PostApiBackupsByNameRestoreResponses, PostApiBackupsData, PostApiBackupsResponses, PostApiBackupsUploadData, PostApiBackupsUploadResponses, PostApiMediaData, PostApiMediaResponses, PostApiMenusData, PostApiMenusResponses, PostApiPagesByIdPublishData, PostApiPagesByIdPublishResponses, PostApiPagesByIdUnpublishData, PostApiPagesByIdUnpublishResponses, PostApiPagesData, PostApiPagesImportData, PostApiPagesImportResponses, PostApiPagesResponses, PutApiBackupsSettingsData, PutApiBackupsSettingsResponses, PutApiMediaByIdData, PutApiMediaByIdResponses, PutApiMenusByIdData, PutApiMenusByIdResponses, PutApiPagesByIdData, PutApiPagesByIdResponses, PutApiPagesByIdTagsData, PutApiPagesByIdTagsResponses, PutApiSiteConfigData, PutApiSiteConfigResponses } from './types.gen';
+import type { DeleteApiBackupsByNameData, DeleteApiBackupsByNameResponses, DeleteApiMediaByIdData, DeleteApiMediaByIdResponses, DeleteApiMenusByIdData, DeleteApiMenusByIdResponses, DeleteApiPagesByIdData, DeleteApiPagesByIdResponses, GetApiAuthCustomerMeData, GetApiAuthCustomerMeResponses, GetApiAuthStaffMeData, GetApiAuthStaffMeResponses, GetApiBackupsByNameData, GetApiBackupsByNameResponses, GetApiBackupsData, GetApiBackupsResponses, GetApiBackupsSettingsData, GetApiBackupsSettingsResponses, GetApiMediaByIdData, GetApiMediaByIdResponses, GetApiMediaData, GetApiMediaResponses, GetApiMenusByIdData, GetApiMenusByIdResponses, GetApiMenusData, GetApiMenusResponses, GetApiPagesByIdData, GetApiPagesByIdResponses, GetApiPagesData, GetApiPagesResponses, GetApiPublicInstanceData, GetApiPublicInstanceResponses, GetApiPublicMediaByKeyData, GetApiPublicMediaByKeyErrors, GetApiPublicMediaByKeyResponses, GetApiPublicMenusByHandleData, GetApiPublicMenusByHandleResponses, GetApiPublicPagesBySlugData, GetApiPublicPagesBySlugResponses, GetApiPublicSiteConfigData, GetApiPublicSiteConfigResponses, GetApiPublicStateBySlugData, GetApiPublicStateBySlugResponses, GetApiPublicStateData, GetApiPublicStateResponses, GetApiSiteConfigData, GetApiSiteConfigResponses, GetApiTagsData, GetApiTagsResponses, PostApiAuthCustomerChangePasswordData, PostApiAuthCustomerChangePasswordResponses, PostApiAuthCustomerConfirmEmailData, PostApiAuthCustomerConfirmEmailResponses, PostApiAuthCustomerForgotPasswordData, PostApiAuthCustomerForgotPasswordResponses, PostApiAuthCustomerLoginData, PostApiAuthCustomerLoginResponses, PostApiAuthCustomerLogoutData, PostApiAuthCustomerLogoutResponses, PostApiAuthCustomerProfileData, PostApiAuthCustomerProfileResponses, PostApiAuthCustomerRefreshData, PostApiAuthCustomerRefreshResponses, PostApiAuthCustomerRegisterData, PostApiAuthCustomerRegisterResponses, PostApiAuthCustomerRequestVerificationData, PostApiAuthCustomerRequestVerificationResponses, PostApiAuthCustomerResetPasswordData, PostApiAuthCustomerResetPasswordResponses, PostApiAuthStaffChangePasswordData, PostApiAuthStaffChangePasswordResponses, PostApiAuthStaffLoginData, PostApiAuthStaffLoginResponses, PostApiAuthStaffLogoutData, PostApiAuthStaffLogoutResponses, PostApiAuthStaffProfileData, PostApiAuthStaffProfileResponses, PostApiAuthStaffRefreshData, PostApiAuthStaffRefreshResponses, PostApiAuthStaffRegisterData, PostApiAuthStaffRegisterResponses, PostApiBackupsByNameRestoreData, PostApiBackupsByNameRestoreResponses, PostApiBackupsData, PostApiBackupsResponses, PostApiBackupsUploadData, PostApiBackupsUploadResponses, PostApiMediaData, PostApiMediaResponses, PostApiMenusData, PostApiMenusResponses, PostApiPagesByIdDuplicateData, PostApiPagesByIdDuplicateResponses, PostApiPagesData, PostApiPagesImportData, PostApiPagesImportResponses, PostApiPagesResponses, PutApiBackupsSettingsData, PutApiBackupsSettingsResponses, PutApiMediaByIdData, PutApiMediaByIdResponses, PutApiMenusByIdData, PutApiMenusByIdResponses, PutApiPagesByIdData, PutApiPagesByIdResponses, PutApiSiteConfigData, PutApiSiteConfigResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -298,25 +298,9 @@ export const postApiPagesImport = <ThrowOnError extends boolean = true>(options?
     }
 });
 
-export const putApiPagesByIdTags = <ThrowOnError extends boolean = true>(options: Options<PutApiPagesByIdTagsData, ThrowOnError>): RequestResult<PutApiPagesByIdTagsResponses, unknown, ThrowOnError> => (options.client ?? client).put<PutApiPagesByIdTagsResponses, unknown, ThrowOnError>({
+export const postApiPagesByIdDuplicate = <ThrowOnError extends boolean = true>(options: Options<PostApiPagesByIdDuplicateData, ThrowOnError>): RequestResult<PostApiPagesByIdDuplicateResponses, unknown, ThrowOnError> => (options.client ?? client).post<PostApiPagesByIdDuplicateResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/pages/{id}/tags',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-export const postApiPagesByIdPublish = <ThrowOnError extends boolean = true>(options: Options<PostApiPagesByIdPublishData, ThrowOnError>): RequestResult<PostApiPagesByIdPublishResponses, unknown, ThrowOnError> => (options.client ?? client).post<PostApiPagesByIdPublishResponses, unknown, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/pages/{id}/publish',
-    ...options
-});
-
-export const postApiPagesByIdUnpublish = <ThrowOnError extends boolean = true>(options: Options<PostApiPagesByIdUnpublishData, ThrowOnError>): RequestResult<PostApiPagesByIdUnpublishResponses, unknown, ThrowOnError> => (options.client ?? client).post<PostApiPagesByIdUnpublishResponses, unknown, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/pages/{id}/unpublish',
+    url: '/api/pages/{id}/duplicate',
     ...options
 });
 
@@ -347,6 +331,18 @@ export const getApiPublicPagesBySlug = <ThrowOnError extends boolean = true>(opt
 export const getApiPublicSiteConfig = <ThrowOnError extends boolean = true>(options?: Options<GetApiPublicSiteConfigData, ThrowOnError>): RequestResult<GetApiPublicSiteConfigResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetApiPublicSiteConfigResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/public/site-config',
+    ...options
+});
+
+export const getApiPublicStateBySlug = <ThrowOnError extends boolean = true>(options: Options<GetApiPublicStateBySlugData, ThrowOnError>): RequestResult<GetApiPublicStateBySlugResponses, unknown, ThrowOnError> => (options.client ?? client).get<GetApiPublicStateBySlugResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/public/state/{slug}',
+    ...options
+});
+
+export const getApiPublicState = <ThrowOnError extends boolean = true>(options?: Options<GetApiPublicStateData, ThrowOnError>): RequestResult<GetApiPublicStateResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetApiPublicStateResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/public/state',
     ...options
 });
 

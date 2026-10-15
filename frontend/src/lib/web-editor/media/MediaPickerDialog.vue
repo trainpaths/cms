@@ -15,7 +15,8 @@ const dialog = ref<HTMLElement | null>(null)
 onMounted(async () => {
 	dialog.value?.focus()
 	try {
-		await media.load(true)
+		// once per session: the store keeps the list current on upload/update/remove (Media view = explicit refresh)
+		await media.load()
 	} catch {
 		error.value = 'Failed to load media'
 	}

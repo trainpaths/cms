@@ -199,7 +199,7 @@ public class MediaTests : IClassFixture<ApiFactory>
 		var page = (await create.Content.ReadFromJsonAsync<PageDetail>(Ct))!;
 		page.Media.Should().ContainSingle().Which.Should().Be(new MediaRef(item.Id, item.Url, "Hero"));
 
-		await SendAsync(HttpMethod.Post, $"/api/pages/{page.Id}/publish", token);
+		await SendAsync(HttpMethod.Put, $"/api/pages/{page.Id}", token, new JsonObject { ["status"] = "published" });
 		await SendAsync(HttpMethod.Put, $"{Base}/{item.Id}", token, new JsonObject { ["alt"] = "Renamed" });
 
 		var published = await _client.GetFromJsonAsync<PublicPage>($"/api/public/pages/{slug}", Ct);

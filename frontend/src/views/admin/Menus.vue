@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import { Button, Icon, Loading, UnsavedChangesDialog, useConfirm, useToast, useUnsavedChanges } from '@trainpaths/nb-ui'
-import { deleteApiMenusById, getApiMenus, getApiMenusById, postApiMenus, putApiMenusById } from '../../api/sdk.gen'
+import { deleteApiMenusById, getApiMenus, postApiMenus, putApiMenusById } from '../../api/sdk.gen'
 import {
 	MENU_HANDLE_MAX,
 	MENU_MAX_ITEMS,
@@ -10,7 +10,6 @@ import {
 	normalizeHandle,
 	type MenuDetail,
 	type MenuItem,
-	type MenuSummary,
 	type PageSummary,
 } from '../../lib/web-editor'
 import { countItems } from '../../lib/menus/tree'
@@ -31,13 +30,13 @@ const tagsStore = useTagsStore()
 const publicMenus = usePublicMenusStore()
 const drag = useMenuDrag()
 
-const menus = ref<MenuSummary[]>([])
+// every menu with its items (one GET): switching menus needs no fetch
+const menus = ref<MenuDetail[]>([])
 const current = ref<MenuDetail | null>(null)
 const items = ref<MenuItem[]>([])
 const saved = ref('')
 const loaded = ref(false)
 const loadFailed = ref(false)
-const loadingMenu = ref(false)
 const saving = ref(false)
 const creating = ref(false)
 const errorMessage = ref<string | null>(null)
@@ -87,13 +86,7 @@ async function save(): Promise<boolean> {
 	try {
 		const { data } = await putApiMenusById({ path: { id: menu.id }, body: { items: items.value } })
 		apply(data)
-		const index = menus.value.findIndex((m) => m.id === data.id)
-		menus.value[index] = {
-			id: data.id,
-			handle: data.handle,
-			itemCount: countItems(data.items),
-			updatedAt: data.updatedAt,
-		}
+		menus.value[menus.value.findIndex((m) => m.id === data.id)] = data
 		publicMenus.invalidate()
 		toast.toast({ message: 'Menu saved', type: 'success' })
 		return true
@@ -109,15 +102,10 @@ const unsaved = useUnsavedChanges(dirty, save)
 
 async function select(id: string) {
 	if (current.value?.id === id || !(await unsaved.confirmLeave())) return
-	loadingMenu.value = true
+	const menu = menus.value.find((m) => m.id === id)
+	if (!menu) return
 	errorMessage.value = null
-	try {
-		apply((await getApiMenusById({ path: { id } })).data)
-	} catch (err: unknown) {
-		errorMessage.value = describe(err, 'Failed to load menu')
-	} finally {
-		loadingMenu.value = false
-	}
+	apply(menu)
 }
 
 onMounted(async () => {
@@ -138,7 +126,7 @@ async function createMenu() {
 	creating.value = true
 	try {
 		const { data: menu } = await postApiMenus({ body: { handle } })
-		menus.value.push({ id: menu.id, handle: menu.handle, itemCount: 0, updatedAt: menu.updatedAt })
+		menus.value.push(menu)
 		newHandle.value = ''
 		showNewMenu.value = false
 		apply(menu)
@@ -340,8 +328,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 				class="min-w-0 rounded-lg border border-gray-200 bg-white p-16 shadow-xs"
 				data-testid="menu-editor"
 			>
-				<Loading v-if="loadingMenu && !current" />
-				<template v-else-if="current">
+				<template v-if="current">
 					<h2
 						class="m-0 mb-16 font-mono text-base font-semibold text-gray-900"
 						title="Handle: the site code loads the menu by it, so it can't change"
@@ -431,7 +418,10 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 							data-testid="menu-picker-add"
 							@click="addPage(page)"
 						>
-							<Icon name="plus" :size="18" />
+							<Icon
+								name="plus"
+								:size="18"
+							/>
 						</button>
 					</li>
 				</ul>

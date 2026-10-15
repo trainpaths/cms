@@ -77,11 +77,12 @@ public class InstanceConfigTests(ApiFactory factory) : IClassFixture<ApiFactory>
 			.Should().Be(HttpStatusCode.BadRequest);
 
 		var rename = await Send(client, HttpMethod.Put, $"/api/pages/{terms.Id}", token, new JsonObject { ["title"] = "Terms of use" })
-			.ReadAs<PageDetail>();
+			.ReadAs<PageSummary>();
 		rename.Title.Should().Be("Terms of use");
 		rename.Locked.Should().BeTrue();
-		rename.Template.Should().BeNull();
-		rename.Editable.Should().BeTrue();
+		var detail = await Send(client, HttpMethod.Get, $"/api/pages/{terms.Id}", token).ReadAs<PageDetail>();
+		detail.Template.Should().BeNull();
+		detail.Editable.Should().BeTrue();
 	}
 
 	[Fact]

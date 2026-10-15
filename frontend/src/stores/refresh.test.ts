@@ -2,12 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { usePublicMenusStore } from './menus'
 import { useSiteConfigStore } from './siteConfig'
-import { getApiPublicMenusByHandle, getApiPublicSiteConfig } from '../api/sdk.gen'
+import { refreshSurroundings } from '../public/refresh'
+import { getApiPublicMenusByHandle, getApiPublicSiteConfig, getApiPublicState } from '../api/sdk.gen'
 import type { PublicMenu, SiteConfig } from '../lib/web-editor/core/types'
 
 vi.mock('../api/sdk.gen', () => ({
 	getApiPublicMenusByHandle: vi.fn(),
 	getApiPublicSiteConfig: vi.fn(),
+	getApiPublicState: vi.fn(),
 }))
 
 const menu = (label: string): PublicMenu => ({
@@ -55,5 +57,35 @@ describe('refresh (stored HTML older than a menu/config change)', () => {
 		vi.mocked(getApiPublicSiteConfig).mockRejectedValue(new Error('offline'))
 		await expect(store.refresh()).resolves.toBeUndefined()
 		expect(store.config).toEqual(config('Old'))
+	})
+})
+
+describe('refreshSurroundings (data-refresh pages: one state call)', () => {
+	beforeEach(() => {
+		setActivePinia(createPinia())
+		vi.mocked(getApiPublicState).mockReset()
+	})
+
+	it('seeds the main menu and the site config', async () => {
+		const pinia = createPinia()
+		usePublicMenusStore(pinia).menus = { main: menu('Old'), footer: menu('Footer') }
+		useSiteConfigStore(pinia).set(config('Old'))
+		vi.mocked(getApiPublicState).mockResolvedValue({
+			data: { page: null, menu: menu('New'), config: config('New') },
+		} as never)
+		await refreshSurroundings(pinia)
+		expect(getApiPublicState).toHaveBeenCalledTimes(1)
+		expect(usePublicMenusStore(pinia).menus).toEqual({ main: menu('New'), footer: menu('Footer') })
+		expect(useSiteConfigStore(pinia).config).toEqual(config('New'))
+	})
+
+	it('keeps both on failure', async () => {
+		const pinia = createPinia()
+		usePublicMenusStore(pinia).menus = { main: menu('Old') }
+		useSiteConfigStore(pinia).set(config('Old'))
+		vi.mocked(getApiPublicState).mockRejectedValue(new Error('offline'))
+		await expect(refreshSurroundings(pinia)).resolves.toBeUndefined()
+		expect(usePublicMenusStore(pinia).menus.main).toEqual(menu('Old'))
+		expect(useSiteConfigStore(pinia).config).toEqual(config('Old'))
 	})
 })

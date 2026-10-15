@@ -2,13 +2,7 @@ import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { nanoid } from 'nanoid'
 import type { BlockInstance, BlockContext, PageDetail, PageStatus } from '../lib/web-editor/core/types'
-import {
-	getApiPagesById,
-	postApiPagesByIdPublish,
-	postApiPagesByIdUnpublish,
-	putApiPagesById,
-	putApiPagesByIdTags,
-} from '../api/sdk.gen'
+import { getApiPagesById, putApiPagesById } from '../api/sdk.gen'
 import { ApiError, errorMessage as describe } from '../api-error'
 import { useMediaStore } from './media'
 import { usePagesStore } from './pages'
@@ -292,6 +286,8 @@ export const useEditorStore = defineStore('editor', () => {
 	// older snapshot can never overwrite a newer one.
 	let inFlight: Promise<void> | null = null
 	let saveQueued = false
+	// publish/unpublish rides along with the next content save (one PUT: publishes what's on screen)
+	let pendingStatus: PageStatus | null = null
 
 	async function savePage(): Promise<void> {
 		if (!pageId.value) return
@@ -306,17 +302,29 @@ export const useEditorStore = defineStore('editor', () => {
 				if (!id) break
 				saveStatus.value = 'saving'
 				changeCount.value = 0
+				const status = pendingStatus
+				pendingStatus = null
 				try {
-					const meta = { metaTitle: pageMetaTitle.value, metaDescription: pageMetaDescription.value }
-					// non-editable (template-only) pages reject block writes
-					const body = pageEditable.value
-						? { title: pageTitle.value, ...meta, blocks: cloneBlocks(blocks.value) }
-						: { title: pageTitle.value, ...meta }
-					usePagesStore().remember((await putApiPagesById({ path: { id }, body })).data)
+					const content = {
+						title: pageTitle.value,
+						metaTitle: pageMetaTitle.value,
+						metaDescription: pageMetaDescription.value,
+						// non-editable (template-only) pages reject block writes
+						...(pageEditable.value && { blocks: cloneBlocks(blocks.value) }),
+					}
+					const { data: page } = await putApiPagesById({
+						path: { id },
+						body: status ? { ...content, status } : content,
+					})
+					usePagesStore().applySaved(page, content)
+					if (pageId.value === id) pageStatus.value = page.status
 					saveStatus.value = 'saved'
 				} catch (err: unknown) {
 					saveStatus.value = 'idle'
-					errorMessage.value = describe(err, 'Failed to save page')
+					errorMessage.value = describe(
+						err,
+						status ? 'Failed to change publish status' : 'Failed to save page',
+					)
 					break
 				}
 			} while (saveQueued)
@@ -333,7 +341,7 @@ export const useEditorStore = defineStore('editor', () => {
 		if (!pageId.value) return false
 		try {
 			const { data: page } = await putApiPagesById({ path: { id: pageId.value }, body: { slug } })
-			usePagesStore().remember(page)
+			usePagesStore().applySaved(page)
 			pageSlug.value = page.slug
 			return true
 		} catch (err: unknown) {
@@ -353,33 +361,27 @@ export const useEditorStore = defineStore('editor', () => {
 			while (pageId.value && JSON.stringify(pageTags.value) !== sent) {
 				sent = JSON.stringify(pageTags.value)
 				try {
-					const { data: page } = await putApiPagesByIdTags({
+					const { data: page } = await putApiPagesById({
 						path: { id: pageId.value },
 						body: { tags: [...pageTags.value] },
 					})
-					usePagesStore().remember(page)
+					usePagesStore().applySaved(page)
 				} catch (err: unknown) {
 					errorMessage.value = describe(err, 'Failed to save tags')
 					break
 				}
 			}
-			useTagsStore().refresh()
+			// counts only matter where the tag filter shows them (pages list): refetch on its next load
+			useTagsStore().invalidate()
 		})().finally(() => (tagsInFlight = null))
 		return tagsInFlight
 	}
 
+	/** Publishes what's on screen, not the last autosave: content + status in one PUT through the save loop. */
 	async function setPublished(published: boolean): Promise<void> {
 		if (!pageId.value) return
-		// Publish what's on screen, not the last autosave.
+		pendingStatus = published ? 'published' : 'draft'
 		await savePage()
-		try {
-			const call = published ? postApiPagesByIdPublish : postApiPagesByIdUnpublish
-			const { data: page } = await call({ path: { id: pageId.value } })
-			usePagesStore().remember(page)
-			pageStatus.value = page.status
-		} catch (err: unknown) {
-			errorMessage.value = describe(err, 'Failed to change publish status')
-		}
 	}
 
 	function dismissError(): void {

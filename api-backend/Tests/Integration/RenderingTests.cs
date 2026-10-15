@@ -109,7 +109,7 @@ public class RenderingTests(ApiFactory factory) : IClassFixture<ApiFactory>
 		});
 		create.StatusCode.Should().Be(HttpStatusCode.Created);
 		var id = (await create.Content.ReadAsStringAsync(Ct)).Split("\"id\":\"")[1].Split('"')[0];
-		(await SendAsync(site, HttpMethod.Post, $"/api/pages/{id}/publish")).StatusCode.Should().Be(HttpStatusCode.OK);
+		(await SendAsync(site, HttpMethod.Put, $"/api/pages/{id}", new JsonObject { ["status"] = "published" })).StatusCode.Should().Be(HttpStatusCode.OK);
 		return (id, slug);
 	}
 
@@ -126,10 +126,10 @@ public class RenderingTests(ApiFactory factory) : IClassFixture<ApiFactory>
 		return (await create.Content.ReadFromJsonAsync<PageDetail>(Ct))!.Id.ToString();
 	}
 
-	private static async Task<MenuSummary> MainMenuAsync(Site site)
+	private static async Task<MenuDetail> MainMenuAsync(Site site)
 	{
 		var list = await SendAsync(site, HttpMethod.Get, "/api/menus");
-		return (await list.Content.ReadFromJsonAsync<List<MenuSummary>>(Ct))!.Single(m => m.Handle == "main");
+		return (await list.Content.ReadFromJsonAsync<List<MenuDetail>>(Ct))!.Single(m => m.Handle == "main");
 	}
 
 	/// <summary>Replaces a menu's items with <paramref name="count"/> URL links.</summary>
@@ -174,8 +174,8 @@ public class RenderingTests(ApiFactory factory) : IClassFixture<ApiFactory>
 			["attributes"] = new JsonObject { ["mediaId"] = mediaId.ToString() },
 			["innerBlocks"] = new JsonArray(),
 		}));
-		var publish = await SendAsync(site, HttpMethod.Post, $"/api/pages/{id}/publish");
-		var slug = (await publish.Content.ReadFromJsonAsync<PageDetail>(Ct))!.Slug;
+		var publish = await SendAsync(site, HttpMethod.Put, $"/api/pages/{id}", new JsonObject { ["status"] = "published" });
+		var slug = (await publish.Content.ReadFromJsonAsync<PageSummary>(Ct))!.Slug;
 		await WaitForAsync(site, $"/api/public/html/{slug}", (_, body) => body.Contains($"alt:{alt}|"));
 		return slug;
 	}
@@ -309,7 +309,7 @@ public class RenderingTests(ApiFactory factory) : IClassFixture<ApiFactory>
 		await WaitForAsync(site, $"/api/public/html/{b}", (r, _) => r.StatusCode == HttpStatusCode.OK && Accel(r) is null);
 
 		var hold = Hold(site);
-		await SendAsync(site, HttpMethod.Post, $"/api/pages/{id}/unpublish");
+		await SendAsync(site, HttpMethod.Put, $"/api/pages/{id}", new JsonObject { ["status"] = "draft" });
 		var response = await site.Client.GetAsync($"/api/public/html/{b}", Ct);
 		response.StatusCode.Should().Be(HttpStatusCode.NotFound);
 		(await response.Content.ReadAsStringAsync(Ct)).Should().NotContain("Short lived");
@@ -442,8 +442,8 @@ public class RenderingTests(ApiFactory factory) : IClassFixture<ApiFactory>
 		var id = await CreateDraftAsync(site, "Page B");
 
 		var hold = Hold(site);
-		var publish = await SendAsync(site, HttpMethod.Post, $"/api/pages/{id}/publish");
-		var b = (await publish.Content.ReadFromJsonAsync<PageDetail>(Ct))!.Slug;
+		var publish = await SendAsync(site, HttpMethod.Put, $"/api/pages/{id}", new JsonObject { ["status"] = "published" });
+		var b = (await publish.Content.ReadFromJsonAsync<PageSummary>(Ct))!.Slug;
 		var other = await site.Client.GetAsync($"/api/public/html/{a}", Ct);
 		Accel(other).Should().BeNull();
 		var body = await other.Content.ReadAsStringAsync(Ct);

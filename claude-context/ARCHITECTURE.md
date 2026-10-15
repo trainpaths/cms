@@ -205,7 +205,8 @@ staff save ─► API IRenderQueue ─► RenderWorker ─POST /render─► ren
   - Something around the body changed (menu, footer, head tags, publish state of another page, media): stored HTML
     keeps being served while a **quiet re-render** runs. HTML rendered before the change gets `data-refresh` on its
     `#__STATE__` (string replace on the response, ETag suffix `-r`), and the public client then refetches the main menu
-    and site config after hydration (`entry-client.ts`), so header/footer show the change right away. Unmarked pages
+    and site config after hydration (one `GET /api/public/state`, `public/refresh.ts`), so header/footer show the
+    change right away. Unmarked pages
     (the normal case) cause no extra requests. Crawlers see the old menu/head tags for a few seconds; a click on a link
     to a just unpublished/renamed page can 404 in that window; a deleted image is broken until re-rendered.
     Splitting the header into its own stored fragment was rejected (separate Vue app, active link after mount, split
@@ -248,8 +249,14 @@ staff save ─► API IRenderQueue ─► RenderWorker ─POST /render─► ren
 - Pinia store `useEditorStore` (`frontend/src/stores/editor.ts`) holds the page's `blocks` tree.
 - Undo/redo: snapshot history (max 50); every mutation pushes a snapshot.
 - Autosave after 4 changes; saves are **serialized** (a save requested mid-flight re-runs after) so an
-  older snapshot can't overwrite a newer one. Leaving the editor flushes pending changes. Publish saves first.
-- `PUT /api/pages/{id}` is a partial update — omitted fields are untouched.
+  older snapshot can't overwrite a newer one. Leaving the editor flushes pending changes. Publish/unpublish is **one
+  PUT**: the status rides along with the next content save through the same loop (publishes what's on screen).
+- `PUT /api/pages/{id}` is the only page write besides create/import/duplicate/delete: a partial update of title, slug,
+  meta, blocks, `status` and `tags` (omitted fields untouched), validated as a whole before anything changes, one
+  transaction. It answers with the slim `PageSummary` (no 2 MB blocks echo); the pages store merges it plus what was
+  sent into its cached detail (`applySaved`). Tags alone don't bump `UpdatedAt` and render nothing.
+- The shell (no stored HTML yet) loads page + main menu + site config in one `GET /api/public/state/{slug}`; dev SSR
+  uses the same call.
 
 ## Styling
 - Tailwind v4, tokens in `@theme` in `frontend/src/style.css`; spacing unit = 1px (`p-16` = 16px).

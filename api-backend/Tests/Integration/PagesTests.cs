@@ -7,6 +7,7 @@ using System.Text.Json.Nodes;
 using api_backend.Models.Auth;
 using api_backend.Models.Dto;
 using api_backend.Models.Media;
+using api_backend.Models.Pages;
 using api_backend.Services.Auth.JWT;
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
@@ -68,9 +69,11 @@ public class PagesTests : IClassFixture<ApiFactory>
 
 		var update = await SendAsync(HttpMethod.Put, $"{Base}/{id}", token, new JsonObject { ["title"] = "Renamed" });
 		update.StatusCode.Should().Be(HttpStatusCode.OK);
+		// slim response: no blocks echoed back
 		var updated = await update.Content.ReadFromJsonAsync<JsonObject>(Ct);
 		updated!["title"]!.GetValue<string>().Should().Be("Renamed");
-		JsonNode.DeepEquals(updated["blocks"], blocks).Should().BeTrue();
+		updated.ContainsKey("blocks").Should().BeFalse();
+		updated["blockCount"]!.GetValue<int>().Should().Be(2);
 
 		var list = await (await SendAsync(HttpMethod.Get, Base, token)).Content.ReadFromJsonAsync<List<PageSummary>>(Ct);
 		list!.Should().Contain(p => p.Slug == slug && p.BlockCount == 2);
@@ -89,14 +92,113 @@ public class PagesTests : IClassFixture<ApiFactory>
 
 		(await _client.GetAsync($"/api/public/pages/{slug}", Ct)).StatusCode.Should().Be(HttpStatusCode.NotFound);
 
-		(await SendAsync(HttpMethod.Post, $"{Base}/{id}/publish", token)).StatusCode.Should().Be(HttpStatusCode.OK);
+		(await SendAsync(HttpMethod.Put, $"{Base}/{id}", token, new JsonObject { ["status"] = "published" })).StatusCode.Should().Be(HttpStatusCode.OK);
 		var publicResponse = await _client.GetAsync($"/api/public/pages/{slug}", Ct);
 		publicResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 		var page = await publicResponse.Content.ReadFromJsonAsync<PublicPage>(Ct);
 		page!.Title.Should().Be("Public");
 
-		(await SendAsync(HttpMethod.Post, $"{Base}/{id}/unpublish", token)).StatusCode.Should().Be(HttpStatusCode.OK);
+		(await SendAsync(HttpMethod.Put, $"{Base}/{id}", token, new JsonObject { ["status"] = "draft" })).StatusCode.Should().Be(HttpStatusCode.OK);
 		(await _client.GetAsync($"/api/public/pages/{slug}", Ct)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+	}
+
+	[Fact]
+	public async Task Update_ContentStatusAndTags_InOneCall()
+	{
+		var token = await CreateStaffTokenAsync();
+		var slug = $"one-{Guid.NewGuid():N}"[..20];
+		var create = await SendAsync(HttpMethod.Post, Base, token, new JsonObject { ["title"] = "Draft", ["slug"] = slug });
+		var id = (await create.Content.ReadFromJsonAsync<PageDetail>(Ct))!.Id;
+
+		var response = await SendAsync(HttpMethod.Put, $"{Base}/{id}", token, new JsonObject
+		{
+			["title"] = "Live",
+			["status"] = "published",
+			["tags"] = new JsonArray("News", "alpha"),
+		});
+		response.StatusCode.Should().Be(HttpStatusCode.OK);
+		var summary = (await response.Content.ReadFromJsonAsync<PageSummary>(Ct))!;
+		summary.Title.Should().Be("Live");
+		summary.Status.Should().Be(PageStatus.Published);
+		summary.PublishedAt.Should().NotBeNull();
+		summary.Tags.Should().Equal("alpha", "news");
+		(await _client.GetFromJsonAsync<PublicPage>($"/api/public/pages/{slug}", Ct))!.Title.Should().Be("Live");
+	}
+
+	[Fact]
+	public async Task Update_InvalidField_ChangesNothing()
+	{
+		var token = await CreateStaffTokenAsync();
+		var create = await SendAsync(HttpMethod.Post, Base, token, new JsonObject { ["title"] = "Atomic" });
+		var id = (await create.Content.ReadFromJsonAsync<PageDetail>(Ct))!.Id;
+
+		var response = await SendAsync(HttpMethod.Put, $"{Base}/{id}", token, new JsonObject
+		{
+			["title"] = "Changed",
+			["status"] = "published",
+			["tags"] = new JsonArray("two words"),
+		});
+		response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+		var detail = await GetDetailAsync(token, id);
+		detail.Title.Should().Be("Atomic");
+		detail.Status.Should().Be(PageStatus.Draft);
+		detail.Tags.Should().BeEmpty();
+	}
+
+	[Fact]
+	public async Task Duplicate_CreatesDraftCopy_WithBlocksMetaAndTags()
+	{
+		var token = await CreateStaffTokenAsync();
+		var slug = $"orig-{Guid.NewGuid():N}"[..20];
+		var blocks = JsonNode.Parse("""
+			[{ "id": "g", "name": "group", "attributes": {}, "innerBlocks": [
+				{ "id": "p", "name": "paragraph", "attributes": { "text": "hi" }, "innerBlocks": [] }] }]
+			""");
+		var create = await SendAsync(HttpMethod.Post, Base, token,
+			new JsonObject { ["title"] = "Original", ["slug"] = slug, ["blocks"] = blocks });
+		var id = (await create.Content.ReadFromJsonAsync<PageDetail>(Ct))!.Id;
+		(await SendAsync(HttpMethod.Put, $"{Base}/{id}", token, new JsonObject
+		{
+			["metaTitle"] = "Meta", ["status"] = "published", ["tags"] = new JsonArray("copied"),
+		})).EnsureSuccessStatusCode();
+
+		var response = await SendAsync(HttpMethod.Post, $"{Base}/{id}/duplicate", token);
+		response.StatusCode.Should().Be(HttpStatusCode.Created);
+		var copy = (await response.Content.ReadFromJsonAsync<PageDetail>(Ct))!;
+		copy.Id.Should().NotBe(id);
+		copy.Title.Should().Be("Original (copy)");
+		copy.Slug.Should().Be($"{slug}-2");
+		copy.Status.Should().Be(PageStatus.Draft);
+		copy.MetaTitle.Should().Be("Meta");
+		copy.Tags.Should().Equal("copied");
+		var copyJson = await (await SendAsync(HttpMethod.Get, $"{Base}/{copy.Id}", token)).Content.ReadFromJsonAsync<JsonObject>(Ct);
+		JsonNode.DeepEquals(copyJson!["blocks"], blocks).Should().BeTrue();
+
+		var list = await (await SendAsync(HttpMethod.Get, Base, token)).Content.ReadFromJsonAsync<List<PageSummary>>(Ct);
+		list!.Single(p => p.Id == copy.Id).BlockCount.Should().Be(2);
+		(await SendAsync(HttpMethod.Post, $"{Base}/{Guid.NewGuid()}/duplicate", token)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+	}
+
+	[Fact]
+	public async Task PublicState_PageMenuAndConfig_InOneCall()
+	{
+		var token = await CreateStaffTokenAsync();
+		var slug = $"state-{Guid.NewGuid():N}"[..20];
+		var create = await SendAsync(HttpMethod.Post, Base, token, new JsonObject { ["title"] = "Stateful", ["slug"] = slug });
+		var id = (await create.Content.ReadFromJsonAsync<PageDetail>(Ct))!.Id;
+
+		// draft, unknown slug, no slug: page null, menu + config present
+		foreach (var url in new[] { $"/api/public/state/{slug}", "/api/public/state/no-such-page", "/api/public/state" })
+		{
+			var state = await _client.GetFromJsonAsync<PublicStateResponse>(url, Ct);
+			state!.Page.Should().BeNull(url);
+			state.Menu!.Handle.Should().Be("main");
+			state.Config.Fields.Should().ContainKey("firmName");
+		}
+
+		(await SendAsync(HttpMethod.Put, $"{Base}/{id}", token, new JsonObject { ["status"] = "published" })).EnsureSuccessStatusCode();
+		var published = await _client.GetFromJsonAsync<PublicStateResponse>($"/api/public/state/{slug.ToUpperInvariant()}", Ct);
+		published!.Page!.Title.Should().Be("Stateful");
 	}
 
 	[Fact]
@@ -151,24 +253,24 @@ public class PagesTests : IClassFixture<ApiFactory>
 		created.MetaTitle.Should().BeEmpty();
 		var id = created.Id;
 
-		var update = await SendAsync(HttpMethod.Put, $"{Base}/{id}", token,
-			new JsonObject { ["metaTitle"] = " About us ", ["metaDescription"] = "Who we are." });
-		var detail = (await update.Content.ReadFromJsonAsync<PageDetail>(Ct))!;
+		(await SendAsync(HttpMethod.Put, $"{Base}/{id}", token,
+			new JsonObject { ["metaTitle"] = " About us ", ["metaDescription"] = "Who we are." })).EnsureSuccessStatusCode();
+		var detail = await GetDetailAsync(token, id);
 		detail.MetaTitle.Should().Be("About us");
 		detail.MetaDescription.Should().Be("Who we are.");
 
 		// partial: a title-only save keeps the meta
-		detail = (await (await SendAsync(HttpMethod.Put, $"{Base}/{id}", token, new JsonObject { ["title"] = "Renamed" }))
-			.Content.ReadFromJsonAsync<PageDetail>(Ct))!;
+		(await SendAsync(HttpMethod.Put, $"{Base}/{id}", token, new JsonObject { ["title"] = "Renamed" })).EnsureSuccessStatusCode();
+		detail = await GetDetailAsync(token, id);
 		detail.MetaTitle.Should().Be("About us");
 
-		await SendAsync(HttpMethod.Post, $"{Base}/{id}/publish", token);
+		await SendAsync(HttpMethod.Put, $"{Base}/{id}", token, new JsonObject { ["status"] = "published" });
 		var pub = await _client.GetFromJsonAsync<PublicPage>($"/api/public/pages/{slug}", Ct);
 		pub!.MetaTitle.Should().Be("About us");
 		pub.MetaDescription.Should().Be("Who we are.");
 
-		detail = (await (await SendAsync(HttpMethod.Put, $"{Base}/{id}", token, new JsonObject { ["metaTitle"] = "" }))
-			.Content.ReadFromJsonAsync<PageDetail>(Ct))!;
+		(await SendAsync(HttpMethod.Put, $"{Base}/{id}", token, new JsonObject { ["metaTitle"] = "" })).EnsureSuccessStatusCode();
+		detail = await GetDetailAsync(token, id);
 		detail.MetaTitle.Should().BeEmpty();
 
 		(await SendAsync(HttpMethod.Put, $"{Base}/{id}", token, new JsonObject { ["metaTitle"] = new string('t', 71) }))
@@ -260,6 +362,9 @@ public class PagesTests : IClassFixture<ApiFactory>
 			new JsonObject { ["title"] = "x", ["blocks"] = new JsonArray() });
 		response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 	}
+
+	private async Task<PageDetail> GetDetailAsync(string token, Guid id) =>
+		(await (await SendAsync(HttpMethod.Get, $"{Base}/{id}", token)).Content.ReadFromJsonAsync<PageDetail>(Ct))!;
 
 	private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string url, string token, JsonNode? body = null)
 	{
