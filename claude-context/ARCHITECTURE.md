@@ -38,7 +38,8 @@ Postgres tests, seeded roles) is built on Postgres, so running both databases wo
 cost for no real gain. Decision: **Postgres only**.
 
 - Table `pages`: `Id`, `Title`, `Slug` (unique), `Status` (`Draft`|`Published`, stored as string),
-  `Blocks` (**jsonb**, the whole tree), `CreatedAt`, `UpdatedAt`, `PublishedAt`, `CreatedById`/`UpdatedById` (FK → staff, SET NULL).
+  `Blocks` (**jsonb**, the whole tree), `CreatedAt`, `UpdatedAt`, `PublishedAt`, `CreatedById`/`UpdatedById` (FK → staff, SET NULL),
+  plus the published snapshot (see Draft vs live).
 - `Blocks` is mapped with a System.Text.Json **value converter** (camelCase, Web defaults) + ValueComparer,
   not Npgsql's dynamic JSON mapping — keeps it working with the EF InMemory provider used by unit tests.
 - Size: a jsonb value can be up to ~255 MB and large values are TOAST-compressed out of line; real pages
@@ -160,13 +161,32 @@ so autocomplete only offers tags in use. Setting tags doesn't bump `UpdatedAt` (
   depth ≤ 10, ≤ 2000 blocks. Explicit JSON nulls for `attributes`/`innerBlocks` are normalized to empty.
 - Adding a block type is therefore frontend-only (see `BLOCK_SYSTEM.md`).
 
+## Draft vs live (save ≠ publish)
+Owners must be able to keep working on a published page without exposing half-done edits, so a page has two copies
+of its **content** (title, meta title, meta description, blocks): the **working copy** (`Title`, `MetaTitle`,
+`MetaDescription`, `Blocks`) that every save writes, and the **published snapshot** (`PublishedTitle`,
+`PublishedMetaTitle`, `PublishedMetaDescription`, `PublishedBlocks`; null title/blocks = never published).
+- Slug and tags have no snapshot: routing/organisation, live right away (a slug change on a published page re-renders).
+- Save (`PUT` with content) never touches the snapshot. Publish (`status: published`, also on an already published page
+  = "publish changes") copies working copy → snapshot, sets `PublishedAt`, re-renders. Unpublish (`status: draft`) only
+  flips the status: the snapshot stays (cheap, allows a later diff), a republish copies the then-saved working copy.
+- Everything public reads the snapshot: `PageService.Live` (public page/state endpoints, renderer input), menu labels
+  and footer links (`PublishedTitle`), the render worker's title check. The editor and the admin preview read the working copy.
+- `HasUnpublishedChanges` (stored bool, in `PageSummary`/`PageDetail`): published and the working copy differs from the
+  snapshot (block trees compared as JSON); recomputed on every content/status write, so lists don't compare trees.
+  Saving the live content back clears it.
+- Page states in the editor: **Unsaved** (client-side dirty), **Draft**, **Published**, **Published · unpublished
+  changes**. Publishing always publishes the *saved* state: the controls are disabled while there are unsaved edits.
+- Migration `PublishedSnapshot`: existing published pages got snapshot = working copy (no pending changes).
+
 ## Auth model
 - Editor endpoints: `[Authorize(Policy = StaffOnly)]`. Router guard: `meta.requiresStaff` checks
   `authStore.authType === 'staff'`. Staff = site owners.
 - Customer accounts only with `publicAuth` in the instance config (default off): otherwise the customer auth API
   answers 404 (`PublicAuthGateAttribute`), the admin router sends `meta.publicAuth` routes to not-found and the main
   menu seed has no Login link. Reserved slugs stay reserved either way.
-- Public reads: `GET /api/public/pages/{slug}` is anonymous and only returns **published** pages (404 otherwise).
+- Public reads: `GET /api/public/pages/{slug}` is anonymous and only returns **published** pages (404 otherwise), as
+  their published snapshot.
 
 ## Slugs and the public route
 - Public URL is `/{slug}` (clean, single segment). vue-router ranks static routes above `/:slug`, so app
@@ -192,8 +212,9 @@ staff save ─► API IRenderQueue ─► RenderWorker ─POST /render─► ren
 - The public site is a separate small Vue app (`frontend/src/public/`, template = the instance's `public.html`) built from the same
   view components as the editor preview, rendered with `vue/server-renderer` and **hydrated** in the browser
   (client navigation between public pages fetches `/api/public/pages/{slug}`). It ships no editor code.
-- Render triggers (controllers call `IRenderQueue`): content edit → `Page(id)`, plus `Refresh()` when the title/slug
-  changed (menus and footer show those). Publish/unpublish → `Page(id)` + `Refresh()`, delete → `Refresh()`. The
+- Render triggers (controllers call `IRenderQueue`): saves of the working copy render nothing; publishing changes or a
+  slug change of a published page → `Page(id)`, plus `Refresh()` when the live title/slug changed (menus and footer show
+  those). Publish/unpublish (status change) → `Page(id)` + `Refresh()`, delete → `Refresh()`. The
   refresh marker is always set at save time: a page loaded before the worker picks the job up would otherwise show the
   old menu without the client refresh. (The worker still widens a one-page job to all when the page left/joined the
   public site or its title/slug differs from what it was rendered with: safety net.) Main menu,
@@ -249,8 +270,11 @@ staff save ─► API IRenderQueue ─► RenderWorker ─POST /render─► ren
 - Pinia store `useEditorStore` (`frontend/src/stores/editor.ts`) holds the page's `blocks` tree.
 - Undo/redo: snapshot history (max 50); every mutation pushes a snapshot.
 - Autosave after 4 changes; saves are **serialized** (a save requested mid-flight re-runs after) so an
-  older snapshot can't overwrite a newer one. Leaving the editor flushes pending changes. Publish/unpublish is **one
-  PUT**: the status rides along with the next content save through the same loop (publishes what's on screen).
+  older snapshot can't overwrite a newer one. Leaving the editor flushes pending changes. Saves only write the working
+  copy (Draft vs live). Dirty tracking: `isDirty` = the content (title, meta, blocks) differs from the last saved JSON
+  (undo back to it = clean); Save is disabled when clean and `savePage` skips clean pages. `publish()`/`unpublish()`
+  send `{status}` alone, after any save in flight; the rules for the buttons (header + Page tab) live in one composable
+  (`lib/web-editor/composables/usePublishState.ts`).
 - `PUT /api/pages/{id}` is the only page write besides create/import/duplicate/delete: a partial update of title, slug,
   meta, blocks, `status` and `tags` (omitted fields untouched), validated as a whole before anything changes, one
   transaction. It answers with the slim `PageSummary` (no 2 MB blocks echo); the pages store merges it plus what was

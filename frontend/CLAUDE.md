@@ -153,7 +153,7 @@ weekday for weekly + biweekly, day 1-28 for monthly), storage folder (`hostPath`
 | `/forgot-password` | `ForgotPassword.vue` | guest |
 | `/reset-password` | `ResetPassword.vue` (`?token=`) | public |
 | `/verify-email` | `VerifyEmail.vue` (`?token=`) | public |
-| `/admin/pages` | `admin/Pages.vue` (list with search / tag filter / status filter (All statuses / Published / Not published; only here, `v-model:status` shows it) / updatedAt sort toggle (clock + arrow icon button, down = newest first) (`PageFilters` + `composables/usePageFilter.ts`), tag chips, row = view/preview link + "…" `components/ActionMenu.vue` (Edit → modal `components/PageEditDialog.vue` (slug, published, tags; one PUT with only what changed, all or nothing), Duplicate (`POST /api/pages/{id}/duplicate`: "<title> (copy)", slug `-2`…, stays on the list), Export (JSON of the saved page), Delete (confirm; disabled for locked pages)); "+ New Page" opens a row: Import (primary outline, upload icon + "Import", icon only below sm; file → `parsePageExport` → `POST /api/pages/import` → editor of the new draft, toast warns about missing images), title input, Create, cancel (x icon)) | staff |
+| `/admin/pages` | `admin/Pages.vue` (list with search / tag filter / status filter (All statuses / Published / Not published; only here, `v-model:status` shows it) / updatedAt sort toggle (clock + arrow icon button, down = newest first) (`PageFilters` + `composables/usePageFilter.ts`), tag chips, row = view/preview link + "…" `components/ActionMenu.vue` (Edit → modal `components/PageEditDialog.vue` (slug, published (switching on publishes the saved copy), tags; one PUT with only what changed, all or nothing), Duplicate (`POST /api/pages/{id}/duplicate`: "<title> (copy)", slug `-2`…, stays on the list), Export (JSON of the saved page), Delete (confirm; disabled for locked pages)); "+ New Page" opens a row: Import (primary outline, upload icon + "Import", icon only below sm; file → `parsePageExport` → `POST /api/pages/import` → editor of the new draft, toast warns about missing images), title input, Create, cancel (x icon)) | staff |
 | `/admin/pages/:id` | `admin/PageEditor.vue` → `WebEditor` (no nav) | staff |
 | `/admin/pages/:id/preview` | `admin/PagePreview.vue` (draft preview, no nav) | staff |
 | `/admin/media` | `admin/Media.vue` (rename + alt; library grid 3/4/6 cols; details in a fixed right sidebar on lg+, modal below; click again to close) | staff |
@@ -203,8 +203,10 @@ their server-rendered `<head>` (`headTags()` in `src/public/head.ts`, falls back
   `blockCount` + the sent fields merged into a cached detail) / `prefetch` (row focus, or ~150 ms pointer rest: hover
   intent, sweeping fetches nothing) / `add` / `forget`. The editor store shows the cached detail first, then applies
   the server copy only if nothing was edited meanwhile. Vitest `stores/pages.test.ts`.
-- Editor saving (`stores/editor.ts`): every write is `PUT /api/pages/{id}`; `setPublished` sets a `pendingStatus` the
-  serialized save loop sends with the on-screen content (one PUT); `updateSlug` / `updateTags` send `{slug}` / `{tags}`.
+- Editor saving (`stores/editor.ts`): every write is `PUT /api/pages/{id}`. Saves write the working copy only (never
+  live, ARCHITECTURE.md → Draft vs live); `isDirty` = title/meta/blocks JSON ≠ last saved (`savedContent`), `savePage`
+  skips clean pages; `publish()` / `unpublish()` send `{status}` alone (after a save in flight; `publishing` flag);
+  `pageHasUnpublishedChanges` from every PUT/GET; `updateSlug` / `updateTags` send `{slug}` / `{tags}`.
 - `src/stores/siteConfig.ts` — `useSiteConfigStore`: public site `config`, `load()` once (single-flight, never throws),
   `refresh()` (refetch, keeps the current value on failure; `data-refresh` pages), `set()` after the admin form saves.
 - `src/stores/instance.ts` — `useInstanceStore`: `config` = `InstanceConfig` (publicAuth, excludedBlocks, siteConfig) +
