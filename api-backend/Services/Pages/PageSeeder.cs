@@ -34,6 +34,7 @@ public static class PageSeeder
 			Status = PageStatus.Published,
 			// copy: the config's block lists are shared (singleton)
 			Blocks = JsonSerializer.Deserialize<List<Block>>(JsonSerializer.Serialize(p.Blocks))!,
+			BlockCount = PageService.CountBlocks(p.Blocks),
 			PublishedAt = now,
 		}));
 		await db.SaveChangesAsync(ct);

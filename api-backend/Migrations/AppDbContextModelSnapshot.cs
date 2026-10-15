@@ -386,6 +386,9 @@ namespace api_backend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int>("BlockCount")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Blocks")
                         .IsRequired()
                         .HasColumnType("jsonb");
