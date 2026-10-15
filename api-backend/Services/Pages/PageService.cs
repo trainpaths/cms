@@ -524,7 +524,7 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		}
 	}
 
-	/// <summary>Blocks at all depths (<see cref="Page.BlockCount"/>); mirrored in SQL by <c>AddPageBlockCount.BackfillSql</c>.</summary>
+	/// <summary>Blocks at all depths (<see cref="Page.BlockCount"/>).</summary>
 	public static int CountBlocks(List<Block> blocks) =>
 		blocks.Sum(b => 1 + CountBlocks(b.InnerBlocks ?? []));
 

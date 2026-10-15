@@ -67,8 +67,7 @@ TagsController         /api/tags             [Authorize(StaffOnly)], rate limit 
   `PublishedBlocks`. `HasUnpublishedChanges` (stored) = published && working ≠ snapshot (`MatchesSnapshot`: block JSON),
   recomputed when content or status is written. Tests that publish via the DB must set `PublishedTitle`/`PublishedBlocks`.
 - `Models/Pages/Page.cs` (entity, `PageStatus` Draft|Published stored as string, `BlockCount` = `PageService.CountBlocks`
-  of `Blocks`, set on every blocks write + by the seeder; `AddPageBlockCount.BackfillSql` = the same count in SQL, so
-  `GET /api/pages` never reads `Blocks`), `Models/Pages/Block.cs`
+  of `Blocks`, set on every blocks write + by the seeder, so `GET /api/pages` never reads `Blocks`), `Models/Pages/Block.cs`
   (recursive: `Id`, `Name`, `Dictionary<string, JsonElement> Attributes`, `List<Block> InnerBlocks`).
 - `Services/Pages/PageService.cs` returns `PageResult<T>` (`PageError`: NotFound | SlugTaken | Invalid);
   the controller maps errors to ProblemDetails. Status is exposed as lowercase `"draft"|"published"`.
@@ -435,15 +434,15 @@ UpdateSiteConfigRequest   Fields {key: value}, Groups {key: ConfigEntryValue[]},
 
 ## DB tables
 `customers`, `staff`, `roles` (seeded), `staff_roles` (junction), `refresh_tokens`,
-`verification_tokens`, `pages` (AddPages migration: unique `Slug`, index on `Status`, `Blocks` jsonb,
-`CreatedById`/`UpdatedById` → staff ON DELETE SET NULL), `media_assets` (AddMediaAssets: unique
-`StorageKey`, index on `CreatedAt`, `CreatedById` → staff ON DELETE SET NULL), `site_config` (AddSiteConfig: singleton,
-logo/icon → media_assets SET NULL; SiteConfigValues: `Values` jsonb replaced the free `Fields` list, old data dropped;
-AddPageMetaAndShareImage: `pages.MetaTitle/MetaDescription`, `site_config.ShareImageMediaId`), `tags` + `page_tags` and `menus` (AddTagsAndMenus: unique tag `Name`,
-unique menu `Handle`, `Items` jsonb), `rendered_pages` (AddRenderedPages: PK/FK `PageId` → pages CASCADE),
-`backup_settings` (AddBackupSettings: singleton, enums as strings, no FKs), `pages.BlockCount` (AddPageBlockCount: backfilled
-by a recursive CTE), `pages.Published*` + `HasUnpublishedChanges` (PublishedSnapshot: published pages backfilled with
-snapshot = working copy)
+`verification_tokens`, `pages` (unique `Slug`, index on `Status`, `Blocks` jsonb + the `Published*` snapshot,
+`CreatedById`/`UpdatedById` → staff ON DELETE SET NULL), `media_assets` (unique `StorageKey`, index on `CreatedAt`,
+`CreatedById` → staff ON DELETE SET NULL), `site_config` (singleton, `Values` jsonb, logo/icon/share image →
+media_assets SET NULL), `tags` + `page_tags` and `menus` (unique tag `Name`, unique menu `Handle`, `Items` jsonb),
+`rendered_pages` (PK/FK `PageId` → pages CASCADE), `backup_settings` (singleton, enums as strings, no FKs)
+
+**Migrations were squashed into one `Init` on 2026-10-15** (no database held real data). From now on they are fixed:
+add new ones, never edit or squash existing ones. A database created before the squash doesn't match the new history:
+wipe it (`docker compose down -v`); backups made before it are refused on restore (unknown migration id).
 Constraints: email unique per table; refresh_token + verification_token owner check
 (CustomerId XOR StaffId non-null)
 
@@ -488,7 +487,7 @@ Integration/          ApiFactory.cs (WebApplicationFactory + Testcontainers Post
                       InstanceConfigTests (locked/template pages, footer links, public auth off; own CmsConfig via ConfigureTestServices),
                       RenderingTests (FakeRenderer replaces IRendererClient; fast debounce/check config),
                       QueryBudgetTests (QueryCounter: DbCommandInterceptor in ApiFactory counting commands of requests
-                      with the X-Count-Queries header; public cache invalidation, BlockCount + backfill SQL),
+                      with the X-Count-Queries header; public cache invalidation, BlockCount),
                       BackupsTests (auth, settings, names, busy 409, 503 gate, invalid uploads, newer schema refused),
                       BackupRoundTripTests (real pg tools, own DB: backup → change → restore → undo, download/upload,
                       scheduled run + retention; skipped without pg_dump)

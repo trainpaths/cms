@@ -2,14 +2,10 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
-using System.Text.Json;
 using System.Text.Json.Nodes;
-using api_backend.Migrations;
 using api_backend.Models.Auth;
 using api_backend.Models.Dto;
-using api_backend.Models.Pages;
 using api_backend.Services.Auth.JWT;
-using api_backend.Services.Pages;
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -191,37 +187,6 @@ public class QueryBudgetTests : IClassFixture<ApiFactory>
 
 		var list = await (await SendAsync(HttpMethod.Get, "/api/pages", token)).Content.ReadFromJsonAsync<List<PageSummary>>(Ct);
 		list!.Single(p => p.Slug == slug).BlockCount.Should().Be(3);
-	}
-
-	[Fact]
-	public async Task BackfillSql_MatchesCountBlocks()
-	{
-		using var scope = _factory.Services.CreateScope();
-		var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-		List<List<Block>> trees =
-		[
-			[],
-			[new Block { Id = "a", Name = "paragraph" }],
-			JsonSerializer.Deserialize<List<Block>>(Nested(), JsonSerializerOptions.Web)!,
-		];
-		var pages = trees.Select((blocks, i) => new Page { Title = $"Backfill {i}", Slug = $"backfill-{i}-{Guid.NewGuid():N}"[..20], Blocks = blocks })
-			.ToList();
-		db.Pages.AddRange(pages);
-		await db.SaveChangesAsync(Ct);
-		// a stored null innerBlocks counts as empty
-		var odd = new Page { Title = "Backfill odd", Slug = $"backfill-odd-{Guid.NewGuid():N}"[..20] };
-		db.Pages.Add(odd);
-		await db.SaveChangesAsync(Ct);
-		await db.Database.ExecuteSqlAsync(
-			$$"""UPDATE pages SET "Blocks" = '[{"id":"x","name":"p","attributes":{},"innerBlocks":null}]'::jsonb WHERE "Id" = {{odd.Id}}""", Ct);
-
-		await db.Database.ExecuteSqlRawAsync(AddPageBlockCount.BackfillSql, Ct);
-
-		var ids = pages.Select(p => p.Id).Append(odd.Id).ToList();
-		var stored = await db.Pages.AsNoTracking().Where(p => ids.Contains(p.Id)).ToDictionaryAsync(p => p.Id, Ct);
-		foreach (var page in pages)
-			stored[page.Id].BlockCount.Should().Be(PageService.CountBlocks(page.Blocks));
-		stored[odd.Id].BlockCount.Should().Be(1);
 	}
 
 	// 3 blocks: a group with two children
