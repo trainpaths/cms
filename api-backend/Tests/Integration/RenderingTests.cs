@@ -244,7 +244,7 @@ public class RenderingTests(ApiFactory factory) : IClassFixture<ApiFactory>
 	}
 
 	[Fact]
-	public async Task EditingPublishedPage_ReRendersIt_AndTitleChangeReRendersOthers()
+	public async Task SavingPublishedPage_KeepsItsHtml_PublishingReRendersIt_AndTitleChangeReRendersOthers()
 	{
 		await using var site = await StartAsync();
 		var (id, slug) = await CreatePublishedAsync(site, "Edit me");
@@ -252,18 +252,24 @@ public class RenderingTests(ApiFactory factory) : IClassFixture<ApiFactory>
 		await WaitForAsync(site, $"/api/public/html/{other}", (r, body) => body.Contains("Other page"));
 		await WaitForAsync(site, $"/api/public/html/{slug}", (r, body) => body.Contains("blocks:1"));
 
-		// content-only autosave (title unchanged): just this page
-		await SendAsync(site, HttpMethod.Put, $"/api/pages/{id}", new JsonObject { ["title"] = "Edit me", ["blocks"] = Blocks(3) });
-		await WaitForAsync(site, $"/api/public/html/{slug}", (r, body) => body.Contains("blocks:3"));
+		// a save edits the working copy only: the stored HTML stays fresh (no shell, no marker)
+		await SendAsync(site, HttpMethod.Put, $"/api/pages/{id}", new JsonObject { ["title"] = "Renamed", ["blocks"] = Blocks(3) });
+		var saved = await site.Client.GetAsync($"/api/public/html/{slug}", Ct);
+		Accel(saved).Should().BeNull();
+		var html = await saved.Content.ReadAsStringAsync(Ct);
+		html.Should().Contain("blocks:1").And.Contain("Edit me");
+		Marked(html).Should().BeFalse();
 
+		// publishing the new title: this page + the others (menus, footer links)
 		site.Renderer.Rendered.Clear();
-		await SendAsync(site, HttpMethod.Put, $"/api/pages/{id}", new JsonObject { ["title"] = "Renamed" });
-		await WaitForAsync(site, $"/api/public/html/{slug}", (r, body) => body.Contains("Renamed"));
+		await SendAsync(site, HttpMethod.Put, $"/api/pages/{id}", new JsonObject { ["status"] = "published" });
+		await WaitForAsync(site, $"/api/public/html/{slug}", (r, body) => body.Contains("blocks:3") && body.Contains("Renamed"));
+		await WaitForAsync(site, $"/api/public/html/{other}", (_, body) => !Marked(body));
 		site.Renderer.Rendered.Should().Contain(other);
 	}
 
 	[Fact]
-	public async Task Rename_MarksOtherPagesRightAway_ContentEditDoesNot()
+	public async Task PublishedRename_MarksOtherPagesRightAway_ContentEditDoesNot()
 	{
 		await using var site = await StartAsync();
 		var (id, slug) = await CreatePublishedAsync(site, "Rename me");
@@ -272,10 +278,10 @@ public class RenderingTests(ApiFactory factory) : IClassFixture<ApiFactory>
 		await WaitForAsync(site, $"/api/public/html/{other}", (_, body) => body.Contains("Bystander") && !Marked(body));
 
 		var hold = Hold(site);
-		await SendAsync(site, HttpMethod.Put, $"/api/pages/{id}", new JsonObject { ["blocks"] = Blocks(2) });
+		await SendAsync(site, HttpMethod.Put, $"/api/pages/{id}", new JsonObject { ["blocks"] = Blocks(2), ["status"] = "published" });
 		Marked(await site.Client.GetStringAsync($"/api/public/html/{other}", Ct)).Should().BeFalse();
 
-		await SendAsync(site, HttpMethod.Put, $"/api/pages/{id}", new JsonObject { ["title"] = "Renamed" });
+		await SendAsync(site, HttpMethod.Put, $"/api/pages/{id}", new JsonObject { ["title"] = "Renamed", ["status"] = "published" });
 		var during = await site.Client.GetStringAsync($"/api/public/html/{other}", Ct);
 		during.Should().Contain("Bystander");
 		Marked(during).Should().BeTrue();
@@ -291,7 +297,7 @@ public class RenderingTests(ApiFactory factory) : IClassFixture<ApiFactory>
 		var (id, slug) = await CreatePublishedAsync(site, "Fresh");
 		await WaitForAsync(site, $"/api/public/html/{slug}", (_, body) => body.Contains("blocks:1"));
 
-		await SendAsync(site, HttpMethod.Put, $"/api/pages/{id}", new JsonObject { ["blocks"] = Blocks(2) });
+		await SendAsync(site, HttpMethod.Put, $"/api/pages/{id}", new JsonObject { ["blocks"] = Blocks(2), ["status"] = "published" });
 		// right away: either the new render or the live shell, not the old HTML
 		var response = await site.Client.GetAsync($"/api/public/html/{slug}", Ct);
 		(await response.Content.ReadAsStringAsync(Ct)).Should().NotContain("blocks:1");
@@ -407,8 +413,8 @@ public class RenderingTests(ApiFactory factory) : IClassFixture<ApiFactory>
 		site.App.Services.GetRequiredService<RenderStatus>().MarkRefreshed();
 		await WaitForAsync(site, $"/api/public/html/{a}", (_, body) => Marked(body));
 
-		// A re-rendered after it (content edit) loses the marker, B keeps it
-		await SendAsync(site, HttpMethod.Put, $"/api/pages/{id}", new JsonObject { ["blocks"] = Blocks(2) });
+		// A re-rendered after it (published edit) loses the marker, B keeps it
+		await SendAsync(site, HttpMethod.Put, $"/api/pages/{id}", new JsonObject { ["blocks"] = Blocks(2), ["status"] = "published" });
 		await WaitForAsync(site, $"/api/public/html/{a}", (_, body) => body.Contains("blocks:2") && !Marked(body));
 		Marked(await site.Client.GetStringAsync($"/api/public/html/{b}", Ct)).Should().BeTrue();
 	}

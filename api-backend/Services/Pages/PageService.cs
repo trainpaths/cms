@@ -25,13 +25,14 @@ public record PageResult<T>(T? Value, PageError? Error = null, string? Detail = 
 }
 
 /// <summary>
-/// <see cref="Renamed"/>: title or slug changed (menus + footer links on every page show those).
-/// <see cref="ContentChanged"/>: a non-tag field was sent (title, slug, meta, blocks).
+/// What a write did to the public site. <see cref="StatusChanged"/>: published or unpublished.
+/// <see cref="LiveChanged"/>: the live page changed while staying published (publish changes, slug).
+/// <see cref="LiveRenamed"/>: its live title or slug changed (menus + footer links on every page show those).
 /// </summary>
-public record PageUpdate(PageSummary Page, bool Renamed, bool StatusChanged, bool ContentChanged);
+public record PageUpdate(PageSummary Page, bool StatusChanged, bool LiveChanged, bool LiveRenamed);
 
 /// <summary>
-/// Page CRUD, publish, slug rules, block validation. Pages declared in the instance config (<see cref="CmsConfig"/>) can be
+/// Page CRUD, publish (working copy → live snapshot, <see cref="Page"/>), slug rules, block validation. Pages declared in the instance config (<see cref="CmsConfig"/>) can be
 /// locked (fixed slug, undeletable) and template-rendered; those flags are looked up by slug, not stored.
 /// </summary>
 public partial class PageService(AppDbContext db, CmsConfig cms)
@@ -70,20 +71,39 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 			.Select(p => new
 			{
 				p.Id, p.Title, p.Slug, p.Status, p.BlockCount, p.CreatedAt, p.UpdatedAt, p.PublishedAt,
+				p.HasUnpublishedChanges,
 				Tags = p.PageTags.Select(pt => pt.Tag.Name).OrderBy(n => n).ToList(),
 			})
 			.ToListAsync(ct);
 		// Locked after materializing: cms.Page(slug) isn't SQL
 		return pages.Select(p => new PageSummary(p.Id, p.Title, p.Slug, p.Status, p.Tags, p.BlockCount, p.CreatedAt,
-			p.UpdatedAt, p.PublishedAt, cms.Page(p.Slug) is { IsLocked: true })).ToList();
+			p.UpdatedAt, p.PublishedAt, p.HasUnpublishedChanges, cms.Page(p.Slug) is { IsLocked: true })).ToList();
 	}
 
 	public async Task<PageDetail?> GetAsync(Guid id, CancellationToken ct)
 	{
-		// tags as one string_agg column, not a second query (tags never contain whitespace)
+		// tags as one string_agg column, not a second query (tags never contain whitespace). No published snapshot:
+		// the editor works on the working copy (a second block tree of up to 2 MB)
 		var row = await db.Pages.AsNoTracking()
 			.Where(p => p.Id == id)
-			.Select(p => new { Page = p, Tags = string.Join(" ", p.PageTags.Select(pt => pt.Tag.Name)) })
+			.Select(p => new
+			{
+				Page = new Page
+				{
+					Id = p.Id,
+					Title = p.Title,
+					Slug = p.Slug,
+					Status = p.Status,
+					MetaTitle = p.MetaTitle,
+					MetaDescription = p.MetaDescription,
+					Blocks = p.Blocks,
+					CreatedAt = p.CreatedAt,
+					UpdatedAt = p.UpdatedAt,
+					PublishedAt = p.PublishedAt,
+					HasUnpublishedChanges = p.HasUnpublishedChanges,
+				},
+				Tags = string.Join(" ", p.PageTags.Select(pt => pt.Tag.Name)),
+			})
 			.FirstOrDefaultAsync(ct);
 		return row is null ? null : await ToDetailAsync(row.Page, SplitTags(row.Tags), ct);
 	}
@@ -91,20 +111,26 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 	private static List<string> SplitTags(string? joined) =>
 		(joined ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries).Order(StringComparer.Ordinal).ToList();
 
+	// the live snapshot of a published page (never the working copy)
+	private record LivePage(Guid Id, string Slug, string Title, string MetaTitle, string MetaDescription,
+		List<Block> Blocks, DateTimeOffset? PublishedAt);
+
+	private IQueryable<LivePage> Live(IQueryable<Page> pages) => pages
+		.Where(p => p.Status == PageStatus.Published)
+		.Select(p => new LivePage(p.Id, p.Slug, p.PublishedTitle!, p.PublishedMetaTitle, p.PublishedMetaDescription,
+			p.PublishedBlocks!, p.PublishedAt));
+
 	public async Task<PublicPage?> GetPublishedBySlugAsync(string slug, CancellationToken ct)
 	{
 		var normalized = slug.ToLowerInvariant();
-		var page = await db.Pages.AsNoTracking()
-			.FirstOrDefaultAsync(p => p.Slug == normalized && p.Status == PageStatus.Published, ct);
+		var page = await Live(db.Pages.AsNoTracking().Where(p => p.Slug == normalized)).FirstOrDefaultAsync(ct);
 		return page is null ? null : ToPublic(page, await MediaService.ResolveRefsAsync(db, page.Blocks, ct));
 	}
 
 	/// <summary>Published pages among <paramref name="ids"/> (others absent): two queries, media refs shared.</summary>
 	public async Task<Dictionary<Guid, PublicPage>> GetPublishedByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct)
 	{
-		var list = await db.Pages.AsNoTracking()
-			.Where(p => ids.Contains(p.Id) && p.Status == PageStatus.Published)
-			.ToListAsync(ct);
+		var list = await Live(db.Pages.AsNoTracking().Where(p => ids.Contains(p.Id))).ToListAsync(ct);
 		var mediaIds = list.SelectMany(p => MediaService.CollectIds(p.Blocks)).ToHashSet();
 		var media = mediaIds.Count == 0
 			? new Dictionary<Guid, MediaRef>()
@@ -115,7 +141,7 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 			MediaService.CollectIds(p.Blocks).Where(media.ContainsKey).Select(id => media[id]).ToList()));
 	}
 
-	private PublicPage ToPublic(Page page, List<MediaRef> media) =>
+	private PublicPage ToPublic(LivePage page, List<MediaRef> media) =>
 		new(page.Title, page.Slug, page.Blocks, media, page.PublishedAt, cms.Page(page.Slug)?.Template,
 			page.MetaTitle, page.MetaDescription);
 
@@ -223,8 +249,9 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 
 	/// <summary>
 	/// Partial update of everything an editor writes (content, meta, slug, status, tags) in one SaveChanges. Everything
-	/// is validated before anything changes. Tags alone don't bump <c>UpdatedAt</c>: tagging isn't a content edit, and
-	/// the pages list sorts by it.
+	/// is validated before anything changes. Content goes to the working copy only; status <c>published</c> then copies
+	/// it to the live snapshot (also when already published), <c>draft</c> unpublishes (the snapshot stays). Tags alone
+	/// don't bump <c>UpdatedAt</c>: tagging isn't a content edit, and the pages list sorts by it.
 	/// </summary>
 	public async Task<PageResult<PageUpdate>> UpdateAsync(Guid id, UpdatePageRequest req, Guid staffId, CancellationToken ct)
 	{
@@ -270,7 +297,7 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 				return PageResult<PageUpdate>.Fail(PageError.Invalid, tagError);
 		}
 
-		var (oldTitle, oldSlug) = (page.Title, page.Slug);
+		var (wasPublished, oldLiveTitle, oldSlug) = (page.Status == PageStatus.Published, page.PublishedTitle, page.Slug);
 		if (title is not null) page.Title = title;
 		if (slug is not null) page.Slug = slug;
 		if (req.MetaTitle is not null) page.MetaTitle = req.MetaTitle.Trim();
@@ -281,16 +308,28 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 			page.BlockCount = CountBlocks(req.Blocks);
 		}
 
-		var statusChanged = req.Status is { } status && status != page.Status;
-		if (statusChanged)
+		var publish = req.Status == PageStatus.Published;
+		var unpublish = req.Status == PageStatus.Draft && wasPublished;
+		if (publish)
 		{
-			page.Status = req.Status!.Value;
-			page.PublishedAt = page.Status == PageStatus.Published ? DateTimeOffset.UtcNow : null;
+			page.PublishedTitle = page.Title;
+			page.PublishedMetaTitle = page.MetaTitle;
+			page.PublishedMetaDescription = page.MetaDescription;
+			page.PublishedBlocks = CloneBlocks(page.Blocks);
+			page.Status = PageStatus.Published;
+			page.PublishedAt = DateTimeOffset.UtcNow;
+		}
+		else if (unpublish)
+		{
+			page.Status = PageStatus.Draft;
+			page.PublishedAt = null;
 		}
 
-		var contentChanged = req.Title is not null || req.Slug is not null || req.Blocks is not null
-			|| req.MetaTitle is not null || req.MetaDescription is not null;
-		if (contentChanged || statusChanged)
+		var contentSent = req.Title is not null || req.Blocks is not null || req.MetaTitle is not null
+			|| req.MetaDescription is not null;
+		if (contentSent || publish || unpublish)
+			page.HasUnpublishedChanges = page.Status == PageStatus.Published && !MatchesSnapshot(page);
+		if (contentSent || req.Slug is not null || publish || unpublish)
 		{
 			page.UpdatedAt = DateTimeOffset.UtcNow;
 			page.UpdatedById = staffId;
@@ -313,9 +352,23 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 			await DeleteUnusedTagsAsync(ct);
 
 		var tags = (tagNames ?? pageTags.Select(pt => pt.Tag.Name).ToList()).Order(StringComparer.Ordinal).ToList();
-		var renamed = page.Title != oldTitle || page.Slug != oldSlug;
-		return PageResult<PageUpdate>.Ok(new PageUpdate(ToSummary(page, tags), renamed, statusChanged, contentChanged));
+		var live = page.Status == PageStatus.Published;
+		var statusChanged = live != wasPublished;
+		var liveRenamed = live && (page.PublishedTitle != oldLiveTitle || page.Slug != oldSlug);
+		return PageResult<PageUpdate>.Ok(new PageUpdate(ToSummary(page, tags), statusChanged,
+			live && (publish || page.Slug != oldSlug), liveRenamed));
 	}
+
+	private static readonly JsonSerializerOptions BlockJson = new(JsonSerializerDefaults.Web);
+
+	private static List<Block> CloneBlocks(List<Block> blocks) =>
+		JsonSerializer.Deserialize<List<Block>>(JsonSerializer.Serialize(blocks, BlockJson), BlockJson)!;
+
+	/// <summary>Working copy = live snapshot (block trees compared as JSON: attribute order counts).</summary>
+	private static bool MatchesSnapshot(Page p) =>
+		p.PublishedBlocks is not null && p.Title == p.PublishedTitle && p.MetaTitle == p.PublishedMetaTitle
+		&& p.MetaDescription == p.PublishedMetaDescription
+		&& JsonSerializer.Serialize(p.Blocks, BlockJson) == JsonSerializer.Serialize(p.PublishedBlocks, BlockJson);
 
 	// null = not sent (unchanged); empty clears
 	private static string? MetaError(string? value, int max, string label) =>
@@ -477,7 +530,7 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 
 	private PageSummary ToSummary(Page p, List<string> tags) =>
 		new(p.Id, p.Title, p.Slug, p.Status, tags, p.BlockCount, p.CreatedAt, p.UpdatedAt, p.PublishedAt,
-			cms.Page(p.Slug) is { IsLocked: true });
+			p.HasUnpublishedChanges, cms.Page(p.Slug) is { IsLocked: true });
 
 	/// <param name="tags">sorted names (every caller knows them: no tags query)</param>
 	private async Task<PageDetail> ToDetailAsync(Page p, List<string> tags, CancellationToken ct)
@@ -485,6 +538,6 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		var config = cms.Page(p.Slug);
 		return new(p.Id, p.Title, p.Slug, p.Status, tags,
 			p.Blocks, await MediaService.ResolveRefsAsync(db, p.Blocks, ct), p.CreatedAt, p.UpdatedAt, p.PublishedAt,
-			config?.Template, config?.IsLocked ?? false, config?.Editable ?? true, p.MetaTitle, p.MetaDescription);
+			p.HasUnpublishedChanges, config?.Template, config?.IsLocked ?? false, config?.Editable ?? true, p.MetaTitle, p.MetaDescription);
 	}
 }

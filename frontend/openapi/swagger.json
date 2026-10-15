@@ -2949,6 +2949,7 @@
           "blocks",
           "createdAt",
           "editable",
+          "hasUnpublishedChanges",
           "id",
           "locked",
           "media",
@@ -3010,6 +3011,9 @@
             "format": "date-time",
             "nullable": true
           },
+          "hasUnpublishedChanges": {
+            "type": "boolean"
+          },
           "template": {
             "type": "string",
             "nullable": true
@@ -3040,6 +3044,7 @@
         "required": [
           "blockCount",
           "createdAt",
+          "hasUnpublishedChanges",
           "id",
           "locked",
           "slug",
@@ -3089,6 +3094,9 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          },
+          "hasUnpublishedChanges": {
+            "type": "boolean"
           },
           "locked": {
             "type": "boolean"

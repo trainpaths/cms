@@ -103,6 +103,35 @@ public class PagesTests : IClassFixture<ApiFactory>
 	}
 
 	[Fact]
+	public async Task PublicEndpoint_ServesTheLiveCopy_UntilChangesArePublished()
+	{
+		var token = await CreateStaffTokenAsync();
+		var slug = $"live-{Guid.NewGuid():N}"[..20];
+		var create = await SendAsync(HttpMethod.Post, Base, token, new JsonObject { ["title"] = "Live", ["slug"] = slug });
+		var id = (await create.Content.ReadFromJsonAsync<PageDetail>(Ct))!.Id;
+		(await SendAsync(HttpMethod.Put, $"{Base}/{id}", token, new JsonObject { ["status"] = "published" })).EnsureSuccessStatusCode();
+
+		var save = (await (await SendAsync(HttpMethod.Put, $"{Base}/{id}", token,
+			new JsonObject { ["title"] = "Edited", ["metaTitle"] = "Meta" })).Content.ReadFromJsonAsync<PageSummary>(Ct))!;
+		save.Status.Should().Be(PageStatus.Published);
+		save.HasUnpublishedChanges.Should().BeTrue();
+		var live = (await _client.GetFromJsonAsync<PublicPage>($"/api/public/pages/{slug}", Ct))!;
+		live.Title.Should().Be("Live");
+		live.MetaTitle.Should().BeEmpty();
+		(await _client.GetFromJsonAsync<PublicStateResponse>($"/api/public/state/{slug}", Ct))!.Page!.Title.Should().Be("Live");
+		(await GetDetailAsync(token, id)).HasUnpublishedChanges.Should().BeTrue();
+		(await (await SendAsync(HttpMethod.Get, Base, token)).Content.ReadFromJsonAsync<List<PageSummary>>(Ct))!
+			.Single(p => p.Id == id).HasUnpublishedChanges.Should().BeTrue();
+
+		var publish = (await (await SendAsync(HttpMethod.Put, $"{Base}/{id}", token, new JsonObject { ["status"] = "published" }))
+			.Content.ReadFromJsonAsync<PageSummary>(Ct))!;
+		publish.HasUnpublishedChanges.Should().BeFalse();
+		live = (await _client.GetFromJsonAsync<PublicPage>($"/api/public/pages/{slug}", Ct))!;
+		live.Title.Should().Be("Edited");
+		live.MetaTitle.Should().Be("Meta");
+	}
+
+	[Fact]
 	public async Task Update_ContentStatusAndTags_InOneCall()
 	{
 		var token = await CreateStaffTokenAsync();

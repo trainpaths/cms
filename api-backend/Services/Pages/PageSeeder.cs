@@ -32,9 +32,11 @@ public static class PageSeeder
 			Title = p.Title,
 			Slug = p.Slug,
 			Status = PageStatus.Published,
-			// copy: the config's block lists are shared (singleton)
+			// copies: the config's block lists are shared (singleton)
 			Blocks = JsonSerializer.Deserialize<List<Block>>(JsonSerializer.Serialize(p.Blocks))!,
 			BlockCount = PageService.CountBlocks(p.Blocks),
+			PublishedTitle = p.Title,
+			PublishedBlocks = JsonSerializer.Deserialize<List<Block>>(JsonSerializer.Serialize(p.Blocks))!,
 			PublishedAt = now,
 		}));
 		await db.SaveChangesAsync(ct);

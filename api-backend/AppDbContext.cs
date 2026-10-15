@@ -34,6 +34,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 	// camelCase in the jsonb column, matching the API and the frontend BlockInstance shape.
 	private static readonly JsonSerializerOptions BlockJson = new(JsonSerializerDefaults.Web);
 
+	// block trees compare + snapshot by their JSON
+	private static ValueComparer<List<Block>?> BlocksComparer() => new(
+		(a, c) => JsonSerializer.Serialize(a, BlockJson) == JsonSerializer.Serialize(c, BlockJson),
+		v => JsonSerializer.Serialize(v, BlockJson).GetHashCode(),
+		v => v == null ? null : JsonSerializer.Deserialize<List<Block>>(JsonSerializer.Serialize(v, BlockJson), BlockJson));
+
 	protected override void OnModelCreating(ModelBuilder b)
 	{
 		base.OnModelCreating(b);
@@ -154,11 +160,21 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 				.HasConversion(
 					v => JsonSerializer.Serialize(v, BlockJson),
 					v => JsonSerializer.Deserialize<List<Block>>(v, BlockJson) ?? new List<Block>(),
-					new ValueComparer<List<Block>>(
-						(a, c) => JsonSerializer.Serialize(a, BlockJson) == JsonSerializer.Serialize(c, BlockJson),
-						v => JsonSerializer.Serialize(v, BlockJson).GetHashCode(),
-						v => JsonSerializer.Deserialize<List<Block>>(JsonSerializer.Serialize(v, BlockJson), BlockJson)!))
+					BlocksComparer())
 				.IsRequired();
+
+			// published snapshot (null title/blocks = never published)
+			e.Property(x => x.PublishedTitle).HasMaxLength(200);
+			e.Property(x => x.PublishedMetaTitle).HasMaxLength(PageService.MaxMetaTitleLength).IsRequired()
+				.HasDefaultValue("");
+			e.Property(x => x.PublishedMetaDescription).HasMaxLength(PageService.MaxMetaDescriptionLength).IsRequired()
+				.HasDefaultValue("");
+			e.Property(x => x.PublishedBlocks)
+				.HasColumnType("jsonb")
+				.HasConversion(
+					v => JsonSerializer.Serialize(v, BlockJson),
+					v => JsonSerializer.Deserialize<List<Block>>(v, BlockJson),
+					BlocksComparer());
 
 			e.HasOne(x => x.CreatedBy)
 				.WithMany()

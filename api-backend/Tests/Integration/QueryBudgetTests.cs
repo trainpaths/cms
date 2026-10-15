@@ -153,7 +153,11 @@ public class QueryBudgetTests : IClassFixture<ApiFactory>
 			.StatusCode.Should().Be(HttpStatusCode.OK);
 		(await GetAsync<PublicMenu>($"/api/public/menus/{handle}")).Items.Single().Label.Should().Be("Before rename");
 
+		// a save alone keeps the live title
 		(await SendAsync(HttpMethod.Put, $"/api/pages/{id}", token, new JsonObject { ["title"] = "After rename" }))
+			.StatusCode.Should().Be(HttpStatusCode.OK);
+		(await GetAsync<PublicMenu>($"/api/public/menus/{handle}")).Items.Single().Label.Should().Be("Before rename");
+		(await SendAsync(HttpMethod.Put, $"/api/pages/{id}", token, new JsonObject { ["status"] = "published" }))
 			.StatusCode.Should().Be(HttpStatusCode.OK);
 		(await GetAsync<PublicMenu>($"/api/public/menus/{handle}")).Items.Single().Label.Should().Be("After rename");
 	}
