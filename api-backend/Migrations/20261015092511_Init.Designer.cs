@@ -12,8 +12,8 @@ using api_backend;
 namespace api_backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261002133957_SiteConfigValues")]
-    partial class SiteConfigValues
+    [Migration("20261015092511_Init")]
+    partial class Init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -263,6 +263,45 @@ namespace api_backend.Migrations
                         });
                 });
 
+            modelBuilder.Entity("api_backend.Models.Backup.BackupSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DayOfMonth")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Interval")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTimeOffset?>("LastRunAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Retention")
+                        .HasColumnType("integer");
+
+                    b.Property<TimeOnly>("TimeOfDay")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Weekday")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("backup_settings", (string)null);
+                });
+
             modelBuilder.Entity("api_backend.Models.Media.MediaAsset", b =>
                 {
                     b.Property<Guid>("Id")
@@ -350,6 +389,9 @@ namespace api_backend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int>("BlockCount")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Blocks")
                         .IsRequired()
                         .HasColumnType("jsonb");
@@ -360,8 +402,46 @@ namespace api_backend.Migrations
                     b.Property<Guid?>("CreatedById")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("HasUnpublishedChanges")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("MetaDescription")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("MetaTitle")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(70)
+                        .HasColumnType("character varying(70)")
+                        .HasDefaultValue("");
+
                     b.Property<DateTimeOffset?>("PublishedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PublishedBlocks")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("PublishedMetaDescription")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("PublishedMetaTitle")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(70)
+                        .HasColumnType("character varying(70)")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("PublishedTitle")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("Slug")
                         .IsRequired()
@@ -475,6 +555,9 @@ namespace api_backend.Migrations
                     b.Property<Guid?>("LogoMediaId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("ShareImageMediaId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -490,6 +573,8 @@ namespace api_backend.Migrations
                     b.HasIndex("IconMediaId");
 
                     b.HasIndex("LogoMediaId");
+
+                    b.HasIndex("ShareImageMediaId");
 
                     b.HasIndex("UpdatedById");
 
@@ -628,6 +713,11 @@ namespace api_backend.Migrations
                         .HasForeignKey("LogoMediaId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("api_backend.Models.Media.MediaAsset", "ShareImage")
+                        .WithMany()
+                        .HasForeignKey("ShareImageMediaId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("api_backend.Models.Auth.Staff", "UpdatedBy")
                         .WithMany()
                         .HasForeignKey("UpdatedById")
@@ -636,6 +726,8 @@ namespace api_backend.Migrations
                     b.Navigation("Icon");
 
                     b.Navigation("Logo");
+
+                    b.Navigation("ShareImage");
 
                     b.Navigation("UpdatedBy");
                 });

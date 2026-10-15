@@ -177,7 +177,7 @@ of its **content** (title, meta title, meta description, blocks): the **working 
   Saving the live content back clears it.
 - Page states in the editor: **Unsaved** (client-side dirty), **Draft**, **Published**, **Published · unpublished
   changes**. Publishing always publishes the *saved* state: the controls are disabled while there are unsaved edits.
-- Migration `PublishedSnapshot`: existing published pages got snapshot = working copy (no pending changes).
+- Seeded pages start published with snapshot = working copy (no pending changes).
 
 ## Auth model
 - Editor endpoints: `[Authorize(Policy = StaffOnly)]`. Router guard: `meta.requiresStaff` checks
