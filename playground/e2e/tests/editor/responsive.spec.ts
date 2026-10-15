@@ -29,7 +29,7 @@ test.describe('Editor layout ≥ md', () => {
 	test('canvas keeps 320px; sidebars then overlap it instead of overflowing the page', async ({
 		staffPage: page,
 	}) => {
-		await page.setViewportSize({ width: 800, height: 700 })
+		await page.setViewportSize({ width: 780, height: 700 })
 		await createPage(page)
 
 		const canvas = (await main(page).boundingBox())!
@@ -38,12 +38,29 @@ test.describe('Editor layout ≥ md', () => {
 			leftSidebar(page).locator('> div').boundingBox(),
 			rightSidebar(page).locator('> div').boundingBox(),
 		])
-		// panels keep their 280px and lie over the canvas edges, inside the window
-		expect(left!.width).toBe(280)
+		// panels keep their width (md: 240px) and lie over the canvas edges, inside the window
+		expect(left!.width).toBe(240)
+		expect(right!.width).toBe(240)
 		expect(left!.x + left!.width).toBeGreaterThan(canvas.x)
 		expect(right!.x).toBeLessThan(canvas.x + canvas.width)
-		expect(right!.x + right!.width).toBeLessThanOrEqual(800)
-		expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(800)
+		expect(right!.x + right!.width).toBeLessThanOrEqual(780)
+		expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(780)
+	})
+
+	test('sidebar widths: md 240/240, lg 240/280, xl 280/280', async ({ staffPage: page }) => {
+		await createPage(page)
+		for (const [width, left, right] of [
+			[800, 240, 240],
+			[1100, 240, 280],
+			[1300, 280, 280],
+		]) {
+			await page.setViewportSize({ width, height: 800 })
+			const [l, r] = await Promise.all([
+				leftSidebar(page).locator('> div').boundingBox(),
+				rightSidebar(page).locator('> div').boundingBox(),
+			])
+			expect([width, l!.width, r!.width]).toEqual([width, left, right])
+		}
 	})
 
 	test('right sidebar Page/Block tabs follow the selection', async ({ staffPage: page }) => {

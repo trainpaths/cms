@@ -74,4 +74,21 @@ export async function uploadImage(scope: Locator, name = `e2e-${crypto.randomUUI
 	return name
 }
 
+/** Saves pending edits, then publishes the saved copy (editor header; Publish needs a saved page). */
+export async function publish(page: Page) {
+	const save = page.getByTestId('page-save')
+	if (await save.isEnabled()) await save.click()
+	// waits for the save to finish: Publish stays disabled while saving
+	await page.getByTestId('page-publish').click()
+	await expect(page.getByTestId('page-unpublish')).toBeVisible()
+	await expect(page.getByTestId('page-publish')).toHaveText('Publish changes')
+}
+
+/** Editor header Unpublish. */
+export async function unpublish(page: Page) {
+	await page.getByTestId('page-unpublish').click()
+	await expect(page.getByTestId('page-publish')).toHaveText('Publish')
+	await expect(page.getByTestId('page-unpublish')).toHaveCount(0)
+}
+
 export { expect } from '@playwright/test'

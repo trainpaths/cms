@@ -1,4 +1,4 @@
-import { test, expect, createPage, type Page } from '../../fixtures/staff.fixture'
+import { test, expect, createPage, publish, type Page } from '../../fixtures/staff.fixture'
 
 // Page meta (PageSettings) + site meta (firm name in Configuration, lang from cms.config.json) in the rendered <head>.
 
@@ -27,8 +27,7 @@ test('meta title + description set in the editor end up in the server-rendered h
 		await expect(page.getByTestId('page-tab-title')).toHaveText('Tab: Our team - ACME Meta')
 		await page.getByTestId('page-meta-description').fill('Who builds ACME.')
 		await page.getByTestId('page-meta-description').blur()
-		await page.getByTestId('publish-toggle').click()
-		await expect(page.getByTestId('publish-toggle')).toHaveText('Unpublish')
+		await publish(page)
 
 		// rendered HTML replaces the shell once the renderer ran
 		await expect

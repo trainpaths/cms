@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { Icon } from '@trainpaths/nb-ui'
 import { useEditorStore } from '../../../stores/editor'
+import { usePublishState } from '../composables/usePublishState'
 
 const props = defineProps<{
 	publicBase: string
@@ -14,8 +15,8 @@ const emit = defineEmits<{
 }>()
 
 const store = useEditorStore()
+const { published: isPublished, canPublish, publishLabel, publishHint } = usePublishState()
 
-const isPublished = computed(() => store.pageStatus === 'published')
 const viewHref = computed(() =>
 	isPublished.value ? `${props.publicBase}/${store.pageSlug}` : (props.previewPath ?? ''),
 )
@@ -91,24 +92,62 @@ function handleTitleBlur() {
 			>
 				<Icon name="external-link" :size="18" />
 			</RouterLink>
-			<!-- < sm: hidden, Page tab has the publish toggle -->
 			<button
-				class="cursor-pointer rounded border border-gray-300 bg-white px-8 py-6 text-sm text-gray-700 hover:bg-gray-50 max-sm:hidden md:px-12"
-				data-testid="publish-toggle"
-				@click="store.setPublished(!isPublished)"
-			>
-				{{ isPublished ? 'Unpublish' : 'Publish' }}
-			</button>
-			<button
-				class="flex size-32 shrink-0 cursor-pointer items-center justify-center rounded border-none bg-primary md:size-36 text-white hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-60"
+				class="flex size-32 shrink-0 cursor-pointer items-center justify-center rounded border-none bg-primary md:size-36 text-white hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
 				:class="{ 'animate-pulse': store.saveStatus === 'saving' }"
-				:title="store.saveStatus === 'saving' ? 'Saving...' : 'Save'"
+				:title="store.saveStatus === 'saving' ? 'Saving...' : store.isDirty ? 'Save' : 'No unsaved changes'"
 				aria-label="Save"
-				:disabled="store.saveStatus === 'saving'"
+				data-testid="page-save"
+				:disabled="!store.isDirty || store.saveStatus === 'saving'"
 				@click="store.savePage()"
 			>
 				<Icon name="save" :size="18" />
 			</button>
+			<!-- md+: text button; < md: globe icon (same rules) -->
+			<button
+				class="cursor-pointer rounded border border-gray-300 bg-white px-12 py-6 text-sm whitespace-nowrap text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white max-md:hidden"
+				:title="publishHint"
+				:disabled="!canPublish"
+				data-testid="page-publish"
+				@click="store.publish()"
+			>
+				{{ publishLabel }}
+			</button>
+			<!-- wrappers: .header-icon-btn's display would beat a hidden utility on the button itself -->
+			<span class="contents md:hidden">
+				<button
+					class="header-icon-btn disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+					:title="publishHint"
+					:aria-label="publishLabel"
+					:disabled="!canPublish"
+					data-testid="page-publish-icon"
+					@click="store.publish()"
+				>
+					<Icon
+						name="globe"
+						:size="18"
+					/>
+				</button>
+			</span>
+			<!-- < md: hidden, the Page tab has it -->
+			<span
+				v-if="isPublished"
+				class="contents max-md:hidden"
+			>
+				<button
+					class="header-icon-btn disabled:cursor-not-allowed disabled:opacity-40"
+					title="Unpublish"
+					aria-label="Unpublish"
+					:disabled="store.publishing"
+					data-testid="page-unpublish"
+					@click="store.unpublish()"
+				>
+					<Icon
+						name="globe-slash"
+						:size="18"
+					/>
+				</button>
+			</span>
 			<button
 				class="header-icon-btn"
 				:class="{ 'header-icon-btn--active': store.showSettingsPanel }"

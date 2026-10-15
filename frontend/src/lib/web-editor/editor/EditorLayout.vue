@@ -15,14 +15,15 @@ function handleMainClick(e: MouseEvent) {
 
 <template>
 	<!-- md+: flex row, canvas takes what the open sidebars leave but never < 320px; then the sidebar slots shrink and
-		their panels (absolute, w-280) overlap the canvas. Below md the sidebars are full-screen modals -->
+		their panels (absolute) overlap the canvas. Widths: md both 240, lg left 240 / right 280, xl both 280.
+		Below md the sidebars are full-screen modals -->
 	<div class="relative flex h-[calc(100vh-56px)]">
 		<aside
 			v-if="store.showInserterSidebar"
-			class="fixed inset-x-0 top-56 bottom-0 z-30 md:relative md:inset-auto md:w-280 md:min-w-0"
+			class="fixed inset-x-0 top-56 bottom-0 z-30 md:relative md:inset-auto md:w-240 md:min-w-0 xl:w-280"
 		>
 			<div
-				class="h-full overflow-hidden bg-gray-50 md:absolute md:inset-y-0 md:left-0 md:w-280 md:border-r md:border-gray-200"
+				class="h-full overflow-hidden bg-gray-50 md:absolute md:inset-y-0 md:left-0 md:w-240 md:border-r md:border-gray-200 xl:w-280"
 			>
 				<LeftSidebar />
 			</div>
@@ -50,10 +51,10 @@ function handleMainClick(e: MouseEvent) {
 
 		<aside
 			v-if="store.showSettingsPanel"
-			class="fixed inset-x-0 top-56 bottom-0 z-30 md:relative md:inset-auto md:w-280 md:min-w-0"
+			class="fixed inset-x-0 top-56 bottom-0 z-30 md:relative md:inset-auto md:w-240 md:min-w-0 lg:w-280"
 		>
 			<div
-				class="h-full overflow-hidden bg-gray-50 md:absolute md:inset-y-0 md:right-0 md:w-280 md:border-l md:border-gray-200"
+				class="h-full overflow-hidden bg-gray-50 md:absolute md:inset-y-0 md:right-0 md:w-240 md:border-l md:border-gray-200 lg:w-280"
 			>
 				<BlockSettingsPanel />
 			</div>

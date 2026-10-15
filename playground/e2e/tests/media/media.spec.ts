@@ -1,4 +1,4 @@
-import { test, expect, createPage, insertBlock, uploadImage } from '../../fixtures/staff.fixture'
+import { test, expect, createPage, insertBlock, uploadImage, publish } from '../../fixtures/staff.fixture'
 
 test('media library: upload, edit alt, delete', async ({ staffPage: page }) => {
 	await page.goto('/admin/media')
@@ -41,8 +41,7 @@ test('published page renders the media alt, updated from the library', async ({ 
 	await insertBlock(page, 'Image')
 	const name = await uploadImage(page.locator('main'))
 	await expect(page.locator('main figure img')).toBeVisible()
-	await page.getByTestId('publish-toggle').click()
-	await expect(page.getByTestId('publish-toggle')).toHaveText('Unpublish')
+	await publish(page)
 
 	const visitor = await (await browser.newContext()).newPage()
 	const response = await visitor.goto(`/${slug}`)

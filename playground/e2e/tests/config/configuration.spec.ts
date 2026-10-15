@@ -1,4 +1,4 @@
-import { test, expect, createPage, uploadImage, type Page } from '../../fixtures/staff.fixture'
+import { test, expect, createPage, uploadImage, publish, type Page } from '../../fixtures/staff.fixture'
 
 // Site config is one site-wide row: each test writes its full state, never relies on leftovers.
 // Shape: core field firmName + group contact; the playground's cms.config.json adds field vatId + group socials.
@@ -38,8 +38,7 @@ async function publishedPageVisitor(page: Page, browser: import('@playwright/tes
 	await createPage(page)
 	await page.getByTestId('page-slug').fill(slug)
 	await page.getByTestId('page-slug').press('Enter')
-	await page.getByTestId('publish-toggle').click()
-	await expect(page.getByTestId('publish-toggle')).toHaveText('Unpublish')
+	await publish(page)
 	const visitor = await (await browser.newContext()).newPage()
 	await visitor.goto(`/${slug}`)
 	return visitor

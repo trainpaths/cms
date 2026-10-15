@@ -16,6 +16,7 @@ const detail = (): PageDetail => ({
 	createdAt: '2026-01-01T00:00:00Z',
 	updatedAt: '2026-01-01T00:00:00Z',
 	publishedAt: null,
+	hasUnpublishedChanges: false,
 	template: null,
 	locked: false,
 	editable: true,
@@ -33,6 +34,7 @@ const summary = (patch: Partial<PageSummary> = {}): PageSummary => ({
 	createdAt: '2026-01-01T00:00:00Z',
 	updatedAt: '2026-01-01T00:00:00Z',
 	publishedAt: null,
+	hasUnpublishedChanges: false,
 	locked: false,
 	...patch,
 })

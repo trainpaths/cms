@@ -34,12 +34,15 @@ editor/Editor.vue   editor for ONE page: props pageId/publicBase/previewPath, em
                     (cached copy from usePagesStore first, then the server copy),
                     flushes unsaved changes on leave; hosts the error toast; non-editable config page
                     (store.pageEditable false) → template notice instead of the BlockList
-editor/EditorHeader.vue   icon-only: back, left-sidebar toggle, title (saves on blur; hidden < sm → PageSettings shows it), undo/redo,
-                    View/Preview link, Publish/Unpublish (= status, no badge; hidden < sm, PageSettings has the toggle), Save, right-sidebar toggle;
-                    toggles show open state by colour (`.header-icon-btn--active`, `aria-pressed`)
-editor/EditorLayout.vue   md+: flex row, left LeftSidebar (w-280) | scrolling <main> (flex-1, min-w-320, `@container/canvas`) | right
-                          settings (w-280); canvas takes what the open sidebars leave. Below 320px of canvas the aside slots
-                          shrink (min-w-0) and their absolute w-280 panels overlap the canvas (z-30). < md: sidebars are fixed
+editor/EditorHeader.vue   back (stays on phones: the only visible way out), left-sidebar toggle, title (saves on blur; hidden
+                    < sm → PageSettings shows it), undo/redo, View/Preview link, Save (disabled when clean / saving),
+                    Publish ("Publish" / "Publish changes" text button md+, `globe` icon button < md; rules + tooltip from
+                    usePublishState), Unpublish (`globe-slash` icon, only when published, hidden < md: Page tab has it),
+                    right-sidebar toggle; toggles show open state by colour (`.header-icon-btn--active`, `aria-pressed`)
+editor/EditorLayout.vue   md+: flex row, left LeftSidebar | scrolling <main> (flex-1, min-w-320, `@container/canvas`) | right
+                          settings; widths md 240/240, lg 240/280, xl 280/280 (slot + inner panel carry the same classes);
+                          canvas takes what the open sidebars leave. Below 320px of canvas the aside slots
+                          shrink (min-w-0) and their absolute panels overlap the canvas (z-30). < md: sidebars are fixed
                           full-screen modals under the header, `#editor-mobile-toolbar` sticky bar at the top of
                           <main> (v-show while a block is selected). Canvas column is `@container` (blocks size by it) and
                           grows (flex) so the root BlockList fills it (drop below last block = append)
@@ -71,12 +74,15 @@ editor/PageSettings.vue   title (< sm only), slug (saved on blur/Enter via store
                           "Search & sharing": meta title (≤70) + description (≤200) with counters and the resulting tab
                           title (public/head documentTitle + site config firm name), saved on blur with the page
                           (store.pageMetaTitle/-Description); tags (`TagInput`, saved right away via store.updateTags,
-                          not part of undo) + publish toggle
+                          not part of undo), Status: "Draft" / "Published" / "Published · unpublished changes" +
+                          Publish / Publish changes + Unpublish (same rules as the header: usePublishState)
 editor/ToolbarDropdown.vue  compact inline-toolbar choice (current value + menu); paragraph align, heading level
 editor/ColorPicker.vue    theme palette swatches + none (no custom colours), model = palette key
 editor/SettingsSection.vue  settings section
 view/ViewBlockList.vue → ViewBlockRenderer.vue (looks up `getBlockView(name)`, core/blockViews.ts) → ViewBlockWrapper.vue
-composables/        useIsMobile (shared matchMedia ref, < 768px; store + BlockWrapper), useSelection (select/clear/prev/next/parent/child), useKeyboardNav (arrows, Esc, Delete;
+composables/        usePublishState (publish rules shared by header + Page tab: published, canPublish (saved, nothing
+                    unsaved/saving, and draft or unpublished changes), publishLabel, publishHint ("Save first" / "No changes
+                    to publish"), statusText), useIsMobile (shared matchMedia ref, < 768px; store + BlockWrapper), useSelection (select/clear/prev/next/parent/child), useKeyboardNav (arrows, Esc, Delete;
                     undo Ctrl/Cmd+Z, redo Ctrl/Cmd+Shift+Z or Ctrl+Y), useToolbarPosition,
                     useBlockAttribute (writable computed over one attribute), useAutoResize (textarea grow),
                     useBlockDrag (shared dragged-block + dropTarget state, one indicator app-wide; canDropInto:
@@ -96,7 +102,8 @@ web-editor.css       @apply component classes (.input-field, .field-label, .inne
 ## Editor store (lives outside the lib: `src/stores/editor.ts`)
 
 `useEditorStore`: blocks tree ops, selection, UI toggles, snapshot undo/redo (50), page state
-(pageId/Title/Slug/Status), loadPage/savePage/updateSlug/setPublished/closePage. Imports the lib's
+(pageId/Title/Slug/Status/HasUnpublishedChanges), `isDirty` (content ≠ last saved), `publishing`,
+loadPage/savePage (working copy only, skips clean)/updateSlug/publish/unpublish/closePage. Imports the lib's
 `core/types` + `api.ts`; re-exported from the barrel.
 
 ## Gotchas
@@ -120,7 +127,8 @@ web-editor.css       @apply component classes (.input-field, .field-label, .inne
 - Images reference media by id in the `mediaId` attribute (image + card; `media/useMediaImage`). Alt text
   lives on the media object (edited in the settings panel or `/admin/media`), fallback `"image"`; the caption
   is not an alt fallback. No external image URLs: nginx CSP is `img-src 'self'`.
-- `data-testid`s used by e2e: `page-title`, `page-slug`, `publish-toggle`, `page-row`, `block-drag-handle`, `inserter-block`, `drop-indicator`,
+- `data-testid`s used by e2e: `page-title`, `page-slug`, `page-save`, `page-publish`, `page-publish-icon`,
+  `page-unpublish`, `page-status`, `settings-publish`, `settings-unpublish`, `page-row`, `block-drag-handle`, `inserter-block`, `drop-indicator`,
   `media-upload`, `media-upload-input`, `media-choose`, `media-replace`, `media-picker`, `media-item`, `media-alt`, `media-name`, `media-details`, `media-save`, `media-delete`,
   `sidebar-tab-blocks`, `sidebar-tab-outline`, `outline-item`, `toggle-left-sidebar`, `toggle-right-sidebar`,
   `sidebar-close-left`, `sidebar-close-right`, `sidebar-tab-page`, `sidebar-tab-block`, `mobile-block-toolbar`, `page-title-mobile`,
