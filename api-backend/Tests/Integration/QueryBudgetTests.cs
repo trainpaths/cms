@@ -52,7 +52,7 @@ public class QueryBudgetTests : IClassFixture<ApiFactory>
 	{
 		var token = await CreateStaffTokenAsync();
 		var (id, _) = await CreatePublishedAsync(token, "Budget list");
-		(await SendAsync(HttpMethod.Put, $"/api/pages/{id}/tags", token, new JsonObject { ["tags"] = new JsonArray("a", "b") }))
+		(await SendAsync(HttpMethod.Put, $"/api/pages/{id}", token, new JsonObject { ["tags"] = new JsonArray("a", "b") }))
 			.StatusCode.Should().Be(HttpStatusCode.OK);
 
 		(await CountAsync(HttpMethod.Get, "/api/pages", token)).Should().Be(1, Counter.Log);
@@ -63,13 +63,36 @@ public class QueryBudgetTests : IClassFixture<ApiFactory>
 	{
 		var token = await CreateStaffTokenAsync();
 		var (id, _) = await CreatePublishedAsync(token, "Budget detail");
-		(await SendAsync(HttpMethod.Put, $"/api/pages/{id}/tags", token, new JsonObject { ["tags"] = new JsonArray("zeta", "alpha") }))
+		(await SendAsync(HttpMethod.Put, $"/api/pages/{id}", token, new JsonObject { ["tags"] = new JsonArray("zeta", "alpha") }))
 			.StatusCode.Should().Be(HttpStatusCode.OK);
 
 		// page + tags, media refs (none here: no query)
 		(await CountAsync(HttpMethod.Get, $"/api/pages/{id}", token)).Should().Be(1, Counter.Log);
 		var detail = await (await SendAsync(HttpMethod.Get, $"/api/pages/{id}", token)).Content.ReadFromJsonAsync<PageDetail>(Ct);
 		detail!.Tags.Should().Equal("alpha", "zeta");
+	}
+
+	[Fact]
+	public async Task Autosave_IsThreeQueries()
+	{
+		var token = await CreateStaffTokenAsync();
+		var (id, _) = await CreatePublishedAsync(token, "Budget autosave");
+
+		// page, its tags, the update
+		(await CountAsync(HttpMethod.Put, $"/api/pages/{id}", token, new JsonObject { ["blocks"] = Nested() }))
+			.Should().Be(3, Counter.Log);
+	}
+
+	[Fact]
+	public async Task WarmPublicState_IsAtMostTwoQueries()
+	{
+		var token = await CreateStaffTokenAsync();
+		var (_, slug) = await CreatePublishedAsync(token, "Budget state");
+		await GetAsync<PublicStateResponse>($"/api/public/state/{slug}");
+
+		// page (+ media refs when it has images); menu + config cached
+		(await CountAsync(HttpMethod.Get, $"/api/public/state/{slug}", null)).Should().BeLessThanOrEqualTo(2, Counter.Log);
+		(await CountAsync(HttpMethod.Get, "/api/public/state", null)).Should().Be(0, Counter.Log);
 	}
 
 	[Fact]
@@ -87,7 +110,7 @@ public class QueryBudgetTests : IClassFixture<ApiFactory>
 	public async Task MainMenuSave_ShowsUpRightAway()
 	{
 		var token = await CreateStaffTokenAsync();
-		var menus = await (await SendAsync(HttpMethod.Get, "/api/menus", token)).Content.ReadFromJsonAsync<List<MenuSummary>>(Ct);
+		var menus = await (await SendAsync(HttpMethod.Get, "/api/menus", token)).Content.ReadFromJsonAsync<List<MenuDetail>>(Ct);
 		var main = menus!.Single(m => m.Handle == "main");
 		await GetAsync<PublicMenu>("/api/public/menus/main");
 
@@ -204,15 +227,17 @@ public class QueryBudgetTests : IClassFixture<ApiFactory>
 			{ "id": "c2", "name": "paragraph", "attributes": {}, "innerBlocks": [] }] }]
 		""")!.AsArray();
 
-	private async Task<int> CountAsync(HttpMethod method, string url, string? token)
+	private async Task<int> CountAsync(HttpMethod method, string url, string? token, JsonNode? body = null)
 	{
 		Counter.Reset();
 		using var request = new HttpRequestMessage(method, url);
 		request.Headers.Add(QueryCounter.Header, "1");
+		if (body is not null)
+			request.Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json");
 		if (token is not null)
 			request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 		var response = await _client.SendAsync(request, Ct);
-		((int)response.StatusCode).Should().BeLessThan(500);
+		((int)response.StatusCode).Should().BeLessThan(500, await response.Content.ReadAsStringAsync(Ct));
 		return Counter.Count;
 	}
 
@@ -246,7 +271,7 @@ public class QueryBudgetTests : IClassFixture<ApiFactory>
 		});
 		create.StatusCode.Should().Be(HttpStatusCode.Created);
 		var page = await create.Content.ReadFromJsonAsync<PageDetail>(Ct);
-		(await SendAsync(HttpMethod.Post, $"/api/pages/{page!.Id}/publish", token)).StatusCode.Should().Be(HttpStatusCode.OK);
+		(await SendAsync(HttpMethod.Put, $"/api/pages/{page!.Id}", token, new JsonObject { ["status"] = "published" })).StatusCode.Should().Be(HttpStatusCode.OK);
 		return (page.Id, page.Slug);
 	}
 

@@ -994,7 +994,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/MenuSummary"
+                    "$ref": "#/components/schemas/MenuDetail"
                   }
                 }
               },
@@ -1002,7 +1002,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/MenuSummary"
+                    "$ref": "#/components/schemas/MenuDetail"
                   }
                 }
               },
@@ -1010,7 +1010,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/MenuSummary"
+                    "$ref": "#/components/schemas/MenuDetail"
                   }
                 }
               }
@@ -1394,17 +1394,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/PageDetail"
+                  "$ref": "#/components/schemas/PageSummary"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PageDetail"
+                  "$ref": "#/components/schemas/PageSummary"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PageDetail"
+                  "$ref": "#/components/schemas/PageSummary"
                 }
               }
             }
@@ -1493,118 +1493,7 @@
         }
       }
     },
-    "/api/pages/{id}/tags": {
-      "put": {
-        "tags": [
-          "Pages"
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/UpdatePageTagsRequest"
-                  }
-                ]
-              }
-            },
-            "text/json": {
-              "schema": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/UpdatePageTagsRequest"
-                  }
-                ]
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/UpdatePageTagsRequest"
-                  }
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/PageDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PageDetail"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PageDetail"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/pages/{id}/publish": {
-      "post": {
-        "tags": [
-          "Pages"
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/PageDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PageDetail"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PageDetail"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/pages/{id}/unpublish": {
+    "/api/pages/{id}/duplicate": {
       "post": {
         "tags": [
           "Pages"
@@ -1847,6 +1736,74 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SiteConfigResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/state/{slug}": {
+      "get": {
+        "tags": [
+          "PublicState"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicStateResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicStateResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicStateResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/state": {
+      "get": {
+        "tags": [
+          "PublicState"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicStateResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicStateResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicStateResponse"
                 }
               }
             }
@@ -2987,33 +2944,6 @@
         },
         "additionalProperties": false
       },
-      "MenuSummary": {
-        "required": [
-          "handle",
-          "id",
-          "itemCount",
-          "updatedAt"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "handle": {
-            "type": "string"
-          },
-          "itemCount": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "additionalProperties": false
-      },
       "PageDetail": {
         "required": [
           "blocks",
@@ -3282,6 +3212,38 @@
           },
           "metaDescription": {
             "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PublicStateResponse": {
+        "required": [
+          "config"
+        ],
+        "type": "object",
+        "properties": {
+          "page": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicPage"
+              }
+            ],
+            "nullable": true
+          },
+          "menu": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicMenu"
+              }
+            ],
+            "nullable": true
+          },
+          "config": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SiteConfigResponse"
+              }
+            ]
           }
         },
         "additionalProperties": false
@@ -3566,21 +3528,21 @@
           "metaDescription": {
             "type": "string",
             "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
-      "UpdatePageTagsRequest": {
-        "required": [
-          "tags"
-        ],
-        "type": "object",
-        "properties": {
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PageStatus"
+              }
+            ],
+            "nullable": true
+          },
           "tags": {
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -3714,6 +3676,9 @@
     },
     {
       "name": "PublicSiteConfig"
+    },
+    {
+      "name": "PublicState"
     },
     {
       "name": "SiteConfig"

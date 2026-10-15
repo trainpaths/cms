@@ -41,7 +41,7 @@ public class MenusTests : IClassFixture<ApiFactory>
 	public async Task MainMenu_IsSeededFirstAndCannotBeDeleted()
 	{
 		var token = await CreateStaffTokenAsync();
-		var menus = await (await SendAsync(HttpMethod.Get, Base, token)).Content.ReadFromJsonAsync<List<MenuSummary>>(Ct);
+		var menus = await (await SendAsync(HttpMethod.Get, Base, token)).Content.ReadFromJsonAsync<List<MenuDetail>>(Ct);
 		var main = menus![0];
 		main.Handle.Should().Be("main");
 
@@ -68,8 +68,9 @@ public class MenusTests : IClassFixture<ApiFactory>
 		detail.Items[0].Children[0].Label.Should().Be("Insta");
 		detail.Items[0].Children[0].Url.Should().Be("https://instagram.com/x");
 
-		var list = await (await SendAsync(HttpMethod.Get, Base, token)).Content.ReadFromJsonAsync<List<MenuSummary>>(Ct);
-		list!.Single(m => m.Id == created.Id).ItemCount.Should().Be(5);
+		// the list carries the items (the admin switches menus without a fetch)
+		var list = await (await SendAsync(HttpMethod.Get, Base, token)).Content.ReadFromJsonAsync<List<MenuDetail>>(Ct);
+		list!.Single(m => m.Id == created.Id).Items.Should().BeEquivalentTo(detail.Items);
 		detail.Items[1].Children[1].Url.Should().Be("/admin/pages");
 
 		(await SendAsync(HttpMethod.Delete, $"{Base}/{created.Id}", token)).StatusCode.Should().Be(HttpStatusCode.NoContent);
@@ -179,7 +180,7 @@ public class MenusTests : IClassFixture<ApiFactory>
 			new JsonObject { ["title"] = $"Menu page {Guid.NewGuid():N}"[..20] });
 		var page = (await create.Content.ReadFromJsonAsync<PageDetail>(Ct))!;
 		if (publish)
-			(await SendAsync(HttpMethod.Post, $"/api/pages/{page.Id}/publish", token)).EnsureSuccessStatusCode();
+			(await SendAsync(HttpMethod.Put, $"/api/pages/{page.Id}", token, new JsonObject { ["status"] = "published" })).EnsureSuccessStatusCode();
 		return (page.Id, page.Slug);
 	}
 

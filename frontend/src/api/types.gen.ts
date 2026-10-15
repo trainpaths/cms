@@ -182,13 +182,6 @@ export type MenuItem = {
     children: Array<MenuItem>;
 };
 
-export type MenuSummary = {
-    id: string;
-    handle: string;
-    itemCount: number;
-    updatedAt: string;
-};
-
 export type PageDetail = {
     id: string;
     title: string;
@@ -252,6 +245,12 @@ export type PublicPage = {
     template?: string | null;
     metaTitle: string;
     metaDescription: string;
+};
+
+export type PublicStateResponse = {
+    page?: PublicPage | null;
+    menu?: PublicMenu | null;
+    config: SiteConfigResponse;
 };
 
 export type RegisterRequest = {
@@ -328,10 +327,8 @@ export type UpdatePageRequest = {
     blocks?: Array<Block> | null;
     metaTitle?: string | null;
     metaDescription?: string | null;
-};
-
-export type UpdatePageTagsRequest = {
-    tags: Array<string>;
+    status?: PageStatus | null;
+    tags?: Array<string> | null;
 };
 
 export type UpdateProfileRequest = {
@@ -755,7 +752,7 @@ export type GetApiMenusResponses = {
     /**
      * OK
      */
-    200: Array<MenuSummary>;
+    200: Array<MenuDetail>;
 };
 
 export type GetApiMenusResponse = GetApiMenusResponses[keyof GetApiMenusResponses];
@@ -907,7 +904,7 @@ export type PutApiPagesByIdResponses = {
     /**
      * OK
      */
-    200: PageDetail;
+    200: PageSummary;
 };
 
 export type PutApiPagesByIdResponse = PutApiPagesByIdResponses[keyof PutApiPagesByIdResponses];
@@ -928,59 +925,23 @@ export type PostApiPagesImportResponses = {
 
 export type PostApiPagesImportResponse = PostApiPagesImportResponses[keyof PostApiPagesImportResponses];
 
-export type PutApiPagesByIdTagsData = {
-    body?: UpdatePageTagsRequest;
-    path: {
-        id: string;
-    };
-    query?: never;
-    url: '/api/pages/{id}/tags';
-};
-
-export type PutApiPagesByIdTagsResponses = {
-    /**
-     * OK
-     */
-    200: PageDetail;
-};
-
-export type PutApiPagesByIdTagsResponse = PutApiPagesByIdTagsResponses[keyof PutApiPagesByIdTagsResponses];
-
-export type PostApiPagesByIdPublishData = {
+export type PostApiPagesByIdDuplicateData = {
     body?: never;
     path: {
         id: string;
     };
     query?: never;
-    url: '/api/pages/{id}/publish';
+    url: '/api/pages/{id}/duplicate';
 };
 
-export type PostApiPagesByIdPublishResponses = {
+export type PostApiPagesByIdDuplicateResponses = {
     /**
      * OK
      */
     200: PageDetail;
 };
 
-export type PostApiPagesByIdPublishResponse = PostApiPagesByIdPublishResponses[keyof PostApiPagesByIdPublishResponses];
-
-export type PostApiPagesByIdUnpublishData = {
-    body?: never;
-    path: {
-        id: string;
-    };
-    query?: never;
-    url: '/api/pages/{id}/unpublish';
-};
-
-export type PostApiPagesByIdUnpublishResponses = {
-    /**
-     * OK
-     */
-    200: PageDetail;
-};
-
-export type PostApiPagesByIdUnpublishResponse = PostApiPagesByIdUnpublishResponses[keyof PostApiPagesByIdUnpublishResponses];
+export type PostApiPagesByIdDuplicateResponse = PostApiPagesByIdDuplicateResponses[keyof PostApiPagesByIdDuplicateResponses];
 
 export type GetApiPublicInstanceData = {
     body?: never;
@@ -1076,6 +1037,40 @@ export type GetApiPublicSiteConfigResponses = {
 };
 
 export type GetApiPublicSiteConfigResponse = GetApiPublicSiteConfigResponses[keyof GetApiPublicSiteConfigResponses];
+
+export type GetApiPublicStateBySlugData = {
+    body?: never;
+    path: {
+        slug: string;
+    };
+    query?: never;
+    url: '/api/public/state/{slug}';
+};
+
+export type GetApiPublicStateBySlugResponses = {
+    /**
+     * OK
+     */
+    200: PublicStateResponse;
+};
+
+export type GetApiPublicStateBySlugResponse = GetApiPublicStateBySlugResponses[keyof GetApiPublicStateBySlugResponses];
+
+export type GetApiPublicStateData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/public/state';
+};
+
+export type GetApiPublicStateResponses = {
+    /**
+     * OK
+     */
+    200: PublicStateResponse;
+};
+
+export type GetApiPublicStateResponse = GetApiPublicStateResponses[keyof GetApiPublicStateResponses];
 
 export type GetApiSiteConfigData = {
     body?: never;

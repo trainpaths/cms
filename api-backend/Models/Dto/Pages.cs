@@ -60,16 +60,19 @@ public record ImportPageRequest(
 /// <summary><see cref="MissingMediaIds"/>: <c>mediaId</c>s in the blocks that this site's media library doesn't have.</summary>
 public record ImportPageResult(PageDetail Page, List<Guid> MissingMediaIds);
 
-/// <summary>Partial update: only non-null fields are applied (empty meta strings clear them).</summary>
+/// <summary>
+/// Partial update: only non-null fields are applied (empty meta strings clear them), all in one transaction.
+/// <see cref="Status"/> publishes/unpublishes; <see cref="Tags"/> replaces the page's tags (normalized: trimmed,
+/// lowercase, deduplicated).
+/// </summary>
 public record UpdatePageRequest(
-	[MaxLength(200)] string? Title,
-	[MaxLength(100)] string? Slug,
+	[MaxLength(PageService.MaxTitleLength)] string? Title,
+	[MaxLength(PageService.MaxSlugLength)] string? Slug,
 	List<Block>? Blocks,
 	[MaxLength(PageService.MaxMetaTitleLength)] string? MetaTitle = null,
-	[MaxLength(PageService.MaxMetaDescriptionLength)] string? MetaDescription = null);
-
-/// <summary>Full replace of the page's tags; names are normalized (trimmed, lowercase) and deduplicated.</summary>
-public record UpdatePageTagsRequest([MaxLength(TagLimits.MaxPerPage)] List<string> Tags);
+	[MaxLength(PageService.MaxMetaDescriptionLength)] string? MetaDescription = null,
+	PageStatus? Status = null,
+	[MaxLength(TagLimits.MaxPerPage)] List<string>? Tags = null);
 
 /// <summary>A tag in use and how many pages carry it (autocomplete, "popular" suggestions).</summary>
 public record TagUsage(string Name, int PageCount);
@@ -84,3 +87,6 @@ public record PublicPage(
 	string? Template,
 	string MetaTitle,
 	string MetaDescription);
+
+/// <summary>Public client state in one response; <see cref="Menu"/> = the main menu.</summary>
+public record PublicStateResponse(PublicPage? Page, PublicMenu? Menu, SiteConfigResponse Config);

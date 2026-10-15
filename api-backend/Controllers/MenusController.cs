@@ -21,7 +21,7 @@ public class MenusController(MenuService menus, IRenderQueue render, PublicCache
 	public const long MaxMenuBodyBytes = 512 * 1024;
 
 	[HttpGet]
-	public async Task<ActionResult<List<MenuSummary>>> List(CancellationToken ct) =>
+	public async Task<ActionResult<List<MenuDetail>>> List(CancellationToken ct) =>
 		Ok(await menus.ListAsync(ct));
 
 	[HttpGet("{id:guid}")]

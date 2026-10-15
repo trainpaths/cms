@@ -24,8 +24,11 @@ public record PageResult<T>(T? Value, PageError? Error = null, string? Detail = 
 	public static PageResult<T> Fail(PageError error, string? detail = null) => new(default, error, detail);
 }
 
-/// <summary><see cref="Renamed"/>: title or slug changed (menus + footer links on every page show those).</summary>
-public record PageUpdate(PageDetail Page, bool Renamed);
+/// <summary>
+/// <see cref="Renamed"/>: title or slug changed (menus + footer links on every page show those).
+/// <see cref="ContentChanged"/>: a non-tag field was sent (title, slug, meta, blocks).
+/// </summary>
+public record PageUpdate(PageSummary Page, bool Renamed, bool StatusChanged, bool ContentChanged);
 
 /// <summary>
 /// Page CRUD, publish, slug rules, block validation. Pages declared in the instance config (<see cref="CmsConfig"/>) can be
@@ -33,6 +36,7 @@ public record PageUpdate(PageDetail Page, bool Renamed);
 /// </summary>
 public partial class PageService(AppDbContext db, CmsConfig cms)
 {
+	public const int MaxTitleLength = 200;
 	public const int MaxSlugLength = 100;
 	public const int MaxDepth = 10;
 	public const int MaxBlocks = 2000;
@@ -171,62 +175,84 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		if (tagError is not null)
 			return PageResult<ImportPageResult>.Fail(PageError.Invalid, tagError);
 
+		var detail = await CreateDraftAsync(title, string.IsNullOrWhiteSpace(req.Slug) ? title : req.Slug, req.Blocks,
+			req.MetaTitle?.Trim() ?? "", req.MetaDescription?.Trim() ?? "", tagNames, staffId, ct);
+		var found = detail.Media.Select(m => m.Id).ToHashSet();
+		var missing = MediaService.CollectIds(req.Blocks).Where(id => !found.Contains(id)).ToList();
+		return PageResult<ImportPageResult>.Ok(new ImportPageResult(detail, missing));
+	}
+
+	/// <summary>A draft copy: "{title} (copy)", a free variant of the slug, same blocks, meta and tags.</summary>
+	public async Task<PageResult<PageDetail>> DuplicateAsync(Guid id, Guid staffId, CancellationToken ct)
+	{
+		var source = await db.Pages.AsNoTracking()
+			.Where(p => p.Id == id)
+			.Select(p => new { Page = p, Tags = string.Join(" ", p.PageTags.Select(pt => pt.Tag.Name)) })
+			.FirstOrDefaultAsync(ct);
+		if (source is null)
+			return PageResult<PageDetail>.Fail(PageError.NotFound);
+		var page = source.Page;
+		var title = $"{page.Title} (copy)";
+		if (title.Length > MaxTitleLength)
+			title = page.Title[..(MaxTitleLength - 7)].TrimEnd() + " (copy)";
+		return PageResult<PageDetail>.Ok(await CreateDraftAsync(title, page.Slug, page.Blocks, page.MetaTitle,
+			page.MetaDescription, SplitTags(source.Tags), staffId, ct));
+	}
+
+	/// <summary>Import + duplicate: inputs already validated; the slug is a free variant of <paramref name="slugSource"/>.</summary>
+	private async Task<PageDetail> CreateDraftAsync(string title, string slugSource, List<Block> blocks, string metaTitle,
+		string metaDescription, List<string> tagNames, Guid staffId, CancellationToken ct)
+	{
 		var page = new Page
 		{
 			Title = title,
-			Slug = await UniqueSlugFromAsync(string.IsNullOrWhiteSpace(req.Slug) ? title : req.Slug, ct),
-			Blocks = req.Blocks,
-			BlockCount = CountBlocks(req.Blocks),
-			MetaTitle = req.MetaTitle?.Trim() ?? "",
-			MetaDescription = req.MetaDescription?.Trim() ?? "",
+			Slug = await UniqueSlugFromAsync(slugSource, ct),
+			Blocks = blocks,
+			BlockCount = CountBlocks(blocks),
+			MetaTitle = metaTitle,
+			MetaDescription = metaDescription,
 			CreatedById = staffId,
 			UpdatedById = staffId,
 		};
 		db.Pages.Add(page);
-		await AddTagsAsync(page, tagNames, ct);
+		if (tagNames.Count > 0)
+			await AddTagsAsync(page, tagNames, ct);
 		await db.SaveChangesAsync(ct);
-
-		var detail = await ToDetailAsync(page, tagNames.Order(StringComparer.Ordinal).ToList(), ct);
-		var found = detail.Media.Select(m => m.Id).ToHashSet();
-		var missing = MediaService.CollectIds(page.Blocks).Where(id => !found.Contains(id)).ToList();
-		return PageResult<ImportPageResult>.Ok(new ImportPageResult(detail, missing));
+		return await ToDetailAsync(page, tagNames.Order(StringComparer.Ordinal).ToList(), ct);
 	}
 
+	/// <summary>
+	/// Partial update of everything an editor writes (content, meta, slug, status, tags) in one SaveChanges. Everything
+	/// is validated before anything changes. Tags alone don't bump <c>UpdatedAt</c>: tagging isn't a content edit, and
+	/// the pages list sorts by it.
+	/// </summary>
 	public async Task<PageResult<PageUpdate>> UpdateAsync(Guid id, UpdatePageRequest req, Guid staffId, CancellationToken ct)
 	{
 		var page = await db.Pages.FirstOrDefaultAsync(p => p.Id == id, ct);
 		if (page is null)
 			return PageResult<PageUpdate>.Fail(PageError.NotFound);
+		// response tag names + diff base for a tag write
+		var pageTags = await db.PageTags.Include(pt => pt.Tag).Where(pt => pt.PageId == id).ToListAsync(ct);
 		var config = cms.Page(page.Slug);
-		var (oldTitle, oldSlug) = (page.Title, page.Slug);
 
-		if (req.Title is not null)
-		{
-			var title = req.Title.Trim();
-			if (title.Length == 0)
-				return PageResult<PageUpdate>.Fail(PageError.Invalid, "Title cannot be empty.");
-			page.Title = title;
-		}
+		var title = req.Title?.Trim();
+		if (title is { Length: 0 })
+			return PageResult<PageUpdate>.Fail(PageError.Invalid, "Title cannot be empty.");
 
-		if (req.Slug is not null)
+		var slug = req.Slug?.Trim().ToLowerInvariant();
+		if (slug is not null)
 		{
-			var slug = req.Slug.Trim().ToLowerInvariant();
 			if (ValidateSlug(slug) is { } slugError)
 				return PageResult<PageUpdate>.Fail(PageError.Invalid, slugError);
 			if (slug != page.Slug && config is { IsLocked: true })
 				return PageResult<PageUpdate>.Fail(PageError.Invalid, "This page's slug is fixed by the site configuration.");
 			if (slug != page.Slug && await db.Pages.AnyAsync(p => p.Slug == slug, ct))
 				return PageResult<PageUpdate>.Fail(PageError.SlugTaken, $"Slug '{slug}' is already in use.");
-			page.Slug = slug;
 		}
 
 		if ((MetaError(req.MetaTitle, MaxMetaTitleLength, "Meta title")
 			?? MetaError(req.MetaDescription, MaxMetaDescriptionLength, "Meta description")) is { } metaError)
 			return PageResult<PageUpdate>.Fail(PageError.Invalid, metaError);
-		if (req.MetaTitle is not null)
-			page.MetaTitle = req.MetaTitle.Trim();
-		if (req.MetaDescription is not null)
-			page.MetaDescription = req.MetaDescription.Trim();
 
 		if (req.Blocks is not null)
 		{
@@ -234,32 +260,61 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 				return PageResult<PageUpdate>.Fail(PageError.Invalid, "This page's content comes from its template.");
 			if (ValidateBlocks(req.Blocks) is { } blockError)
 				return PageResult<PageUpdate>.Fail(PageError.Invalid, blockError);
+		}
+
+		List<string>? tagNames = null;
+		if (req.Tags is not null)
+		{
+			(tagNames, var tagError) = NormalizeTags(req.Tags);
+			if (tagError is not null)
+				return PageResult<PageUpdate>.Fail(PageError.Invalid, tagError);
+		}
+
+		var (oldTitle, oldSlug) = (page.Title, page.Slug);
+		if (title is not null) page.Title = title;
+		if (slug is not null) page.Slug = slug;
+		if (req.MetaTitle is not null) page.MetaTitle = req.MetaTitle.Trim();
+		if (req.MetaDescription is not null) page.MetaDescription = req.MetaDescription.Trim();
+		if (req.Blocks is not null)
+		{
 			page.Blocks = req.Blocks;
 			page.BlockCount = CountBlocks(req.Blocks);
 		}
 
-		page.UpdatedAt = DateTimeOffset.UtcNow;
-		page.UpdatedById = staffId;
-		await db.SaveChangesAsync(ct);
-		var renamed = page.Title != oldTitle || page.Slug != oldSlug;
-		return PageResult<PageUpdate>.Ok(new PageUpdate(await ToDetailAsync(page, null, ct), renamed));
-	}
-
-	public async Task<PageResult<PageDetail>> SetStatusAsync(Guid id, PageStatus status, Guid staffId, CancellationToken ct)
-	{
-		var page = await db.Pages.FirstOrDefaultAsync(p => p.Id == id, ct);
-		if (page is null)
-			return PageResult<PageDetail>.Fail(PageError.NotFound);
-
-		if (page.Status != status)
+		var statusChanged = req.Status is { } status && status != page.Status;
+		if (statusChanged)
 		{
-			page.Status = status;
-			page.PublishedAt = status == PageStatus.Published ? DateTimeOffset.UtcNow : null;
+			page.Status = req.Status!.Value;
+			page.PublishedAt = page.Status == PageStatus.Published ? DateTimeOffset.UtcNow : null;
+		}
+
+		var contentChanged = req.Title is not null || req.Slug is not null || req.Blocks is not null
+			|| req.MetaTitle is not null || req.MetaDescription is not null;
+		if (contentChanged || statusChanged)
+		{
 			page.UpdatedAt = DateTimeOffset.UtcNow;
 			page.UpdatedById = staffId;
-			await db.SaveChangesAsync(ct);
 		}
-		return PageResult<PageDetail>.Ok(await ToDetailAsync(page, null, ct));
+
+		var tagRemoved = false;
+		if (tagNames is not null)
+		{
+			var removed = pageTags.Where(pt => !tagNames.Contains(pt.Tag.Name)).ToList();
+			db.PageTags.RemoveRange(removed);
+			tagRemoved = removed.Count > 0;
+			var added = tagNames.Where(n => pageTags.All(pt => pt.Tag.Name != n)).ToList();
+			if (added.Count > 0)
+				foreach (var tag in await LoadOrCreateTagsAsync(added, ct))
+					db.PageTags.Add(new PageTag { PageId = page.Id, Tag = tag });
+		}
+
+		await db.SaveChangesAsync(ct);
+		if (tagRemoved)
+			await DeleteUnusedTagsAsync(ct);
+
+		var tags = (tagNames ?? pageTags.Select(pt => pt.Tag.Name).ToList()).Order(StringComparer.Ordinal).ToList();
+		var renamed = page.Title != oldTitle || page.Slug != oldSlug;
+		return PageResult<PageUpdate>.Ok(new PageUpdate(ToSummary(page, tags), renamed, statusChanged, contentChanged));
 	}
 
 	// null = not sent (unchanged); empty clears
@@ -282,29 +337,6 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		if (page.HasTags)
 			await DeleteUnusedTagsAsync(ct);
 		return PageResult<bool>.Ok(true);
-	}
-
-	/// <summary>
-	/// Replaces the page's tags. Doesn't touch <c>UpdatedAt</c>: tagging isn't a content edit, and the
-	/// pages list sorts by it.
-	/// </summary>
-	public async Task<PageResult<PageDetail>> SetTagsAsync(Guid id, List<string> raw, CancellationToken ct)
-	{
-		var page = await db.Pages.Include(p => p.PageTags).FirstOrDefaultAsync(p => p.Id == id, ct);
-		if (page is null)
-			return PageResult<PageDetail>.Fail(PageError.NotFound);
-
-		var (names, error) = NormalizeTags(raw);
-		if (error is not null)
-			return PageResult<PageDetail>.Fail(PageError.Invalid, error);
-
-		var tags = await LoadOrCreateTagsAsync(names, ct);
-		db.PageTags.RemoveRange(page.PageTags.Where(pt => tags.All(t => t.Id != pt.TagId)));
-		foreach (var tag in tags.Where(t => page.PageTags.All(pt => pt.TagId != t.Id)))
-			page.PageTags.Add(new PageTag { Page = page, Tag = tag });
-		await db.SaveChangesAsync(ct);
-		await DeleteUnusedTagsAsync(ct);
-		return PageResult<PageDetail>.Ok(await ToDetailAsync(page, null, ct));
 	}
 
 	/// <summary>Normalized, deduplicated tag names, or the first validation error.</summary>
@@ -443,12 +475,15 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 	public static int CountBlocks(List<Block> blocks) =>
 		blocks.Sum(b => 1 + CountBlocks(b.InnerBlocks ?? []));
 
-	/// <param name="tags">sorted names when the caller knows them; null = query them (the page is loaded without)</param>
-	private async Task<PageDetail> ToDetailAsync(Page p, List<string>? tags, CancellationToken ct)
+	private PageSummary ToSummary(Page p, List<string> tags) =>
+		new(p.Id, p.Title, p.Slug, p.Status, tags, p.BlockCount, p.CreatedAt, p.UpdatedAt, p.PublishedAt,
+			cms.Page(p.Slug) is { IsLocked: true });
+
+	/// <param name="tags">sorted names (every caller knows them: no tags query)</param>
+	private async Task<PageDetail> ToDetailAsync(Page p, List<string> tags, CancellationToken ct)
 	{
 		var config = cms.Page(p.Slug);
-		return new(p.Id, p.Title, p.Slug, p.Status,
-			tags ?? await db.PageTags.Where(pt => pt.PageId == p.Id).Select(pt => pt.Tag.Name).OrderBy(n => n).ToListAsync(ct),
+		return new(p.Id, p.Title, p.Slug, p.Status, tags,
 			p.Blocks, await MediaService.ResolveRefsAsync(db, p.Blocks, ct), p.CreatedAt, p.UpdatedAt, p.PublishedAt,
 			config?.Template, config?.IsLocked ?? false, config?.Editable ?? true, p.MetaTitle, p.MetaDescription);
 	}

@@ -40,7 +40,7 @@ public class TagsTests : IClassFixture<ApiFactory>
 
 		var response = await PutTagsAsync(token, id, [$"  Summer{unique} ", $"summer{unique}", "News"]);
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
-		var detail = await response.Content.ReadFromJsonAsync<PageDetail>(Ct);
+		var detail = await response.Content.ReadFromJsonAsync<PageSummary>(Ct);
 		detail!.Tags.Should().Equal("news", $"summer{unique}");
 
 		var list = await (await SendAsync(HttpMethod.Get, Base, token)).Content.ReadFromJsonAsync<List<PageSummary>>(Ct);
@@ -54,7 +54,7 @@ public class TagsTests : IClassFixture<ApiFactory>
 		var id = await CreatePageAsync(token);
 		var before = await (await SendAsync(HttpMethod.Get, $"{Base}/{id}", token)).Content.ReadFromJsonAsync<PageDetail>(Ct);
 
-		var after = await (await PutTagsAsync(token, id, ["x"])).Content.ReadFromJsonAsync<PageDetail>(Ct);
+		var after = await (await PutTagsAsync(token, id, ["x"])).Content.ReadFromJsonAsync<PageSummary>(Ct);
 		after!.UpdatedAt.Should().Be(before!.UpdatedAt);
 	}
 
@@ -113,7 +113,7 @@ public class TagsTests : IClassFixture<ApiFactory>
 		(await (await SendAsync(HttpMethod.Get, "/api/tags", token)).Content.ReadFromJsonAsync<List<TagUsage>>(Ct))!;
 
 	private Task<HttpResponseMessage> PutTagsAsync(string token, Guid id, string[] tags) =>
-		SendAsync(HttpMethod.Put, $"{Base}/{id}/tags", token,
+		SendAsync(HttpMethod.Put, $"{Base}/{id}", token,
 			new JsonObject { ["tags"] = new JsonArray(tags.Select(t => (JsonNode)t).ToArray()) });
 
 	private async Task<Guid> CreatePageAsync(string token)

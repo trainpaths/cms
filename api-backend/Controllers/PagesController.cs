@@ -52,35 +52,44 @@ public class PagesController(PageService pages, IRenderQueue render) : Controlle
 			: ToProblem(result);
 	}
 
+	/// <summary>
+	/// Partial update of content, meta, slug, status and tags in one call. Returns the slim summary: the editor already
+	/// has the blocks it sent (up to 2 MB, not echoed back).
+	/// </summary>
 	[HttpPut("{id:guid}")]
 	[RequestSizeLimit(MaxPageBodyBytes)]
-	public async Task<ActionResult<PageDetail>> Update(Guid id, UpdatePageRequest req, CancellationToken ct)
+	public async Task<ActionResult<PageSummary>> Update(Guid id, UpdatePageRequest req, CancellationToken ct)
 	{
 		var result = await pages.UpdateAsync(id, req, CurrentUserId, ct);
 		if (result.Error is not null)
 			return ToProblem(result);
-		var (page, renamed) = result.Value!;
-		// no draft copy: edits to a published page are live; a new title/slug shows in menus + footer links on every
-		// page: re-render all quietly, other pages marked right away
-		if (page.Status == PageStatus.Published)
+		var (page, renamed, statusChanged, contentChanged) = result.Value!;
+		if (statusChanged)
 		{
+			// menus + footer links on every page resolve published pages only: re-render all quietly, other pages
+			// marked right away. Page(id) too: HTML stored before an unpublish must not come back on a republish.
+			render.Page(id);
+			render.Refresh();
+		}
+		else if (page.Status == PageStatus.Published && contentChanged)
+		{
+			// no draft copy: edits to a published page are live; a new title/slug shows in menus + footer links on
+			// every page: re-render all quietly, other pages marked right away. Tags alone render nothing.
 			render.Page(id);
 			if (renamed) render.Refresh();
 		}
 		return Ok(page);
 	}
 
-	[HttpPut("{id:guid}/tags")]
-	public async Task<ActionResult<PageDetail>> SetTags(Guid id, UpdatePageTagsRequest req, CancellationToken ct) =>
-		Map(await pages.SetTagsAsync(id, req.Tags, ct));
-
-	[HttpPost("{id:guid}/publish")]
-	public Task<ActionResult<PageDetail>> Publish(Guid id, CancellationToken ct) =>
-		SetStatusAsync(id, PageStatus.Published, ct);
-
-	[HttpPost("{id:guid}/unpublish")]
-	public Task<ActionResult<PageDetail>> Unpublish(Guid id, CancellationToken ct) =>
-		SetStatusAsync(id, PageStatus.Draft, ct);
+	/// <summary>Draft copy of the page (blocks, meta, tags) without the blocks round trip through the browser.</summary>
+	[HttpPost("{id:guid}/duplicate")]
+	public async Task<ActionResult<PageDetail>> Duplicate(Guid id, CancellationToken ct)
+	{
+		var result = await pages.DuplicateAsync(id, CurrentUserId, ct);
+		return result.Error is null
+			? CreatedAtAction(nameof(Get), new { id = result.Value!.Id }, result.Value)
+			: ToProblem(result);
+	}
 
 	[HttpDelete("{id:guid}")]
 	public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
@@ -92,23 +101,6 @@ public class PagesController(PageService pages, IRenderQueue render) : Controlle
 		render.Refresh();
 		return NoContent();
 	}
-
-	// menus + footer links on every page resolve published pages only: re-render all quietly, other pages marked right
-	// away (a page loaded before the worker picks the job up would show the old menu without the client refresh).
-	// Page(id) too: HTML stored before an unpublish must not come back on a republish (draft edits render nothing).
-	private async Task<ActionResult<PageDetail>> SetStatusAsync(Guid id, PageStatus status, CancellationToken ct)
-	{
-		var result = await pages.SetStatusAsync(id, status, CurrentUserId, ct);
-		if (result.Error is null)
-		{
-			render.Page(id);
-			render.Refresh();
-		}
-		return Map(result);
-	}
-
-	private ActionResult<PageDetail> Map(PageResult<PageDetail> result) =>
-		result.Error is null ? Ok(result.Value) : ToProblem(result);
 
 	private ObjectResult ToProblem<T>(PageResult<T> result) => result.Error switch
 	{
