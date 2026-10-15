@@ -79,7 +79,7 @@ public class PageServiceTests
 
 		var updated = await service.UpdateAsync(created.Value!.Id, new UpdatePageRequest("Renamed", null, null), StaffId, Ct);
 
-		updated.Value!.Renamed.Should().BeTrue();
+		updated.Value!.LiveRenamed.Should().BeFalse(); // a draft: nothing live to rename
 		updated.Value.Page.Title.Should().Be("Renamed");
 		updated.Value.Page.Slug.Should().Be("page");
 		updated.Value.Page.BlockCount.Should().Be(1);
@@ -111,6 +111,55 @@ public class PageServiceTests
 
 		await service.UpdateAsync(page.Id, new UpdatePageRequest(null, null, null, Status: PageStatus.Draft), StaffId, Ct);
 		(await service.GetPublishedBySlugAsync("visible", Ct)).Should().BeNull();
+	}
+
+	[Fact]
+	public async Task Save_OnAPublishedPage_StaysOffTheLivePage_UntilPublished()
+	{
+		await using var db = TestDbContextFactory.Create();
+		var service = new PageService(db, CmsConfig.Default);
+		var paragraph = Block("paragraph");
+		var page = (await service.CreateAsync(new CreatePageRequest("Live", null, [paragraph]), StaffId, Ct)).Value!;
+		await service.UpdateAsync(page.Id, new UpdatePageRequest(null, null, null, Status: PageStatus.Published), StaffId, Ct);
+
+		var saved = await service.UpdateAsync(page.Id,
+			new UpdatePageRequest("Edited", null, [paragraph, Block("heading")], MetaTitle: "Meta"), StaffId, Ct);
+		saved.Value!.Should().Be(saved.Value with { StatusChanged = false, LiveChanged = false, LiveRenamed = false });
+		saved.Value.Page.HasUnpublishedChanges.Should().BeTrue();
+		var live = (await service.GetPublishedBySlugAsync("live", Ct))!;
+		live.Title.Should().Be("Live");
+		live.MetaTitle.Should().BeEmpty();
+		live.Blocks.Should().ContainSingle();
+		(await service.GetAsync(page.Id, Ct))!.Title.Should().Be("Edited");
+
+		// back to the live content = nothing to publish
+		var reverted = await service.UpdateAsync(page.Id,
+			new UpdatePageRequest("Live", null, [paragraph], MetaTitle: ""), StaffId, Ct);
+		reverted.Value!.Page.HasUnpublishedChanges.Should().BeFalse();
+
+		await service.UpdateAsync(page.Id, new UpdatePageRequest("Edited", null, null), StaffId, Ct);
+		var published = await service.UpdateAsync(page.Id, new UpdatePageRequest(null, null, null, Status: PageStatus.Published), StaffId, Ct);
+		published.Value!.Should().Be(published.Value with { StatusChanged = false, LiveChanged = true, LiveRenamed = true });
+		published.Value.Page.HasUnpublishedChanges.Should().BeFalse();
+		(await service.GetPublishedBySlugAsync("live", Ct))!.Title.Should().Be("Edited");
+	}
+
+	[Fact]
+	public async Task Unpublish_HidesThePage_AndRepublishShowsTheSavedCopy()
+	{
+		await using var db = TestDbContextFactory.Create();
+		var service = new PageService(db, CmsConfig.Default);
+		var page = (await service.CreateAsync(new CreatePageRequest("Page", null, null), StaffId, Ct)).Value!;
+		await service.UpdateAsync(page.Id, new UpdatePageRequest(null, null, null, Status: PageStatus.Published), StaffId, Ct);
+		await service.UpdateAsync(page.Id, new UpdatePageRequest("Changed", null, null), StaffId, Ct);
+
+		var unpublished = await service.UpdateAsync(page.Id, new UpdatePageRequest(null, null, null, Status: PageStatus.Draft), StaffId, Ct);
+		unpublished.Value!.StatusChanged.Should().BeTrue();
+		unpublished.Value.Page.HasUnpublishedChanges.Should().BeFalse();
+		(await service.GetPublishedBySlugAsync("page", Ct)).Should().BeNull();
+
+		await service.UpdateAsync(page.Id, new UpdatePageRequest(null, null, null, Status: PageStatus.Published), StaffId, Ct);
+		(await service.GetPublishedBySlugAsync("page", Ct))!.Title.Should().Be("Changed");
 	}
 
 	[Fact]

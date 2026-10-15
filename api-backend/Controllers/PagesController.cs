@@ -53,8 +53,9 @@ public class PagesController(PageService pages, IRenderQueue render) : Controlle
 	}
 
 	/// <summary>
-	/// Partial update of content, meta, slug, status and tags in one call. Returns the slim summary: the editor already
-	/// has the blocks it sent (up to 2 MB, not echoed back).
+	/// Partial update of content, meta, slug, status and tags in one call. Content edits the working copy; status
+	/// <c>published</c> publishes it. Returns the slim summary: the editor already has the blocks it sent (up to 2 MB, not
+	/// echoed back).
 	/// </summary>
 	[HttpPut("{id:guid}")]
 	[RequestSizeLimit(MaxPageBodyBytes)]
@@ -63,7 +64,7 @@ public class PagesController(PageService pages, IRenderQueue render) : Controlle
 		var result = await pages.UpdateAsync(id, req, CurrentUserId, ct);
 		if (result.Error is not null)
 			return ToProblem(result);
-		var (page, renamed, statusChanged, contentChanged) = result.Value!;
+		var (page, statusChanged, liveChanged, liveRenamed) = result.Value!;
 		if (statusChanged)
 		{
 			// menus + footer links on every page resolve published pages only: re-render all quietly, other pages
@@ -71,12 +72,12 @@ public class PagesController(PageService pages, IRenderQueue render) : Controlle
 			render.Page(id);
 			render.Refresh();
 		}
-		else if (page.Status == PageStatus.Published && contentChanged)
+		else if (liveChanged)
 		{
-			// no draft copy: edits to a published page are live; a new title/slug shows in menus + footer links on
-			// every page: re-render all quietly, other pages marked right away. Tags alone render nothing.
+			// published changes / new slug; saves of the working copy render nothing. A new live title/slug shows in
+			// menus + footer links on every page: re-render all quietly, other pages marked right away.
 			render.Page(id);
-			if (renamed) render.Refresh();
+			if (liveRenamed) render.Refresh();
 		}
 		return Ok(page);
 	}

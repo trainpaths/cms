@@ -6,6 +6,7 @@ using api_backend.Services.Pages;
 
 namespace api_backend.Models.Dto;
 
+/// <summary><see cref="HasUnpublishedChanges"/>: published, and the saved copy differs from the live one.</summary>
 public record PageSummary(
 	Guid Id,
 	string Title,
@@ -16,9 +17,11 @@ public record PageSummary(
 	DateTimeOffset CreatedAt,
 	DateTimeOffset UpdatedAt,
 	DateTimeOffset? PublishedAt,
+	bool HasUnpublishedChanges,
 	bool Locked);
 
 /// <summary>
+/// The working copy (what the editor saves; the public site shows the published snapshot).
 /// <see cref="Template"/>, <see cref="Locked"/> (slug fixed, undeletable) and <see cref="Editable"/> (blocks writable) come
 /// from the instance config's entry for the slug.
 /// </summary>
@@ -33,6 +36,7 @@ public record PageDetail(
 	DateTimeOffset CreatedAt,
 	DateTimeOffset UpdatedAt,
 	DateTimeOffset? PublishedAt,
+	bool HasUnpublishedChanges,
 	string? Template,
 	bool Locked,
 	bool Editable,
@@ -62,8 +66,9 @@ public record ImportPageResult(PageDetail Page, List<Guid> MissingMediaIds);
 
 /// <summary>
 /// Partial update: only non-null fields are applied (empty meta strings clear them), all in one transaction.
-/// <see cref="Status"/> publishes/unpublishes; <see cref="Tags"/> replaces the page's tags (normalized: trimmed,
-/// lowercase, deduplicated).
+/// Content fields (title, meta, blocks) only change the working copy, never the live page. <see cref="Status"/>
+/// <c>published</c> publishes the working copy as saved by this request (also on a published page: "publish changes"),
+/// <c>draft</c> unpublishes. <see cref="Tags"/> replaces the page's tags (normalized: trimmed, lowercase, deduplicated).
 /// </summary>
 public record UpdatePageRequest(
 	[MaxLength(PageService.MaxTitleLength)] string? Title,

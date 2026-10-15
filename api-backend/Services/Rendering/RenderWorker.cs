@@ -130,7 +130,7 @@ public sealed class RenderWorker(
 		var services = scope.ServiceProvider;
 		var db = services.GetRequiredService<AppDbContext>();
 
-		// a single page widens to all when it left the public site, is new there, or changed its title/slug (menus +
+		// a single page widens to all when it left the public site, is new there, or changed its live title/slug (menus +
 		// footer links on every page show those). Safety net: the controllers queue Refresh() for those already (it
 		// marks other pages for the client refresh at save time).
 		if (!all)
@@ -140,7 +140,7 @@ public sealed class RenderWorker(
 				.LeftJoin(db.RenderedPages, p => p.Id, r => r.PageId, (p, r) => new
 				{
 					p.Status,
-					p.Title,
+					Title = p.PublishedTitle,
 					p.Slug,
 					RenderedTitle = r == null ? null : r.Title,
 					RenderedSlug = r == null ? null : r.Slug,

@@ -399,6 +399,9 @@ namespace api_backend.Migrations
                     b.Property<Guid?>("CreatedById")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("HasUnpublishedChanges")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("MetaDescription")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -415,6 +418,27 @@ namespace api_backend.Migrations
 
                     b.Property<DateTimeOffset?>("PublishedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PublishedBlocks")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("PublishedMetaDescription")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("PublishedMetaTitle")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(70)
+                        .HasColumnType("character varying(70)")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("PublishedTitle")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("Slug")
                         .IsRequired()

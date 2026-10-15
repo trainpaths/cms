@@ -109,7 +109,7 @@ public partial class MenuService(AppDbContext db)
 		var ids = PageIds(menu.Items);
 		var pages = await db.Pages.AsNoTracking()
 			.Where(p => ids.Contains(p.Id) && p.Status == PageStatus.Published)
-			.Select(p => new { p.Id, p.Title, p.Slug })
+			.Select(p => new { p.Id, Title = p.PublishedTitle!, p.Slug })
 			.ToDictionaryAsync(p => p.Id, ct);
 
 		return new PublicMenu(menu.Handle, Resolve(menu.Items));

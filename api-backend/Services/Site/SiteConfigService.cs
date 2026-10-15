@@ -40,7 +40,7 @@ public class SiteConfigService(AppDbContext db, CmsConfig cms)
 		if (slugs.Count == 0) return [];
 		var pages = await db.Pages.AsNoTracking()
 			.Where(p => slugs.Contains(p.Slug) && p.Status == PageStatus.Published)
-			.Select(p => new FooterLink(p.Title, p.Slug))
+			.Select(p => new FooterLink(p.PublishedTitle!, p.Slug))
 			.ToListAsync(ct);
 		return pages.OrderBy(l => slugs.IndexOf(l.Slug)).ToList();
 	}

@@ -193,6 +193,7 @@ export type PageDetail = {
     createdAt: string;
     updatedAt: string;
     publishedAt?: string | null;
+    hasUnpublishedChanges: boolean;
     template?: string | null;
     locked: boolean;
     editable: boolean;
@@ -212,6 +213,7 @@ export type PageSummary = {
     createdAt: string;
     updatedAt: string;
     publishedAt?: string | null;
+    hasUnpublishedChanges: boolean;
     locked: boolean;
 };
 

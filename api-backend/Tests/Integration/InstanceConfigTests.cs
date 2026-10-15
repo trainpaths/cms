@@ -117,7 +117,8 @@ public class InstanceConfigTests(ApiFactory factory) : IClassFixture<ApiFactory>
 			// title may have been renamed by another test
 			var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 			await db.Pages.Where(p => p.Slug == "terms")
-				.ExecuteUpdateAsync(s => s.SetProperty(p => p.Title, "Terms").SetProperty(p => p.Status, PageStatus.Published), Ct);
+				.ExecuteUpdateAsync(s => s.SetProperty(p => p.Title, "Terms").SetProperty(p => p.PublishedTitle, "Terms")
+					.SetProperty(p => p.Status, PageStatus.Published), Ct);
 		}
 
 		var config = await client.GetFromJsonAsync<SiteConfigResponse>("/api/public/site-config", Ct);
