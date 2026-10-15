@@ -60,19 +60,32 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 
 	public async Task<List<PageSummary>> ListAsync(CancellationToken ct)
 	{
-		// Blocks is a jsonb value-converted column, so the block count is computed client-side.
+		// no Blocks (up to 2 MB each): the stored BlockCount instead
 		var pages = await db.Pages.AsNoTracking()
-			.Include(p => p.PageTags).ThenInclude(pt => pt.Tag)
 			.OrderByDescending(p => p.UpdatedAt)
+			.Select(p => new
+			{
+				p.Id, p.Title, p.Slug, p.Status, p.BlockCount, p.CreatedAt, p.UpdatedAt, p.PublishedAt,
+				Tags = p.PageTags.Select(pt => pt.Tag.Name).OrderBy(n => n).ToList(),
+			})
 			.ToListAsync(ct);
-		return pages.Select(ToSummary).ToList();
+		// Locked after materializing: cms.Page(slug) isn't SQL
+		return pages.Select(p => new PageSummary(p.Id, p.Title, p.Slug, p.Status, p.Tags, p.BlockCount, p.CreatedAt,
+			p.UpdatedAt, p.PublishedAt, cms.Page(p.Slug) is { IsLocked: true })).ToList();
 	}
 
 	public async Task<PageDetail?> GetAsync(Guid id, CancellationToken ct)
 	{
-		var page = await db.Pages.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, ct);
-		return page is null ? null : await ToDetailAsync(page, ct);
+		// tags as one string_agg column, not a second query (tags never contain whitespace)
+		var row = await db.Pages.AsNoTracking()
+			.Where(p => p.Id == id)
+			.Select(p => new { Page = p, Tags = string.Join(" ", p.PageTags.Select(pt => pt.Tag.Name)) })
+			.FirstOrDefaultAsync(ct);
+		return row is null ? null : await ToDetailAsync(row.Page, SplitTags(row.Tags), ct);
 	}
+
+	private static List<string> SplitTags(string? joined) =>
+		(joined ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries).Order(StringComparer.Ordinal).ToList();
 
 	public async Task<PublicPage?> GetPublishedBySlugAsync(string slug, CancellationToken ct)
 	{
@@ -131,12 +144,13 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 			Title = title,
 			Slug = slug,
 			Blocks = blocks,
+			BlockCount = CountBlocks(blocks),
 			CreatedById = staffId,
 			UpdatedById = staffId,
 		};
 		db.Pages.Add(page);
 		await db.SaveChangesAsync(ct);
-		return PageResult<PageDetail>.Ok(await ToDetailAsync(page, ct));
+		return PageResult<PageDetail>.Ok(await ToDetailAsync(page, [], ct));
 	}
 
 	/// <summary>
@@ -162,6 +176,7 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 			Title = title,
 			Slug = await UniqueSlugFromAsync(string.IsNullOrWhiteSpace(req.Slug) ? title : req.Slug, ct),
 			Blocks = req.Blocks,
+			BlockCount = CountBlocks(req.Blocks),
 			MetaTitle = req.MetaTitle?.Trim() ?? "",
 			MetaDescription = req.MetaDescription?.Trim() ?? "",
 			CreatedById = staffId,
@@ -171,7 +186,7 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		await AddTagsAsync(page, tagNames, ct);
 		await db.SaveChangesAsync(ct);
 
-		var detail = await ToDetailAsync(page, ct);
+		var detail = await ToDetailAsync(page, tagNames.Order(StringComparer.Ordinal).ToList(), ct);
 		var found = detail.Media.Select(m => m.Id).ToHashSet();
 		var missing = MediaService.CollectIds(page.Blocks).Where(id => !found.Contains(id)).ToList();
 		return PageResult<ImportPageResult>.Ok(new ImportPageResult(detail, missing));
@@ -220,13 +235,14 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 			if (ValidateBlocks(req.Blocks) is { } blockError)
 				return PageResult<PageUpdate>.Fail(PageError.Invalid, blockError);
 			page.Blocks = req.Blocks;
+			page.BlockCount = CountBlocks(req.Blocks);
 		}
 
 		page.UpdatedAt = DateTimeOffset.UtcNow;
 		page.UpdatedById = staffId;
 		await db.SaveChangesAsync(ct);
 		var renamed = page.Title != oldTitle || page.Slug != oldSlug;
-		return PageResult<PageUpdate>.Ok(new PageUpdate(await ToDetailAsync(page, ct), renamed));
+		return PageResult<PageUpdate>.Ok(new PageUpdate(await ToDetailAsync(page, null, ct), renamed));
 	}
 
 	public async Task<PageResult<PageDetail>> SetStatusAsync(Guid id, PageStatus status, Guid staffId, CancellationToken ct)
@@ -243,7 +259,7 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 			page.UpdatedById = staffId;
 			await db.SaveChangesAsync(ct);
 		}
-		return PageResult<PageDetail>.Ok(await ToDetailAsync(page, ct));
+		return PageResult<PageDetail>.Ok(await ToDetailAsync(page, null, ct));
 	}
 
 	// null = not sent (unchanged); empty clears
@@ -252,14 +268,19 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 
 	public async Task<PageResult<bool>> DeleteAsync(Guid id, CancellationToken ct)
 	{
-		var page = await db.Pages.Include(p => p.PageTags).FirstOrDefaultAsync(p => p.Id == id, ct);
+		var page = await db.Pages.AsNoTracking()
+			.Where(p => p.Id == id)
+			.Select(p => new { p.Slug, HasTags = p.PageTags.Any() })
+			.FirstOrDefaultAsync(ct);
 		if (page is null)
 			return PageResult<bool>.Fail(PageError.NotFound);
 		if (cms.Page(page.Slug) is { IsLocked: true })
 			return PageResult<bool>.Fail(PageError.Invalid, "This page is part of the site configuration and can't be deleted.");
-		db.Pages.Remove(page);
-		await db.SaveChangesAsync(ct);
-		await DeleteUnusedTagsAsync(ct);
+		// page_tags + rendered_pages cascade in Postgres
+		if (await db.Pages.Where(p => p.Id == id).ExecuteDeleteAsync(ct) == 0)
+			return PageResult<bool>.Fail(PageError.NotFound);
+		if (page.HasTags)
+			await DeleteUnusedTagsAsync(ct);
 		return PageResult<bool>.Ok(true);
 	}
 
@@ -283,7 +304,7 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 			page.PageTags.Add(new PageTag { Page = page, Tag = tag });
 		await db.SaveChangesAsync(ct);
 		await DeleteUnusedTagsAsync(ct);
-		return PageResult<PageDetail>.Ok(await ToDetailAsync(page, ct));
+		return PageResult<PageDetail>.Ok(await ToDetailAsync(page, null, ct));
 	}
 
 	/// <summary>Normalized, deduplicated tag names, or the first validation error.</summary>
@@ -333,14 +354,8 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 			.ToListAsync(ct);
 
 	// autocomplete only offers tags that are still on some page
-	private async Task DeleteUnusedTagsAsync(CancellationToken ct)
-	{
-		var unused = await db.Tags.Where(t => !t.PageTags.Any()).ToListAsync(ct);
-		if (unused.Count == 0)
-			return;
-		db.Tags.RemoveRange(unused);
-		await db.SaveChangesAsync(ct);
-	}
+	private Task DeleteUnusedTagsAsync(CancellationToken ct) =>
+		db.Tags.Where(t => !t.PageTags.Any()).ExecuteDeleteAsync(ct);
 
 	public static string? ValidateSlug(string slug)
 	{
@@ -424,19 +439,16 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		}
 	}
 
-	private static int CountBlocks(List<Block> blocks) =>
+	/// <summary>Blocks at all depths (<see cref="Page.BlockCount"/>); mirrored in SQL by <c>AddPageBlockCount.BackfillSql</c>.</summary>
+	public static int CountBlocks(List<Block> blocks) =>
 		blocks.Sum(b => 1 + CountBlocks(b.InnerBlocks ?? []));
 
-	private PageSummary ToSummary(Page p) =>
-		new(p.Id, p.Title, p.Slug, p.Status, p.PageTags.Select(pt => pt.Tag.Name).Order().ToList(),
-			CountBlocks(p.Blocks), p.CreatedAt, p.UpdatedAt, p.PublishedAt, cms.Page(p.Slug) is { IsLocked: true });
-
-	// tags queried, not taken from p.PageTags: callers load the page without them
-	private async Task<PageDetail> ToDetailAsync(Page p, CancellationToken ct)
+	/// <param name="tags">sorted names when the caller knows them; null = query them (the page is loaded without)</param>
+	private async Task<PageDetail> ToDetailAsync(Page p, List<string>? tags, CancellationToken ct)
 	{
 		var config = cms.Page(p.Slug);
 		return new(p.Id, p.Title, p.Slug, p.Status,
-			await db.PageTags.Where(pt => pt.PageId == p.Id).Select(pt => pt.Tag.Name).OrderBy(n => n).ToListAsync(ct),
+			tags ?? await db.PageTags.Where(pt => pt.PageId == p.Id).Select(pt => pt.Tag.Name).OrderBy(n => n).ToListAsync(ct),
 			p.Blocks, await MediaService.ResolveRefsAsync(db, p.Blocks, ct), p.CreatedAt, p.UpdatedAt, p.PublishedAt,
 			config?.Template, config?.IsLocked ?? false, config?.Editable ?? true, p.MetaTitle, p.MetaDescription);
 	}

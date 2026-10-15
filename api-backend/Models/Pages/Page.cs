@@ -29,6 +29,8 @@ public class Page
 	public string MetaDescription { get; set; } = "";
 
 	public List<Block> Blocks { get; set; } = new();
+	/// <summary>Blocks at all depths; kept in sync with <see cref="Blocks"/> so lists don't read the tree.</summary>
+	public int BlockCount { get; set; }
 	public List<PageTag> PageTags { get; set; } = new();
 
 	public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
