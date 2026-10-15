@@ -15,7 +15,7 @@ namespace api_backend.Controllers;
 [Route("api/menus")]
 [Authorize(Policy = AuthPolicies.StaffOnly)]
 [EnableRateLimiting(RateLimitPolicies.Pages)]
-public class MenusController(MenuService menus, IRenderQueue render) : ControllerBase
+public class MenusController(MenuService menus, IRenderQueue render, PublicCache cache) : ControllerBase
 {
 	/// <summary>200 items with long URLs can outgrow the global 64 KB body limit.</summary>
 	public const long MaxMenuBodyBytes = 512 * 1024;
@@ -35,9 +35,10 @@ public class MenusController(MenuService menus, IRenderQueue render) : Controlle
 	public async Task<ActionResult<MenuDetail>> Create(CreateMenuRequest req, CancellationToken ct)
 	{
 		var result = await menus.CreateAsync(req, User.GetUserId(), ct);
-		return result.Error is null
-			? CreatedAtAction(nameof(Get), new { id = result.Value!.Id }, result.Value)
-			: ToProblem(result);
+		if (result.Error is not null)
+			return ToProblem(result);
+		cache.Invalidate();
+		return CreatedAtAction(nameof(Get), new { id = result.Value!.Id }, result.Value);
 	}
 
 	[HttpPut("{id:guid}")]
@@ -47,8 +48,9 @@ public class MenusController(MenuService menus, IRenderQueue render) : Controlle
 		var result = await menus.UpdateAsync(id, req, User.GetUserId(), ct);
 		if (result.Error is not null)
 			return ToProblem(result);
-		// only main is in the rendered state; other menus exist only client-side
+		// only main is in the rendered state; other menus exist only client-side (Refresh() invalidates too)
 		if (result.Value!.Handle == Menu.MainHandle) render.Refresh();
+		else cache.Invalidate();
 		return Ok(result.Value);
 	}
 
@@ -59,6 +61,7 @@ public class MenusController(MenuService menus, IRenderQueue render) : Controlle
 		if (result.Error is not null)
 			return ToProblem(result);
 		// nothing to render: the main menu can't be deleted, other menus aren't in stored HTML
+		cache.Invalidate();
 		return NoContent();
 	}
 

@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using api_backend.Models.Dto;
 using api_backend.Models.Pages;
 using api_backend.Services.Cms;
+using api_backend.Services.Rendering;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -49,6 +50,8 @@ public class PageSeederTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
 			await db.Pages.Where(p => p.Slug == DefaultPages.PrivacySlug)
 				.ExecuteUpdateAsync(s => s.SetProperty(p => p.Status, PageStatus.Draft), Ct);
+			// written behind the API's back
+			app.Services.GetRequiredService<PublicCache>().Invalidate();
 			config = await client.GetFromJsonAsync<SiteConfigResponse>("/api/public/site-config", Ct);
 			config!.FooterLinks.Should().Equal(new FooterLink("Legal", DefaultPages.LegalSlug));
 		}

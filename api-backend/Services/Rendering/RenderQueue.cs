@@ -24,7 +24,11 @@ public interface IRenderQueue
 }
 
 /// <summary>Unbounded in-memory queue; <c>null</c> = all pages. The worker coalesces bursts (autosave).</summary>
-public sealed class RenderQueue(RenderStatus status) : IRenderQueue
+/// <remarks>
+/// <see cref="Refresh"/> and <see cref="All"/> also drop the <see cref="PublicCache"/>: every write that changes a
+/// public menu or the site config goes through one of them (non-main menus: <c>MenusController</c> invalidates).
+/// </remarks>
+public sealed class RenderQueue(RenderStatus status, PublicCache cache) : IRenderQueue
 {
 	private readonly Channel<Guid?> _channel = Channel.CreateUnbounded<Guid?>(new UnboundedChannelOptions { SingleReader = true });
 
@@ -39,12 +43,14 @@ public sealed class RenderQueue(RenderStatus status) : IRenderQueue
 	public void All()
 	{
 		status.MarkAllChanged();
+		cache.Invalidate();
 		_channel.Writer.TryWrite(null);
 	}
 
 	public void Refresh()
 	{
 		status.MarkRefreshed();
+		cache.Invalidate();
 		_channel.Writer.TryWrite(null);
 	}
 

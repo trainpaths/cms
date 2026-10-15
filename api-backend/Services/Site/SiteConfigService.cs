@@ -83,12 +83,20 @@ public class SiteConfigService(AppDbContext db, CmsConfig cms)
 
 	public async Task<SiteConfigResult> UpdateAsync(UpdateSiteConfigRequest req, Guid staffId, CancellationToken ct)
 	{
-		var (values, error) = Normalize(cms.SiteConfigSchema(), req);
+		var schema = cms.SiteConfigSchema();
+		var (values, error) = Normalize(schema, req);
 		if (error is not null)
 			return SiteConfigResult.Invalid(error);
 
+		// one media query: validates all three ids and gives the response's refs
+		var mediaIds = new[] { req.LogoMediaId, req.IconMediaId, req.ShareImageMediaId }.OfType<Guid>().Distinct().ToList();
+		var media = mediaIds.Count == 0
+			? new Dictionary<Guid, MediaRef>()
+			: await db.MediaAssets.AsNoTracking()
+				.Where(m => mediaIds.Contains(m.Id))
+				.ToDictionaryAsync(m => m.Id, MediaService.ToRef, ct);
 		foreach (var (id, label) in new[] { (req.LogoMediaId, "Logo"), (req.IconMediaId, "Icon"), (req.ShareImageMediaId, "Share image") })
-			if (id is { } mediaId && !await db.MediaAssets.AnyAsync(m => m.Id == mediaId, ct))
+			if (id is { } mediaId && !media.ContainsKey(mediaId))
 				return SiteConfigResult.Invalid($"{label} media not found.");
 
 		var config = await db.SiteConfig.FirstOrDefaultAsync(m => m.Id == SiteConfig.SingletonId, ct);
@@ -101,11 +109,18 @@ public class SiteConfigService(AppDbContext db, CmsConfig cms)
 		config.LogoMediaId = req.LogoMediaId;
 		config.IconMediaId = req.IconMediaId;
 		config.ShareImageMediaId = req.ShareImageMediaId;
-		config.UpdatedAt = DateTimeOffset.UtcNow;
+		// microseconds (Postgres precision): the response matches later reads
+		var now = DateTimeOffset.UtcNow;
+		config.UpdatedAt = now.AddTicks(-(now.UtcTicks % 10));
 		config.UpdatedById = staffId;
 		await db.SaveChangesAsync(ct);
 
-		return SiteConfigResult.Ok(await GetAsync(ct));
+		// built from what was just written, not re-read
+		var (fields, groups) = Resolve(schema, values!);
+		return SiteConfigResult.Ok(new SiteConfigResponse(fields, groups, RefOf(req.LogoMediaId), RefOf(req.IconMediaId),
+			RefOf(req.ShareImageMediaId), config.UpdatedAt, await FooterLinksAsync(ct)));
+
+		MediaRef? RefOf(Guid? id) => id is { } mediaId ? media[mediaId] : null;
 	}
 
 	/// <summary>Validates a full replace against the schema; strings trimmed, entry types taken from their preset.</summary>
