@@ -1,4 +1,4 @@
-import { test, expect, createPage, type Page } from '../../fixtures/staff.fixture'
+import { test, expect, createPage, publish, unpublish, type Page } from '../../fixtures/staff.fixture'
 
 // The main menu is one site-wide row: the test replaces all of its items.
 
@@ -7,8 +7,7 @@ const unique = () => crypto.randomUUID().slice(0, 8)
 /** Creates + publishes a page; returns its title and slug. */
 async function publishedPage(page: Page, label: string) {
 	const title = await createPage(page, `E2E Menu ${label} ${unique()}`)
-	await page.getByTestId('publish-toggle').click()
-	await expect(page.getByTestId('publish-toggle')).toHaveText('Unpublish')
+	await publish(page)
 	const slug = await page.getByTestId('page-slug').inputValue()
 	return { title, slug }
 }
@@ -109,8 +108,7 @@ test('build the main menu and see it as the public navigation', async ({ staffPa
 	// unpublishing a page drops it from the public menu
 	await page.goto('/admin/pages')
 	await page.getByTestId('page-row').filter({ hasText: team.title }).getByRole('link').first().click()
-	await page.getByTestId('publish-toggle').click()
-	await expect(page.getByTestId('publish-toggle')).toHaveText('Publish')
+	await unpublish(page)
 	const later = await browser.newPage()
 	await later.goto(`/${about.slug}`)
 	await later.getByTestId('site-nav-item').nth(1).hover()

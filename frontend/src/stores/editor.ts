@@ -15,6 +15,8 @@ export const useEditorStore = defineStore('editor', () => {
 	const pageTitle = ref('')
 	const pageSlug = ref('')
 	const pageStatus = ref<PageStatus>('draft')
+	// published, and the saved copy differs from the live one (from the API)
+	const pageHasUnpublishedChanges = ref(false)
 	const pageMetaTitle = ref('')
 	const pageMetaDescription = ref('')
 	// from the instance config (cms.config.json): template-rendered / fixed slug + undeletable / blocks writable
@@ -33,6 +35,7 @@ export const useEditorStore = defineStore('editor', () => {
 	const changeCount = ref(0)
 	const autosaveThreshold = ref(4)
 	const saveStatus = ref<'idle' | 'saving' | 'saved'>('idle')
+	const publishing = ref(false)
 	const errorMessage = ref<string | null>(null)
 	const history = ref<BlockInstance[][]>([])
 	const historyIndex = ref(-1)
@@ -41,6 +44,13 @@ export const useEditorStore = defineStore('editor', () => {
 	function cloneBlocks(list: BlockInstance[]): BlockInstance[] {
 		return JSON.parse(JSON.stringify(list))
 	}
+
+	// what a save writes, as JSON: isDirty compares it with the last saved one (undo back to it = clean)
+	function contentJson(): string {
+		return JSON.stringify([pageTitle.value, pageMetaTitle.value, pageMetaDescription.value, blocks.value])
+	}
+	const savedContent = ref('')
+	const isDirty = computed(() => !!pageId.value && contentJson() !== savedContent.value)
 
 	function pushHistory(): void {
 		history.value = history.value.slice(0, historyIndex.value + 1)
@@ -214,6 +224,7 @@ export const useEditorStore = defineStore('editor', () => {
 		pageTitle.value = page.title
 		pageSlug.value = page.slug
 		pageStatus.value = page.status
+		pageHasUnpublishedChanges.value = page.hasUnpublishedChanges
 		pageMetaTitle.value = page.metaTitle
 		pageMetaDescription.value = page.metaDescription
 		pageTemplate.value = page.template ?? null
@@ -226,6 +237,7 @@ export const useEditorStore = defineStore('editor', () => {
 		saveStatus.value = 'idle'
 		history.value = [cloneBlocks(page.blocks)]
 		historyIndex.value = 0
+		savedContent.value = contentJson()
 	}
 
 	// bumped by every load/close: a slower, superseded load must not apply its page
@@ -244,7 +256,7 @@ export const useEditorStore = defineStore('editor', () => {
 			pages.remember(fresh)
 			useMediaStore().seed(fresh.media)
 			if (seq !== loadSeq) return false
-			const untouched = changeCount.value === 0 && historyIndex.value === 0
+			const untouched = !isDirty.value && historyIndex.value === 0
 			if (!cached || (untouched && fresh.updatedAt !== cached.updatedAt)) applyPage(fresh)
 			// tag edits don't bump updatedAt
 			else if (!tagsInFlight) pageTags.value = fresh.tags
@@ -268,6 +280,7 @@ export const useEditorStore = defineStore('editor', () => {
 		pageTitle.value = ''
 		pageSlug.value = ''
 		pageStatus.value = 'draft'
+		pageHasUnpublishedChanges.value = false
 		pageMetaTitle.value = ''
 		pageMetaDescription.value = ''
 		pageTemplate.value = null
@@ -280,15 +293,15 @@ export const useEditorStore = defineStore('editor', () => {
 		saveStatus.value = 'idle'
 		history.value = []
 		historyIndex.value = -1
+		savedContent.value = ''
 	}
 
 	// Saves are serialized: a save requested while one is in flight runs once it finishes, so an
 	// older snapshot can never overwrite a newer one.
 	let inFlight: Promise<void> | null = null
 	let saveQueued = false
-	// publish/unpublish rides along with the next content save (one PUT: publishes what's on screen)
-	let pendingStatus: PageStatus | null = null
 
+	/** Saves the working copy when it differs from the saved one. Never publishes. */
 	async function savePage(): Promise<void> {
 		if (!pageId.value) return
 		if (inFlight) {
@@ -299,11 +312,10 @@ export const useEditorStore = defineStore('editor', () => {
 			do {
 				saveQueued = false
 				const id = pageId.value
-				if (!id) break
+				if (!id || !isDirty.value) break
 				saveStatus.value = 'saving'
 				changeCount.value = 0
-				const status = pendingStatus
-				pendingStatus = null
+				const sent = contentJson()
 				try {
 					const content = {
 						title: pageTitle.value,
@@ -312,19 +324,16 @@ export const useEditorStore = defineStore('editor', () => {
 						// non-editable (template-only) pages reject block writes
 						...(pageEditable.value && { blocks: cloneBlocks(blocks.value) }),
 					}
-					const { data: page } = await putApiPagesById({
-						path: { id },
-						body: status ? { ...content, status } : content,
-					})
+					const { data: page } = await putApiPagesById({ path: { id }, body: content })
 					usePagesStore().applySaved(page, content)
-					if (pageId.value === id) pageStatus.value = page.status
+					if (pageId.value === id) {
+						savedContent.value = sent
+						pageHasUnpublishedChanges.value = page.hasUnpublishedChanges
+					}
 					saveStatus.value = 'saved'
 				} catch (err: unknown) {
 					saveStatus.value = 'idle'
-					errorMessage.value = describe(
-						err,
-						status ? 'Failed to change publish status' : 'Failed to save page',
-					)
+					errorMessage.value = describe(err, 'Failed to save page')
 					break
 				}
 			} while (saveQueued)
@@ -377,11 +386,34 @@ export const useEditorStore = defineStore('editor', () => {
 		return tagsInFlight
 	}
 
-	/** Publishes what's on screen, not the last autosave: content + status in one PUT through the save loop. */
-	async function setPublished(published: boolean): Promise<void> {
-		if (!pageId.value) return
-		pendingStatus = published ? 'published' : 'draft'
-		await savePage()
+	async function setStatus(status: PageStatus, failure: string): Promise<void> {
+		if (!pageId.value || publishing.value) return
+		publishing.value = true
+		try {
+			if (inFlight) await inFlight
+			const id = pageId.value
+			if (!id) return
+			const { data: page } = await putApiPagesById({ path: { id }, body: { status } })
+			usePagesStore().applySaved(page)
+			if (pageId.value === id) {
+				pageStatus.value = page.status
+				pageHasUnpublishedChanges.value = page.hasUnpublishedChanges
+			}
+		} catch (err: unknown) {
+			errorMessage.value = describe(err, failure)
+		} finally {
+			publishing.value = false
+		}
+	}
+
+	/** Publishes the saved copy (the controls require a save first: unsaved edits never go live). */
+	function publish(): Promise<void> {
+		return setStatus('published', 'Failed to publish page')
+	}
+
+	/** Takes the page off the public site; the live copy is kept server-side. */
+	function unpublish(): Promise<void> {
+		return setStatus('draft', 'Failed to unpublish page')
 	}
 
 	function dismissError(): void {
@@ -394,6 +426,7 @@ export const useEditorStore = defineStore('editor', () => {
 		pageTitle,
 		pageSlug,
 		pageStatus,
+		pageHasUnpublishedChanges,
 		pageMetaTitle,
 		pageMetaDescription,
 		pageTemplate,
@@ -409,6 +442,8 @@ export const useEditorStore = defineStore('editor', () => {
 		changeCount,
 		autosaveThreshold,
 		saveStatus,
+		isDirty,
+		publishing,
 		errorMessage,
 		dismissError,
 		canUndo,
@@ -434,6 +469,7 @@ export const useEditorStore = defineStore('editor', () => {
 		savePage,
 		updateSlug,
 		updateTags,
-		setPublished,
+		publish,
+		unpublish,
 	}
 })

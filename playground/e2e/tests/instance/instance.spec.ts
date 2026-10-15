@@ -1,4 +1,4 @@
-import { test, expect, createPage, insertBlock, rowAction } from '../../fixtures/staff.fixture'
+import { test, expect, createPage, insertBlock, rowAction, publish } from '../../fixtures/staff.fixture'
 
 // What the playground adds as an instance (playground/src/, cms.config.json): the extension points a client site uses.
 
@@ -10,8 +10,7 @@ test('instance block: inserted in the editor, server-rendered on the public site
 
 	await insertBlock(page, 'Callout')
 	await page.getByTestId('callout-input').fill('Instance block text')
-	await page.getByTestId('publish-toggle').click()
-	await expect(page.getByTestId('publish-toggle')).toHaveText('Unpublish')
+	await publish(page)
 
 	// the renderer's SSR bundle carries the instance block (rendered HTML replaces the shell once ready)
 	await expect

@@ -1,4 +1,4 @@
-import { test, expect, createPage } from '../../fixtures/staff.fixture'
+import { test, expect, createPage, publish } from '../../fixtures/staff.fixture'
 
 test('pages list: View opens the preview for drafts, the public page once published', async ({ staffPage: page }) => {
 	const title = await createPage(page)
@@ -12,8 +12,7 @@ test('pages list: View opens the preview for drafts, the public page once publis
 	await expect(row.getByTestId('page-view')).toHaveAttribute('href', `${new URL(editorUrl).pathname}/preview`)
 
 	await page.goto(editorUrl)
-	await page.getByTestId('publish-toggle').click()
-	await expect(page.getByTestId('publish-toggle')).toHaveText('Unpublish')
+	await publish(page)
 	await page.goto('/admin/pages')
 	const view = row.getByTestId('page-view')
 	await expect(view).toHaveAttribute('href', `/${slug}`)

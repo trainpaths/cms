@@ -7,12 +7,14 @@ import { documentTitle } from '../../../public/head'
 import { useEditorStore } from '../../../stores/editor'
 import { useSiteConfigStore } from '../../../stores/siteConfig'
 import { useTagsStore } from '../../../stores/tags'
+import { usePublishState } from '../composables/usePublishState'
 import { pageExportFileName, toPageExport } from '../../pageExport'
 import { saveJson } from '../../download'
 
 const store = useEditorStore()
 const tags = useTagsStore()
 const siteConfig = useSiteConfigStore()
+const { published, canPublish, publishLabel, publishHint, statusText } = usePublishState()
 onMounted(() => {
 	tags.load()
 	siteConfig.load()
@@ -140,17 +142,34 @@ async function commitSlug() {
 			/>
 		</SettingsSection>
 		<SettingsSection title="Status">
-			<div class="flex items-center justify-between text-sm">
-				<span :class="store.pageStatus === 'published' ? 'text-green-700' : 'text-gray-600'">
-					{{ store.pageStatus === 'published' ? 'Published' : 'Draft' }}
-				</span>
+			<p
+				class="mt-0 mb-8 text-sm"
+				:class="published ? 'text-green-700' : 'text-gray-600'"
+				data-testid="page-status"
+			>
+				{{ statusText }}
+			</p>
+			<div class="flex flex-wrap items-center gap-8">
 				<button
-					class="cursor-pointer rounded border-none bg-primary px-12 py-4 text-xs text-white hover:bg-primary-dark"
-					@click="store.setPublished(store.pageStatus !== 'published')"
+					class="cursor-pointer rounded border-none bg-primary px-12 py-4 text-xs text-white hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-primary"
+					:title="publishHint"
+					:disabled="!canPublish"
+					data-testid="settings-publish"
+					@click="store.publish()"
 				>
-					{{ store.pageStatus === 'published' ? 'Unpublish' : 'Publish' }}
+					{{ publishLabel }}
+				</button>
+				<button
+					v-if="published"
+					class="cursor-pointer rounded border border-gray-300 bg-white px-12 py-4 text-xs text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+					:disabled="store.publishing"
+					data-testid="settings-unpublish"
+					@click="store.unpublish()"
+				>
+					Unpublish
 				</button>
 			</div>
+			<p class="mt-8 mb-0 text-xs text-gray-400">Saving never publishes: visitors see the last published version.</p>
 		</SettingsSection>
 		<SettingsSection title="Export">
 			<button

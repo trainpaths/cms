@@ -34,14 +34,14 @@ watch(
 )
 
 async function handleBack() {
-	if (store.changeCount > 0) await store.savePage()
+	if (store.isDirty) await store.savePage()
 	store.closePage()
 	emit('back')
 }
 
 onUnmounted(() => {
 	// Leaving via the router (not the back button): flush pending edits.
-	if (store.pageId && store.changeCount > 0) void store.savePage()
+	if (store.isDirty) void store.savePage()
 })
 
 let savedTimer: ReturnType<typeof setTimeout> | undefined
