@@ -144,8 +144,15 @@ and never gets the release commit: its `frontend/package.json` version is stale,
   client sites deploy from their own instance repos (`trainpaths/cms-starter` template).
 - **Before starting any work, sync with remote**: `git fetch origin --prune && git checkout main && git pull`,
   then branch from the fresh `main`. Local refs are often stale (the user merges/pushes from elsewhere).
-- Feature branches off `main` (`feat/...`, `fix/...`) → PR into `main` (merge, not rebase) → delete branch.
-  Put `Closes #N` in the PR body; merging into the default branch auto-closes the issue.
+- Feature branches off `main` (`feat/...`, `fix/...`) → PR into `main` → rebase-merge (`gh pr merge --rebase`, never a
+  merge commit; only when the user says so) → delete branch. The release reads each rebased commit, so keep them
+  Conventional. Put `Closes #N` in the PR body; merging into the default branch auto-closes the issue.
+- **Stacked PRs** (only when B really needs A's unmerged code, e.g. a migration on top of A's schema; independent work
+  branches off `main`): branch B off A, PR B into `main` too (CI only runs for PRs into `main`), say "merge #A first"
+  in B's body. A's rebase-merge rewrites its commits, so afterwards B conflicts with `main`. Then move only B's own
+  commits: `git fetch origin && git rebase --onto origin/main <A's old tip> <B>` (old tip = A's last commit as it is in
+  B's history; `git diff <A's old tip> origin/main` empty = A landed unchanged), check `git log origin/main..B` lists only
+  B's commits, `git push --force-with-lease`, update B's body.
 - Work is tracked in GitHub issues (plan as a checkbox list; tick items off; close when done).
 
 **Conventional Commits**, short single line: `<type>(<scope>): <description>`
