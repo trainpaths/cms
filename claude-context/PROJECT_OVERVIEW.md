@@ -17,7 +17,7 @@ It grew out of two projects:
 ## Who uses it
 | Role | Account | Can |
 |------|---------|-----|
-| Site owner | **Staff** (first one bootstrapped from `BOOTSTRAP_SUPERADMIN_*`; super admins create more) | log in, create/edit/delete pages, publish/unpublish |
+| Site owner | **Staff** (first one bootstrapped from `BOOTSTRAP_SUPERADMIN_*`; super admins create more) | log in, create/edit/delete pages, publish/unpublish (saving never publishes: visitors see the last published version) |
 | Visitor | none | read published pages at `/{slug}` |
 | Customer | Customer (self-registration, only with `publicAuth` in the instance config) | currently nothing CMS-specific — kept from the template for future member features |
 
@@ -31,7 +31,8 @@ It grew out of two projects:
 | Config pages (default: Home, Privacy Policy, Legal; seeded on a fresh install, locked/template ones on every start) | `api-backend/Services/Pages/{PageSeeder,DefaultPages}.cs` |
 | Template pages (instance `src/templates/<name>.vue` renders the page; slug fixed, undeletable) | `frontend/src/public/templates.ts`, `views/PageView.vue` |
 | Block editor (3-panel: Blocks/Outline tabs, canvas, settings) | `/admin/pages/:id` → `lib/web-editor/editor/Editor.vue` |
-| Draft preview | `/admin/pages/:id/preview` |
+| Draft preview (the saved working copy) | `/admin/pages/:id/preview` |
+| Save vs publish (draft/live snapshot, header Save / Publish / Publish changes / Unpublish) | ARCHITECTURE.md → Draft vs live; `stores/editor.ts`, `composables/usePublishState.ts` |
 | Page settings (slug, meta title/description, tags, publish) | right sidebar when no block is selected (`editor/PageSettings.vue`) |
 | Public page rendering | Server-rendered on content change, hydrated: `frontend/src/public/` (Vue SSR) via the `renderer` service; API `RenderWorker` + `PublicHtmlController` (see ARCHITECTURE.md → Public pages) |
 | Pages API | `api-backend/Controllers/PagesController.cs` (staff), `PublicPagesController.cs` (anonymous) |

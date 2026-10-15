@@ -40,13 +40,15 @@ PagesController        /api/pages            [Authorize(StaffOnly)], rate limit 
                                  ImportPageResult(page, missingMediaIds) | 400 — always a new draft, never overwrites
   PUT    /{id}                 UpdatePageRequest(title?, slug?, blocks?, metaTitle?, metaDescription?, status?, tags?) —
                                  partial, all validated before any change, one SaveChanges → PageSummary (slim: no
-                                 blocks echo) | 400 (incl. locked slug, non-editable blocks) | 404 | 409. status sets/
-                                 clears PublishedAt; tags = full replace (tags only: UpdatedAt untouched, no render)
+                                 blocks echo) | 400 (incl. locked slug, non-editable blocks) | 404 | 409. Content →
+                                 working copy only; status published = copy it to the live snapshot (also when already
+                                 published) + PublishedAt, draft = unpublish (snapshot kept, PublishedAt null); tags = full
+                                 replace (tags only: UpdatedAt untouched, no render)
   POST   /{id}/duplicate       → 201 PageDetail: draft "{title} (copy)", slug UniqueSlugFrom(source slug), blocks/meta/tags
   DELETE /{id}                 → 204 | 400 (locked config page) | 404
   POST/PUT carry [RequestSizeLimit(2 MB)] (global cap is 64 KB)
 PublicPagesController  /api/public/pages     [AllowAnonymous], rate limit "pages"
-  GET    /{slug}               → PublicPage (published only) | 404
+  GET    /{slug}               → PublicPage (published only, the live snapshot) | 404
 PublicStateController  /api/public/state     [AllowAnonymous], rate limit "pages"
   GET    / | /{slug}           → PublicStateResponse(page? (published, null when unknown/draft/no slug), menu? (main),
                                  config) — menu + config from PublicCache; the public shell, data-refresh, dev SSR
@@ -58,6 +60,12 @@ TagsController         /api/tags             [Authorize(StaffOnly)], rate limit 
   ≤20 per page. `PageService.UpdateAsync` (tags sent) diffs against the page's `page_tags`, creates missing tags and,
   when one was removed, deletes tags left without pages in one `DELETE` (also after deleting a tagged page), so
   `/api/tags` only lists tags in use. `PageSummary`/`PageDetail.Tags` sorted by name.
+- **Draft vs live** (why: `claude-context/ARCHITECTURE.md` → Draft vs live): `Title`/`MetaTitle`/`MetaDescription`/`Blocks` =
+  working copy; `PublishedTitle`/`PublishedMetaTitle`/`PublishedMetaDescription`/`PublishedBlocks` = live snapshot (null
+  title/blocks = never published; slug + tags are live). Public readers go through `PageService.Live` (projection, never
+  loads the working tree), menus/footer/render worker use `PublishedTitle`; `GetAsync` (editor) projects without
+  `PublishedBlocks`. `HasUnpublishedChanges` (stored) = published && working ≠ snapshot (`MatchesSnapshot`: block JSON),
+  recomputed when content or status is written. Tests that publish via the DB must set `PublishedTitle`/`PublishedBlocks`.
 - `Models/Pages/Page.cs` (entity, `PageStatus` Draft|Published stored as string, `BlockCount` = `PageService.CountBlocks`
   of `Blocks`, set on every blocks write + by the seeder; `AddPageBlockCount.BackfillSql` = the same count in SQL, so
   `GET /api/pages` never reads `Blocks`), `Models/Pages/Block.cs`
@@ -76,9 +84,9 @@ TagsController         /api/tags             [Authorize(StaffOnly)], rate limit 
   `Services/Cms/DefaultPages.cs` = the default config's pages: **Home** (`home`, served at `/`), **Privacy Policy**
   (`privacy-policy`), **Legal** (`legal`), the last two `footer`. Block attributes must match the frontend blocks'
   `attributes` (`blocks/*/index.ts`).
-- Render triggers of `PUT` (`PageUpdate(Summary, Renamed, StatusChanged, ContentChanged)`): status changed →
-  `Page(id)` + `Refresh()`; else published + a non-tag field sent → `Page(id)` (+ `Refresh()` when renamed); tags only →
-  nothing.
+- Render triggers of `PUT` (`PageUpdate(Summary, StatusChanged, LiveChanged, LiveRenamed)`): status changed →
+  `Page(id)` + `Refresh()`; else live changed (publish changes, slug of a published page) → `Page(id)` (+ `Refresh()` when
+  the live title/slug changed); saves of the working copy and tags → nothing.
 - Import (`PageService.ImportAsync`, page export files of `frontend/src/lib/pageExport.ts`): same validation as create +
   meta + tags (validated before anything is written); slug = the given one (or the title) through `UniqueSlugFromAsync`,
   so taken/reserved/invalid slugs get a free variant instead of 409. Shares `CreateDraftAsync` with `DuplicateAsync`. `missingMediaIds` = `mediaId`s
@@ -149,7 +157,7 @@ PublicHtmlController   /api/public/html      [AllowAnonymous], rate limit "pages
 ```
 - `Services/Rendering/`: `RenderQueue` (`IRenderQueue`, called by controllers after a successful write: `Page(id)` =
   that page's content (stale → shell until re-rendered), `Refresh()` = main menu, site config, media alt/delete, page
-  title/slug change (`PageService.UpdateAsync` → `PageUpdate(Page, Renamed)`), publish/unpublish (+ `Page(id)`)/delete
+  live title/slug change (`PageService.UpdateAsync` → `PageUpdate.LiveRenamed`), publish/unpublish (+ `Page(id)`)/delete
   (all pages, stored HTML stays servable, marked right away; the worker's widening is only a safety net), `All()` = backup restore only (everything stale); `Requeue(id?)` = worker-internal, no invalidation),
   `RenderStatus` (singleton: renderer `CurrentVersion`, in-memory `NotFoundHtml`, change timestamps → `IsFresh`,
   refresh marker → `NeedsRefresh`: `PublicHtmlController` adds `data-refresh` to `#__STATE__` and an `-r` ETag suffix,
@@ -395,13 +403,13 @@ RequestVerificationRequest  Email
 ConfirmEmailRequest         Token
 ForgotPasswordRequest       Email
 ResetPasswordRequest        Token, NewPassword(min8)
-PageSummary / PageDetail    Id, Title, Slug, Status, Tags, BlockCount | Blocks + Media, CreatedAt, UpdatedAt, PublishedAt,
-                            Locked (summary) | Template?, Locked, Editable (detail; from the instance config), MetaTitle, MetaDescription
+PageSummary / PageDetail    Id, Title, Slug, Status, Tags, BlockCount | Blocks + Media (working copy), CreatedAt, UpdatedAt,
+                            PublishedAt, HasUnpublishedChanges, Locked (summary) | Template?, Locked, Editable (detail; from the instance config), MetaTitle, MetaDescription
 CreatePageRequest           Title(≤200), Slug?(≤100), Blocks?
 ImportPageRequest           Title, Slug?, Blocks, MetaTitle?, MetaDescription?, Tags?   ImportPageResult  Page, MissingMediaIds
 UpdatePageRequest           Title?, Slug?, Blocks?, MetaTitle?(≤70), MetaDescription?(≤200), Status?, Tags?(≤20)   (partial)
 PublicStateResponse         Page?, Menu?, Config
-PublicPage                  Title, Slug, Blocks, Media, PublishedAt, Template?, MetaTitle, MetaDescription
+PublicPage                  Title, Slug, Blocks, Media, PublishedAt, Template?, MetaTitle, MetaDescription (live snapshot)
 InstanceConfig              PublicAuth, ExcludedBlocks, SiteConfig (SiteConfigSchema: fields[], groups[])
 TagUsage                    Name, PageCount
 MenuDetail                  Id, Handle, Items, CreatedAt, UpdatedAt
@@ -434,7 +442,8 @@ logo/icon → media_assets SET NULL; SiteConfigValues: `Values` jsonb replaced t
 AddPageMetaAndShareImage: `pages.MetaTitle/MetaDescription`, `site_config.ShareImageMediaId`), `tags` + `page_tags` and `menus` (AddTagsAndMenus: unique tag `Name`,
 unique menu `Handle`, `Items` jsonb), `rendered_pages` (AddRenderedPages: PK/FK `PageId` → pages CASCADE),
 `backup_settings` (AddBackupSettings: singleton, enums as strings, no FKs), `pages.BlockCount` (AddPageBlockCount: backfilled
-by a recursive CTE)
+by a recursive CTE), `pages.Published*` + `HasUnpublishedChanges` (PublishedSnapshot: published pages backfilled with
+snapshot = working copy)
 Constraints: email unique per table; refresh_token + verification_token owner check
 (CustomerId XOR StaffId non-null)
 
