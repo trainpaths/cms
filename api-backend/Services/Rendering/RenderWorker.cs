@@ -137,17 +137,18 @@ public sealed class RenderWorker(
 		{
 			var pages = await db.Pages.AsNoTracking()
 				.Where(p => ids.Contains(p.Id))
-				.Select(p => new
+				.LeftJoin(db.RenderedPages, p => p.Id, r => r.PageId, (p, r) => new
 				{
 					p.Status,
 					p.Title,
 					p.Slug,
-					Rendered = db.RenderedPages.Where(r => r.PageId == p.Id).Select(r => new { r.Title, r.Slug }).FirstOrDefault(),
+					RenderedTitle = r == null ? null : r.Title,
+					RenderedSlug = r == null ? null : r.Slug,
 				})
 				.ToListAsync(ct);
+			// no row → null title/slug → mismatch
 			all = pages.Count < ids.Count
-				|| pages.Any(p => p.Status != PageStatus.Published || p.Rendered is null
-					|| p.Rendered.Title != p.Title || p.Rendered.Slug != p.Slug);
+				|| pages.Any(p => p.Status != PageStatus.Published || p.RenderedTitle != p.Title || p.RenderedSlug != p.Slug);
 		}
 
 		var cache = services.GetRequiredService<PublicCache>();
