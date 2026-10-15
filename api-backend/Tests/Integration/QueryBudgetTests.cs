@@ -42,6 +42,8 @@ public class QueryBudgetTests : IClassFixture<ApiFactory>
 
 		var count = await CountAsync(HttpMethod.Get, $"/api/public/html/{slug}", null);
 		count.Should().Be(1, Counter.Log);
+		// a join on the PK, not a window function over every stored page's HTML
+		Counter.Log.Should().NotContain("ROW_NUMBER");
 		(await CountAsync(HttpMethod.Get, "/api/public/html/no-such-page", null)).Should().Be(1, Counter.Log);
 	}
 

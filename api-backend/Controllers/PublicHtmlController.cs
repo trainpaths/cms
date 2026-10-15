@@ -54,33 +54,27 @@ public class PublicHtmlController(AppDbContext db, RenderStatus status) : Contro
 		// only HTML of the current renderer build: older builds reference asset files that no longer exist. null
 		// version (renderer not reached yet) matches no row → shell
 		var version = status.CurrentVersion;
+		// left join on the PK (a correlated FirstOrDefault becomes a ROW_NUMBER() over the whole table)
 		var page = await db.Pages.AsNoTracking()
 			.Where(p => p.Slug == slug && p.Status == PageStatus.Published)
-			.Select(p => new
-			{
-				p.Id,
-				Rendered = db.RenderedPages
-					.Where(r => r.PageId == p.Id && r.RendererVersion == version)
-					.Select(r => new { r.Html, r.RenderedAt })
-					.FirstOrDefault(),
-			})
+			.LeftJoin(db.RenderedPages.Where(r => r.RendererVersion == version), p => p.Id, r => r.PageId,
+				(p, r) => new { p.Id, Html = r == null ? null : r.Html, RenderedAt = r == null ? (DateTimeOffset?)null : r.RenderedAt })
 			.FirstOrDefaultAsync(ct);
 		if (page is null)
 			return Html(status.NotFoundHtml ?? FallbackNotFound, 404);
 
-		var rendered = page.Rendered;
-		if (rendered is null || !status.IsFresh(page.Id, rendered.RenderedAt))
+		if (page.Html is null || page.RenderedAt is not { } renderedAt || !status.IsFresh(page.Id, renderedAt))
 			return Accel(PublicShell);
 
 		// rendered before a quiet change (menu, site config, ...): the client refetches those after hydration. The
 		// suffix keeps browsers from reusing a marked copy after the re-render, or an unmarked one during it.
-		var refresh = status.NeedsRefresh(rendered.RenderedAt);
-		var etag = $"W/\"{rendered.RenderedAt.UtcTicks:x}{(refresh ? "-r" : "")}\"";
+		var refresh = status.NeedsRefresh(renderedAt);
+		var etag = $"W/\"{renderedAt.UtcTicks:x}{(refresh ? "-r" : "")}\"";
 		Response.Headers.ETag = etag;
 		Response.Headers.CacheControl = "no-cache";
 		if (Request.Headers.IfNoneMatch == etag)
 			return StatusCode(304);
-		return Html(refresh ? MarkRefresh(rendered.Html) : rendered.Html, 200);
+		return Html(refresh ? MarkRefresh(page.Html) : page.Html, 200);
 	}
 
 	/// <summary><c>#__STATE__</c> is the contract between <c>public.html</c> and the client (first occurrence).</summary>
