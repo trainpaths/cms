@@ -51,21 +51,24 @@ public class PublicHtmlController(AppDbContext db, RenderStatus status) : Contro
 
 	private async Task<IActionResult> ServeAsync(string slug, CancellationToken ct)
 	{
+		// only HTML of the current renderer build: older builds reference asset files that no longer exist. null
+		// version (renderer not reached yet) matches no row → shell
+		var version = status.CurrentVersion;
 		var page = await db.Pages.AsNoTracking()
 			.Where(p => p.Slug == slug && p.Status == PageStatus.Published)
-			.Select(p => new { p.Id })
+			.Select(p => new
+			{
+				p.Id,
+				Rendered = db.RenderedPages
+					.Where(r => r.PageId == p.Id && r.RendererVersion == version)
+					.Select(r => new { r.Html, r.RenderedAt })
+					.FirstOrDefault(),
+			})
 			.FirstOrDefaultAsync(ct);
 		if (page is null)
 			return Html(status.NotFoundHtml ?? FallbackNotFound, 404);
 
-		// only HTML of the current renderer build: older builds reference asset files that no longer exist
-		var version = status.CurrentVersion;
-		var rendered = version is null
-			? null
-			: await db.RenderedPages.AsNoTracking()
-				.Where(r => r.PageId == page.Id && r.RendererVersion == version)
-				.Select(r => new { r.Html, r.RenderedAt })
-				.FirstOrDefaultAsync(ct);
+		var rendered = page.Rendered;
 		if (rendered is null || !status.IsFresh(page.Id, rendered.RenderedAt))
 			return Accel(PublicShell);
 

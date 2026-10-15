@@ -54,7 +54,9 @@ TagsController         /api/tags             [Authorize(StaffOnly)], rate limit 
   lowercase; single words, whitespace inside → 400; unique) + `PageTag` junction (`page_tags`, cascade both ways). `TagLimits`: ≤32 chars,
   ≤20 per page. `PageService.SetTagsAsync` creates missing tags and deletes tags left without pages (also after a
   page delete), so `/api/tags` only lists tags in use. `PageSummary`/`PageDetail.Tags` sorted by name.
-- `Models/Pages/Page.cs` (entity, `PageStatus` Draft|Published stored as string), `Models/Pages/Block.cs`
+- `Models/Pages/Page.cs` (entity, `PageStatus` Draft|Published stored as string, `BlockCount` = `PageService.CountBlocks`
+  of `Blocks`, set on every blocks write + by the seeder; `AddPageBlockCount.BackfillSql` = the same count in SQL, so
+  `GET /api/pages` never reads `Blocks`), `Models/Pages/Block.cs`
   (recursive: `Id`, `Name`, `Dictionary<string, JsonElement> Attributes`, `List<Block> InnerBlocks`).
 - `Services/Pages/PageService.cs` returns `PageResult<T>` (`PageError`: NotFound | SlugTaken | Invalid);
   the controller maps errors to ProblemDetails. Status is exposed as lowercase `"draft"|"published"`.
@@ -134,7 +136,7 @@ Why + full flow: `claude-context/ARCHITECTURE.md` → Public pages.
 ```
 PublicHtmlController   /api/public/html      [AllowAnonymous], rate limit "pages", not in OpenAPI (nginx-facing)
   GET|HEAD /                   → home page HTML
-  GET|HEAD /{slug}             → 200 stored HTML (weak ETag, no-cache, 304) | 404 rendered not-found page
+  GET|HEAD /{slug}             → (one query: page + current rendered row) 200 stored HTML (weak ETag, no-cache, 304) | 404 rendered not-found page
                                  | 301 → / (`home`) | X-Accel-Redirect: /index.html (ReservedSlugs → admin SPA)
                                  | X-Accel-Redirect: /public.html (no fresh HTML yet → client-rendered shell)
 ```
@@ -145,10 +147,14 @@ PublicHtmlController   /api/public/html      [AllowAnonymous], rate limit "pages
   `RenderStatus` (singleton: renderer `CurrentVersion`, in-memory `NotFoundHtml`, change timestamps → `IsFresh`,
   refresh marker → `NeedsRefresh`: `PublicHtmlController` adds `data-refresh` to `#__STATE__` and an `-r` ETag suffix,
   the public client then refetches the main menu + site config),
+  `PublicCache` (singleton: resolved public menus by handle + `SiteConfigResponse`, generation-checked; invalidated by
+  `RenderQueue.Refresh()/All()` and every `MenusController` write; readers: public menu/site-config endpoints, the
+  worker; tests writing the DB directly must `Invalidate()`),
   `HttpRendererClient` (`IRendererClient`, typed HttpClient to the Node renderer; `RenderState` mirrors
   `frontend/src/public/state.ts`), `RenderWorker` (hosted: debounced render loop + version check every
-  `CheckIntervalSeconds`; failures retry after 30 s; chunks of 20 pages: `PageService.GetPublishedByIdsAsync`, rows
-  loaded and committed per chunk, row by row after an FK violation; logs the duration).
+  `CheckIntervalSeconds`; failures retry after 30 s; widen check = one query over the queued ids; chunks of 20 pages:
+  `PageService.GetPublishedByIdsAsync`, existing row ids (old HTML never read: `Update` of a fresh entity), committed per
+  chunk, row by row after an FK violation; logs the duration).
 - `Models/Rendering/RenderedPage.cs` → `rendered_pages` (PK/FK `PageId`, cascade): `Html`, the `Title`/`Slug` it was
   rendered with (a difference widens a one-page job to all), `RendererVersion`, `RenderedAt` (= render start, compared
   with change timestamps). Only rows of the current renderer version and newer than the last change are served.
@@ -272,6 +278,7 @@ PageService           Scoped      CMS pages: CRUD, publish, slug rules, block va
 MediaService          Scoped      media library: upload validation, alt, delete, resolve block media refs
 SiteConfigService       Scoped      site config: get / replace, field + media validation
 RenderQueue/IRenderQueue, RenderStatus  Singleton  public-page render jobs + freshness state
+PublicCache           Singleton   public menus + site config (invalidated by Refresh()/All() + menu writes)
 IRendererClient       Typed HttpClient  HttpRendererClient → Node renderer (Renderer:BaseUrl)
 RenderWorker          Hosted      renders published pages to rendered_pages
 MenuService           Scoped      menus: CRUD, item validation, public resolution, main-menu seed
@@ -418,7 +425,8 @@ UpdateSiteConfigRequest   Fields {key: value}, Groups {key: ConfigEntryValue[]},
 logo/icon → media_assets SET NULL; SiteConfigValues: `Values` jsonb replaced the free `Fields` list, old data dropped;
 AddPageMetaAndShareImage: `pages.MetaTitle/MetaDescription`, `site_config.ShareImageMediaId`), `tags` + `page_tags` and `menus` (AddTagsAndMenus: unique tag `Name`,
 unique menu `Handle`, `Items` jsonb), `rendered_pages` (AddRenderedPages: PK/FK `PageId` → pages CASCADE),
-`backup_settings` (AddBackupSettings: singleton, enums as strings, no FKs)
+`backup_settings` (AddBackupSettings: singleton, enums as strings, no FKs), `pages.BlockCount` (AddPageBlockCount: backfilled
+by a recursive CTE)
 Constraints: email unique per table; refresh_token + verification_token owner check
 (CustomerId XOR StaffId non-null)
 
@@ -462,6 +470,8 @@ Integration/          ApiFactory.cs (WebApplicationFactory + Testcontainers Post
                       BootstrapTests, TokenCleanupTests, PagesTests, MediaTests, SiteConfigTests, TagsTests, MenusTests (AuthCookies.cs: refresh-cookie helpers),
                       InstanceConfigTests (locked/template pages, footer links, public auth off; own CmsConfig via ConfigureTestServices),
                       RenderingTests (FakeRenderer replaces IRendererClient; fast debounce/check config),
+                      QueryBudgetTests (QueryCounter: DbCommandInterceptor in ApiFactory counting commands of requests
+                      with the X-Count-Queries header; public cache invalidation, BlockCount + backfill SQL),
                       BackupsTests (auth, settings, names, busy 409, 503 gate, invalid uploads, newer schema refused),
                       BackupRoundTripTests (real pg tools, own DB: backup → change → restore → undo, download/upload,
                       scheduled run + retention; skipped without pg_dump)

@@ -178,6 +178,7 @@ builder.Services.Configure<RendererOptions>(builder.Configuration.GetSection(Ren
 builder.Services.AddSingleton<RenderQueue>();
 builder.Services.AddSingleton<IRenderQueue>(sp => sp.GetRequiredService<RenderQueue>());
 builder.Services.AddSingleton<RenderStatus>();
+builder.Services.AddSingleton<PublicCache>();
 builder.Services.AddHttpClient<IRendererClient, HttpRendererClient>((sp, http) =>
 {
 	var baseUrl = sp.GetRequiredService<IOptions<RendererOptions>>().Value.BaseUrl;

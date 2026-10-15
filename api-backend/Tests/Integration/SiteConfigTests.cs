@@ -8,6 +8,7 @@ using api_backend.Models.Dto;
 using api_backend.Models.Site;
 using api_backend.Services.Auth.JWT;
 using api_backend.Services.Cms;
+using api_backend.Services.Rendering;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
@@ -55,6 +56,8 @@ public class SiteConfigTests : IClassFixture<ApiFactory>
 		{
 			var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 			await db.SiteConfig.ExecuteDeleteAsync(Ct);
+			// written behind the API's back
+			scope.ServiceProvider.GetRequiredService<PublicCache>().Invalidate();
 		}
 
 		var config = await _client.GetFromJsonAsync<SiteConfigResponse>(PublicBase, Ct);

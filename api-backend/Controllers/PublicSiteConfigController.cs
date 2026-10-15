@@ -1,5 +1,6 @@
 using api_backend.Models.Auth.JWT;
 using api_backend.Models.Dto;
+using api_backend.Services.Rendering;
 using api_backend.Services.Site;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,9 +13,9 @@ namespace api_backend.Controllers;
 [Route("api/public/site-config")]
 [AllowAnonymous]
 [EnableRateLimiting(RateLimitPolicies.Pages)]
-public class PublicSiteConfigController(SiteConfigService siteConfig) : ControllerBase
+public class PublicSiteConfigController(SiteConfigService siteConfig, PublicCache cache) : ControllerBase
 {
 	[HttpGet]
 	public async Task<ActionResult<SiteConfigResponse>> Get(CancellationToken ct) =>
-		Ok(await siteConfig.GetAsync(ct));
+		Ok(await cache.SiteConfigAsync(siteConfig, ct));
 }

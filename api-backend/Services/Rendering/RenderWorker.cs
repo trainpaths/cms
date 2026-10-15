@@ -135,47 +135,41 @@ public sealed class RenderWorker(
 		// marks other pages for the client refresh at save time).
 		if (!all)
 		{
-			foreach (var id in ids)
-			{
-				var page = await db.Pages.AsNoTracking()
-					.Where(p => p.Id == id)
-					.Select(p => new { p.Status, p.Title, p.Slug })
-					.FirstOrDefaultAsync(ct);
-				if (page?.Status != PageStatus.Published)
+			var pages = await db.Pages.AsNoTracking()
+				.Where(p => ids.Contains(p.Id))
+				.Select(p => new
 				{
-					all = true;
-					break;
-				}
-				var rendered = await db.RenderedPages.AsNoTracking()
-					.Where(r => r.PageId == id)
-					.Select(r => new { r.Title, r.Slug })
-					.FirstOrDefaultAsync(ct);
-				if (rendered is null || rendered.Title != page.Title || rendered.Slug != page.Slug)
-				{
-					all = true;
-					break;
-				}
-			}
+					p.Status,
+					p.Title,
+					p.Slug,
+					Rendered = db.RenderedPages.Where(r => r.PageId == p.Id).Select(r => new { r.Title, r.Slug }).FirstOrDefault(),
+				})
+				.ToListAsync(ct);
+			all = pages.Count < ids.Count
+				|| pages.Any(p => p.Status != PageStatus.Published || p.Rendered is null
+					|| p.Rendered.Title != p.Title || p.Rendered.Slug != p.Slug);
 		}
 
-		var menu = await services.GetRequiredService<MenuService>().GetPublicAsync(Menu.MainHandle, ct);
-		var config = await services.GetRequiredService<SiteConfigService>().GetAsync(ct);
-		var pages = services.GetRequiredService<PageService>();
+		var cache = services.GetRequiredService<PublicCache>();
+		var menu = await cache.MenuAsync(services.GetRequiredService<MenuService>(), Menu.MainHandle, ct);
+		var config = await cache.SiteConfigAsync(services.GetRequiredService<SiteConfigService>(), ct);
+		var pageService = services.GetRequiredService<PageService>();
 		var baseUrl = options.Value.PublicBaseUrl.TrimEnd('/');
 
 		var stopwatch = Stopwatch.StartNew();
-		var targets = await db.Pages.AsNoTracking()
-			.Where(p => all ? p.Status == PageStatus.Published : ids.Contains(p.Id))
-			.Select(p => p.Id)
-			.ToListAsync(ct);
+		// one page: GetPublishedByIdsAsync drops it when unpublished meanwhile
+		var targets = all
+			? await db.Pages.AsNoTracking().Where(p => p.Status == PageStatus.Published).Select(p => p.Id).ToListAsync(ct)
+			: ids.ToList();
 
-		// per chunk: pages + media refs in two queries, existing rows in one, one commit (one POST per page: Node
-		// renders one at a time anyway). A page is fresh once its chunk commits.
+		// per chunk: pages + media refs in two queries, existing row ids in one, one commit (one POST per page: Node
+		// renders one at a time anyway). Existing rows are updated without reading them (Apply sets every column),
+		// so the old HTML never leaves the DB. A page is fresh once its chunk commits.
 		var count = 0;
 		foreach (var chunk in targets.Chunk(ChunkSize))
 		{
-			var published = await pages.GetPublishedByIdsAsync(chunk, ct);
-			var rows = await db.RenderedPages.Where(r => chunk.Contains(r.PageId)).ToDictionaryAsync(r => r.PageId, ct);
+			var published = await pageService.GetPublishedByIdsAsync(chunk, ct);
+			var existing = await db.RenderedPages.Where(r => chunk.Contains(r.PageId)).Select(r => r.PageId).ToHashSetAsync(ct);
 			var results = new List<(Guid Id, PublicPage Page, RenderResult Result)>();
 			foreach (var id in chunk)
 			{
@@ -183,12 +177,7 @@ public sealed class RenderWorker(
 				if (!published.TryGetValue(id, out var page)) continue;
 				var result = await renderer.RenderAsync(new RenderState(page.Slug, page, menu, config, baseUrl), ct);
 				results.Add((id, page, result));
-				if (!rows.TryGetValue(id, out var row))
-				{
-					row = NewRow(id);
-					db.RenderedPages.Add(row);
-				}
-				Apply(row, page, result, startedAt);
+				Track(db, id, existing.Contains(id), page, result, startedAt);
 			}
 			try
 			{
@@ -220,13 +209,8 @@ public sealed class RenderWorker(
 		AppDbContext db, Guid pageId, PublicPage page, RenderResult result, DateTimeOffset renderedAt,
 		CancellationToken ct)
 	{
-		var row = await db.RenderedPages.FirstOrDefaultAsync(r => r.PageId == pageId, ct);
-		if (row is null)
-		{
-			row = NewRow(pageId);
-			db.RenderedPages.Add(row);
-		}
-		Apply(row, page, result, renderedAt);
+		var exists = await db.RenderedPages.AnyAsync(r => r.PageId == pageId, ct);
+		Track(db, pageId, exists, page, result, renderedAt);
 		try
 		{
 			await db.SaveChangesAsync(ct);
@@ -238,8 +222,15 @@ public sealed class RenderWorker(
 		}
 	}
 
-	private static RenderedPage NewRow(Guid pageId) =>
-		new() { PageId = pageId, Html = "", Title = "", Slug = "", RendererVersion = "" };
+	/// <summary>Insert, or a full-row update of an existing row without loading it.</summary>
+	private static void Track(
+		AppDbContext db, Guid pageId, bool exists, PublicPage page, RenderResult result, DateTimeOffset renderedAt)
+	{
+		var row = new RenderedPage { PageId = pageId, Html = "", Title = "", Slug = "", RendererVersion = "" };
+		Apply(row, page, result, renderedAt);
+		if (exists) db.RenderedPages.Update(row);
+		else db.RenderedPages.Add(row);
+	}
 
 	private static void Apply(RenderedPage row, PublicPage page, RenderResult result, DateTimeOffset renderedAt)
 	{

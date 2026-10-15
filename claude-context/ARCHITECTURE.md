@@ -148,7 +148,7 @@ renders it. Nesting ≤10, ≤200 items.
 ## Tags: normalized tables
 Tags are shared across pages and need counts ("most popular") and lookups, so they're rows (`tags`) with a
 `page_tags` junction rather than a jsonb array on the page. Tags are single words (no spaces); the name is normalized before
-it's stored (trim, lowercase) so one unique column suffices. Tags without pages are deleted on every tag write/page delete,
+it's stored (trim, lowercase) so one unique column suffices. Tags without pages are deleted (one `DELETE`) after a tag write/page delete that removed one,
 so autocomplete only offers tags in use. Setting tags doesn't bump `UpdatedAt` (the pages list sorts by it).
 
 ## Block contract (frontend ⇄ API ⇄ DB)
@@ -212,8 +212,14 @@ staff save ─► API IRenderQueue ─► RenderWorker ─POST /render─► ren
     state, breaking `public.html` change for instances).
   - `All()` (restore only) marks everything stale: `rendered_pages` isn't in backups, but a render in flight during
     the restore could store pre-restore HTML afterwards.
-- **Batched writes:** the worker processes pages in chunks of 20: pages + media refs in two queries, existing rows in
-  one, one `POST /render` per page (Node renders one at a time; a batch endpoint would hit the 4 MB body limit), one
+- **Public cache** (`PublicCache`, in memory, same one-instance assumption): resolved public menus by handle + the
+  site config, read by the public menu/site-config endpoints and every render batch. `Refresh()`/`All()` invalidate it
+  (they already fire on every write that changes the main menu, the site config, a page title/slug, publish state or
+  media), `MenusController` on any menu write (other menus don't go through `Refresh()`). Entries carry a generation, so
+  a load racing an invalidation is never served. Stored HTML/page JSON is deliberately **not** cached: the stored-HTML
+  lookup is one indexed query (page + current `rendered_pages` row joined).
+- **Batched writes:** the worker processes pages in chunks of 20: pages + media refs in two queries, existing row ids in
+  one (rows are updated without reading the old HTML), one `POST /render` per page (Node renders one at a time; a batch endpoint would hit the 4 MB body limit), one
   commit per chunk (a page is fresh once its chunk commits). An FK violation (page deleted mid-render) falls back to
   row-by-row for that chunk. The log line `Rendered {n} public page(s) in {ms} ms` shows what a full render costs.
 - **Deploys:** stored HTML names hashed asset files of its build. The renderer reports a version (hash of

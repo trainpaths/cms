@@ -50,8 +50,11 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 			if (descriptor != null)
 				services.Remove(descriptor);
 
-			services.AddDbContext<AppDbContext>(options =>
-				options.UseNpgsql(_postgres.GetConnectionString()));
+			services.AddHttpContextAccessor();
+			services.AddSingleton<QueryCounter>();
+			services.AddDbContext<AppDbContext>((sp, options) => options
+				.UseNpgsql(_postgres.GetConnectionString())
+				.AddInterceptors(sp.GetRequiredService<QueryCounter>()));
 
 			services.RemoveAll<IEmailSender>();
 			services.AddSingleton<IEmailSender>(EmailSender);

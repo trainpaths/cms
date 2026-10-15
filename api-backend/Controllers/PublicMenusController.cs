@@ -1,6 +1,7 @@
 using api_backend.Models.Auth.JWT;
 using api_backend.Models.Dto;
 using api_backend.Services.Menus;
+using api_backend.Services.Rendering;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -12,12 +13,12 @@ namespace api_backend.Controllers;
 [Route("api/public/menus")]
 [AllowAnonymous]
 [EnableRateLimiting(RateLimitPolicies.Pages)]
-public class PublicMenusController(MenuService menus) : ControllerBase
+public class PublicMenusController(MenuService menus, PublicCache cache) : ControllerBase
 {
 	[HttpGet("{handle}")]
 	public async Task<ActionResult<PublicMenu>> Get(string handle, CancellationToken ct)
 	{
-		var menu = await menus.GetPublicAsync(handle, ct);
+		var menu = await cache.MenuAsync(menus, handle, ct);
 		return menu is null ? Problem(statusCode: 404, title: "Menu not found.") : Ok(menu);
 	}
 }
