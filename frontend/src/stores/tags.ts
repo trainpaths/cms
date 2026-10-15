@@ -5,7 +5,8 @@ import { getApiTags } from '../api/sdk.gen'
 
 /**
  * Tags in use (most used first): autocomplete, the "popular" row and the tag filter. Fetched once per session;
- * tag writes call `refresh()` since they change the counts.
+ * tag writes change the counts: `refresh()` where they show (pages list), `invalidate()` elsewhere (editor), so the
+ * next `load()` refetches.
  */
 export const useTagsStore = defineStore('tags', () => {
 	const usage = ref<TagUsage[]>([])
@@ -15,9 +16,14 @@ export const useTagsStore = defineStore('tags', () => {
 	const names = computed(() => usage.value.map((t) => t.name))
 	const popular = computed(() => names.value.slice(0, 3))
 
-	/** First call fetches, later calls reuse the result. Never throws. */
+	/** First call (or the first after `invalidate()`) fetches, later calls reuse the result. Never throws. */
 	function load(): Promise<void> {
 		return loaded ? Promise.resolve() : refresh()
+	}
+
+	/** Marks the counts stale without fetching: the next `load()` refetches. */
+	function invalidate(): void {
+		loaded = false
 	}
 
 	/** Refetches; concurrent calls share one request. Never throws. */
@@ -32,5 +38,5 @@ export const useTagsStore = defineStore('tags', () => {
 		return pending
 	}
 
-	return { usage, names, popular, load, refresh }
+	return { usage, names, popular, load, refresh, invalidate }
 })

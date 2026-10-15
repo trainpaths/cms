@@ -20,24 +20,22 @@ export function devSsr(apiTarget) {
 				const path = (req.url ?? '').split('?')[0]
 				if (req.method !== 'GET' || !(path === '/' || /^\/[a-z0-9-]+$/.test(path))) return next()
 				const slug = path === '/' ? 'home' : path.slice(1)
-				/** @param {string} url */
-				const get = (url) =>
-					fetch(apiTarget() + url).then(
-						(r) => (r.ok ? r.json() : null),
-						() => null,
-					)
 				try {
-					const page = await get(`/api/public/pages/${slug}`)
-					if (!page) return next()
-					const [menu, config] = await Promise.all([
-						get('/api/public/menus/main'),
-						get('/api/public/site-config'),
-					])
+					// page + main menu + site config in one call
+					const state = /** @type {{ page?: unknown, menu?: unknown, config?: unknown } | null} */ (
+						await fetch(`${apiTarget()}/api/public/state/${slug}`).then(
+							(r) => (r.ok ? r.json() : null),
+							() => null,
+						)
+					)
+					if (!state?.page) return next()
+					const { page, menu = null, config = null } = state
 					const html = await readFile(resolve(server.config.root, 'public.html'), 'utf8')
 					const template = await server.transformIndexHtml(req.url ?? '/', html)
-					const { render } = /** @type {{ render: (state: unknown) => Promise<import('./template.js').Rendered> }} */ (
-						await server.ssrLoadModule('/src/entry-server.ts')
-					)
+					const { render } =
+						/** @type {{ render: (state: unknown) => Promise<import('./template.js').Rendered> }} */ (
+							await server.ssrLoadModule('/src/entry-server.ts')
+						)
 					const rendered = await render({ slug, page, menu, config, baseUrl: `http://${req.headers.host}` })
 					res.setHeader('Content-Type', 'text/html; charset=utf-8')
 					res.end(splice(template, rendered))

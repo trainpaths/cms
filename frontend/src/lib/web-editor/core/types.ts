@@ -65,7 +65,6 @@ export type {
 	SiteConfigResponse as SiteConfig,
 	TagUsage,
 	MenuItem,
-	MenuSummary,
 	MenuDetail,
 	PublicMenu,
 	PublicMenuItem,

@@ -1,26 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { Alert, Button, FormField, Input, Modal, Switch, TagInput } from '@trainpaths/nb-ui'
-import {
-	postApiPagesByIdPublish,
-	postApiPagesByIdUnpublish,
-	putApiPagesById,
-	putApiPagesByIdTags,
-} from '../api/sdk.gen'
-import {
-	TAG_MAX_LENGTH,
-	TAGS_PER_PAGE,
-	errorMessage,
-	normalizeTag,
-	type PageDetail,
-	type PageSummary,
-} from '../lib/web-editor'
+import { putApiPagesById } from '../api/sdk.gen'
+import type { UpdatePageRequest } from '../api/types.gen'
+import { TAG_MAX_LENGTH, TAGS_PER_PAGE, errorMessage, normalizeTag, type PageSummary } from '../lib/web-editor'
 import { usePagesStore } from '../stores/pages'
 import { useTagsStore } from '../stores/tags'
 
 /**
- * Pages-list modal: slug, publish status and tags of one page. Save sends only what changed, each through its
- * own endpoint (slug, publish/unpublish, tags), in that order; a failing step stops the rest.
+ * Pages-list modal: slug, publish status and tags of one page. Save sends only what changed, in one PUT (all or
+ * nothing).
  */
 const props = defineProps<{ page: PageSummary }>()
 const emit = defineEmits<{ close: [] }>()
@@ -55,22 +44,16 @@ async function save() {
 	saving.value = true
 	error.value = null
 	const id = props.page.id
-	let latest: PageDetail | null = null
+	const tagsChanged = JSON.stringify(tags.value) !== JSON.stringify(props.page.tags)
+	const body: UpdatePageRequest = {}
+	if (normalizedSlug.value !== props.page.slug) body.slug = normalizedSlug.value
+	if (published.value !== (props.page.status === 'published')) body.status = published.value ? 'published' : 'draft'
+	if (tagsChanged) body.tags = tags.value
 	try {
-		if (normalizedSlug.value !== props.page.slug)
-			latest = (await putApiPagesById({ path: { id }, body: { slug: normalizedSlug.value } })).data
-		if (published.value !== (props.page.status === 'published'))
-			latest = (await (published.value ? postApiPagesByIdPublish : postApiPagesByIdUnpublish)({ path: { id } }))
-				.data
-		if (JSON.stringify(tags.value) !== JSON.stringify(props.page.tags)) {
-			latest = (await putApiPagesByIdTags({ path: { id }, body: { tags: tags.value } })).data
-			tagsStore.refresh()
-		}
-		if (latest) pages.remember(latest)
+		pages.applySaved((await putApiPagesById({ path: { id }, body })).data)
+		if (tagsChanged) tagsStore.refresh()
 		emit('close')
 	} catch (err: unknown) {
-		// earlier steps may have saved: keep the list in sync with them
-		if (latest) pages.remember(latest)
 		error.value = errorMessage(err, 'Failed to save page')
 	} finally {
 		saving.value = false

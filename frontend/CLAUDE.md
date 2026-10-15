@@ -78,9 +78,11 @@ head.ts             <head> tags: title via documentTitle ("{metaTitle} - {firmNa
                     paragraph), canonical, OG/Twitter (og:title = meta or page title, og:site_name = firm, og:image =
                     first image, else config.shareImage), icon; serializeState
 entry-server.ts     render(state) → {head, html, state}   (built with `vite build --ssr` → dist-ssr/)
-entry-client.ts     hydrates from #__STATE__; without it (shell) fetches page/menu/config, adds head tags; after mounting,
-                    a `data-refresh` on #__STATE__ (stored HTML older than a menu/config change, set by the API during
-                    the quiet re-render) → refresh('main') + site config refresh() (not awaited, no hydration mismatch)
+entry-client.ts     hydrates from #__STATE__; without it (shell) fetches page + menu + config in one
+                    `GET /api/public/state/{slug}`, adds head tags; after mounting, a `data-refresh` on #__STATE__ (stored
+                    HTML older than a menu/config change, set by the API during the quiet re-render) → refresh.ts
+refresh.ts          refreshSurroundings(pinia): one `GET /api/public/state` (no slug) → seeds menus.main + the site
+                    config store, keeps both on failure (not awaited, no hydration mismatch)
 render.test.ts      Vitest: render output, escaping (vitest.config.ts: vue + nbUi only)
 server/render-server.js  renderer service: POST /render, GET /version (hash of template + SSR bundle), /health; reads
                          dist/public.html + dist-ssr/entry-server.js from the working directory (= instance app root)
@@ -88,7 +90,7 @@ server/template.js       splice(): fills public.html placeholders (function repl
 server/site-lang.js      build time, part of cms(): parseConfig (JSONC), site.lang (validated) → <html lang>
 server/theme.js          build time, part of cms(): theme.colors (validated like the API) → themeStyle <style> + palette
 server/dev-ssr.js        part of cms(): dev server-renders published pages via the app's /src/entry-server.ts
-                         (falls through to the SPA otherwise)
+                         (one `/api/public/state/{slug}` fetch; falls through to the SPA when page is null)
 ```
 - Public code imports **directly** (`../lib/web-editor/view/ViewBlockList.vue`, `../stores/media`), type-only from the
   barrel: the barrel pulls the editor into the public bundle.
@@ -151,11 +153,11 @@ weekday for weekly + biweekly, day 1-28 for monthly), storage folder (`hostPath`
 | `/forgot-password` | `ForgotPassword.vue` | guest |
 | `/reset-password` | `ResetPassword.vue` (`?token=`) | public |
 | `/verify-email` | `VerifyEmail.vue` (`?token=`) | public |
-| `/admin/pages` | `admin/Pages.vue` (list with search / tag filter / status filter (All statuses / Published / Not published; only here, `v-model:status` shows it) / updatedAt sort toggle (clock + arrow icon button, down = newest first) (`PageFilters` + `composables/usePageFilter.ts`), tag chips, row = view/preview link + "…" `components/ActionMenu.vue` (Edit → modal `components/PageEditDialog.vue` (slug, published, tags; saves only what changed via slug PUT → publish/unpublish → tags PUT), Duplicate (fetch + `POST /api/pages/import` as "<title> (copy)", slug `-2`…, stays on the list), Export (JSON of the saved page), Delete (confirm; disabled for locked pages)); "+ New Page" opens a row: Import (primary outline, upload icon + "Import", icon only below sm; file → `parsePageExport` → `POST /api/pages/import` → editor of the new draft, toast warns about missing images), title input, Create, cancel (x icon)) | staff |
+| `/admin/pages` | `admin/Pages.vue` (list with search / tag filter / status filter (All statuses / Published / Not published; only here, `v-model:status` shows it) / updatedAt sort toggle (clock + arrow icon button, down = newest first) (`PageFilters` + `composables/usePageFilter.ts`), tag chips, row = view/preview link + "…" `components/ActionMenu.vue` (Edit → modal `components/PageEditDialog.vue` (slug, published, tags; one PUT with only what changed, all or nothing), Duplicate (`POST /api/pages/{id}/duplicate`: "<title> (copy)", slug `-2`…, stays on the list), Export (JSON of the saved page), Delete (confirm; disabled for locked pages)); "+ New Page" opens a row: Import (primary outline, upload icon + "Import", icon only below sm; file → `parsePageExport` → `POST /api/pages/import` → editor of the new draft, toast warns about missing images), title input, Create, cancel (x icon)) | staff |
 | `/admin/pages/:id` | `admin/PageEditor.vue` → `WebEditor` (no nav) | staff |
 | `/admin/pages/:id/preview` | `admin/PagePreview.vue` (draft preview, no nav) | staff |
 | `/admin/media` | `admin/Media.vue` (rename + alt; library grid 3/4/6 cols; details in a fixed right sidebar on lg+, modal below; click again to close) | staff |
-| `/admin/menus` | `admin/Menus.vue` (menu list by handle (new menu = handle only, normalized, immutable), tree editor `components/menus/` (item = label + optional link: typing a page's path `/slug` links that page by id, else a `/path` or http(s) URL; drag & drop of rows and of picker pages via `useMenuDrag` (module-level state): 10px `MenuDropSlot` lines between rows (no layout shift, like BlockList), row middle = nest inside (bottom shade); ↑↓⇤⇥ buttons; ops in `lib/menus/tree.ts`), published-page picker with `PageFilters` (click + or drag); explicit Save; switching menus / leaving with changes → `UnsavedChangesDialog`) | staff |
+| `/admin/menus` | `admin/Menus.vue` (menu list by handle, all menus with items from one `GET /api/menus` (switching applies from the list, no fetch; save replaces the entry) (new menu = handle only, normalized, immutable), tree editor `components/menus/` (item = label + optional link: typing a page's path `/slug` links that page by id, else a `/path` or http(s) URL; drag & drop of rows and of picker pages via `useMenuDrag` (module-level state): 10px `MenuDropSlot` lines between rows (no layout shift, like BlockList), row middle = nest inside (bottom shade); ↑↓⇤⇥ buttons; ops in `lib/menus/tree.ts`), published-page picker with `PageFilters` (click + or drag); explicit Save; switching menus / leaving with changes → `UnsavedChangesDialog`) | staff |
 | `/admin/configuration` | `admin/Configuration.vue` (logo, icon, share image (og:image fallback); site config shaped by `useInstanceStore().config.siteConfig`: fixed fields form, one section per group with `components/config/ConfigEntryRow.vue` rows (preset = fixed name/type, custom = name + type select, address = 4 inputs; reorder, remove unless required), "+ <preset>" / "+ Custom entry" buttons; duplicate names block saving; logo + icon via `ConfigImageField`; leave-guard when dirty) | staff |
 | `/:slug` | `public-page`: hand-off like `home` (links in SiteHeader/Footer, Pages list) | public |
 | `/:pathMatch(.*)*` | `NotFound.vue` | public |
@@ -196,20 +198,26 @@ their server-rendered `<head>` (`headTags()` in `src/public/head.ts`, falls back
   localStorage holds `auth_type` only.
 - `src/stores/editor.ts` — `useEditorStore` (block tree, history, page state, saving).
 - `src/stores/pages.ts` — `usePagesStore`: stale-while-revalidate cache. `items`/`loaded`/`load()` (list renders
-  cached, refreshes in the background), detail cache `cached(id)` (returns a copy) / `remember` / `prefetch`
-  (on page-row hover/focus) / `add` / `forget`. The editor store shows the cached detail first, then applies
-  the server copy only if nothing was edited meanwhile, and remembers every save/publish/slug response.
+  cached, refreshes in the background), detail cache `cached(id)` (returns a copy) / `remember` (full details: GET,
+  create, import, duplicate) / `applySaved(summary, patch?)` (a PUT's `PageSummary` → list row; summary fields minus
+  `blockCount` + the sent fields merged into a cached detail) / `prefetch` (row focus, or ~150 ms pointer rest: hover
+  intent, sweeping fetches nothing) / `add` / `forget`. The editor store shows the cached detail first, then applies
+  the server copy only if nothing was edited meanwhile. Vitest `stores/pages.test.ts`.
+- Editor saving (`stores/editor.ts`): every write is `PUT /api/pages/{id}`; `setPublished` sets a `pendingStatus` the
+  serialized save loop sends with the on-screen content (one PUT); `updateSlug` / `updateTags` send `{slug}` / `{tags}`.
 - `src/stores/siteConfig.ts` — `useSiteConfigStore`: public site `config`, `load()` once (single-flight, never throws),
   `refresh()` (refetch, keeps the current value on failure; `data-refresh` pages), `set()` after the admin form saves.
 - `src/stores/instance.ts` — `useInstanceStore`: `config` = `InstanceConfig` (publicAuth, excludedBlocks, siteConfig) +
   `isOffered(blockName)` (not in excludedBlocks), from
   `/api/public/instance`, `load()` once in `createAdmin()` (failure keeps the API defaults: auth off, nothing hidden).
 - `src/stores/tags.ts` — `useTagsStore`: tags in use + page counts (`names`, `popular` = top 3); `load()` once per
-  session, `refresh()` after every tag write.
+  session (again after `invalidate()`); the pages list `refresh()`es after its tag-changing actions (filter shows the
+  counts), the editor only `invalidate()`s.
 - `src/stores/menus.ts` — `usePublicMenusStore`: public menus by handle, `load(handle)` once per session (never throws),
   `refresh(handle)` (refetch, keeps the current entry on failure; `data-refresh` pages), `invalidate()` after the admin
-  saves a menu. Both refreshes: Vitest `stores/refresh.test.ts`.
-- `src/stores/media.ts` — `useMediaStore`: library `items` (`load`, `upload`, `update` (alt + optional fileName), `remove`) and a
+  saves a menu. `data-refresh` pages go through `public/refresh.ts` (one state call) instead. Vitest `stores/refresh.test.ts`.
+- `src/stores/media.ts` — `useMediaStore`: library `items` (`load` once per session (the picker), `load(true)` = the
+  Media view's explicit refresh, `upload`, `update` (alt + optional fileName), `remove`) and a
   `byId` cache that image blocks render from (seeded from page responses via `seed`).
 
 ## Token refresh (`src/interceptors.ts`)

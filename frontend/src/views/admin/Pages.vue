@@ -1,8 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onBeforeUnmount, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Alert, Badge, Button, EmptyState, Icon, Input, Loading, useConfirm, useToast } from '@trainpaths/nb-ui'
-import { deleteApiPagesById, getApiPagesById, postApiPages, postApiPagesImport } from '../../api/sdk.gen'
+import {
+	deleteApiPagesById,
+	getApiPagesById,
+	postApiPages,
+	postApiPagesByIdDuplicate,
+	postApiPagesImport,
+} from '../../api/sdk.gen'
 import { errorMessage as describe, type PageSummary } from '../../lib/web-editor'
 import { usePagesStore } from '../../stores/pages'
 import { useTagsStore } from '../../stores/tags'
@@ -95,27 +101,28 @@ async function handleExportPage(page: PageSummary) {
 	}
 }
 
-// a new draft with the same content via the import endpoint (slug gets -2, -3…); stays on the list
+// a draft copy made by the API ("<title> (copy)", slug -2, -3…; no blocks round trip); stays on the list
 async function handleDuplicatePage(page: PageSummary) {
 	try {
-		const { data: source } = await getApiPagesById({ path: { id: page.id } })
-		const { data } = await postApiPagesImport({
-			body: {
-				title: `${source.title} (copy)`.slice(0, 200),
-				slug: source.slug,
-				blocks: source.blocks,
-				metaTitle: source.metaTitle,
-				metaDescription: source.metaDescription,
-				tags: source.tags,
-			},
-		})
-		pages.add(data.page)
+		const { data } = await postApiPagesByIdDuplicate({ path: { id: page.id } })
+		pages.add(data)
 		tagsStore.refresh()
-		toast({ message: `Duplicated as draft /${data.page.slug}`, type: 'success' })
+		toast({ message: `Duplicated as draft /${data.slug}`, type: 'success' })
 	} catch (err: unknown) {
 		errorMessage.value = describe(err, 'Failed to duplicate page')
 	}
 }
+
+// hover intent: only a pointer resting on a row prefetches its detail, sweeping over the list fetches nothing
+let hoverTimer: ReturnType<typeof setTimeout> | undefined
+function hoverStart(id: string) {
+	clearTimeout(hoverTimer)
+	hoverTimer = setTimeout(() => pages.prefetch(id), 150)
+}
+function hoverEnd() {
+	clearTimeout(hoverTimer)
+}
+onBeforeUnmount(hoverEnd)
 
 function rowActions(page: PageSummary): ActionItem[] {
 	return [
@@ -278,7 +285,8 @@ async function handleDeletePage(page: PageSummary) {
 				:key="page.id"
 				class="mb-8 flex w-full cursor-pointer items-center rounded-md border border-gray-200 bg-white hover:bg-gray-100"
 				data-testid="page-row"
-				@pointerenter="pages.prefetch(page.id)"
+				@pointerenter="hoverStart(page.id)"
+				@pointerleave="hoverEnd"
 				@focusin="pages.prefetch(page.id)"
 			>
 				<RouterLink

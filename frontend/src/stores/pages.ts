@@ -6,7 +6,7 @@ import { getApiPages, getApiPagesById } from '../api/sdk.gen'
 /**
  * Client-side page cache (stale-while-revalidate). Views render cached data at once and refresh in
  * the background, so revisiting the list or reopening a page doesn't wait for the API.
- * Details are seeded by prefetch (hovering a row) and by the editor's loads/saves.
+ * Details are seeded by prefetch (resting on a row) and by the editor's loads; saves merge into them (applySaved).
  */
 export const usePagesStore = defineStore('pages', () => {
 	const items = ref<PageSummary[]>([])
@@ -51,11 +51,27 @@ export const usePagesStore = defineStore('pages', () => {
 		let pending = prefetching.get(id)
 		if (!pending) {
 			pending = getApiPagesById({ path: { id } })
-				.then(({ data }) => remember(data), () => {})
+				.then(
+					({ data }) => remember(data),
+					() => {},
+				)
 				.finally(() => prefetching.delete(id))
 			prefetching.set(id, pending)
 		}
 		return pending
+	}
+
+	/**
+	 * After a page PUT (which answers with the summary only): replaces the list row and merges the summary's fields
+	 * plus `patch` (what was sent, e.g. the blocks) into a cached detail.
+	 */
+	function applySaved(summary: PageSummary, patch: Partial<PageDetail> = {}): void {
+		const index = items.value.findIndex((p) => p.id === summary.id)
+		if (index >= 0) items.value[index] = summary
+		const detail = details.get(summary.id)
+		if (!detail) return
+		const { blockCount: _blockCount, ...fields } = summary
+		details.set(summary.id, copy({ ...detail, ...fields, ...patch }))
 	}
 
 	function add(page: PageDetail): void {
@@ -68,5 +84,5 @@ export const usePagesStore = defineStore('pages', () => {
 		items.value = items.value.filter((p) => p.id !== id)
 	}
 
-	return { items, loaded, load, cached, remember, prefetch, add, forget }
+	return { items, loaded, load, cached, remember, applySaved, prefetch, add, forget }
 })
