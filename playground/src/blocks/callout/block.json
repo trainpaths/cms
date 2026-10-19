@@ -4,6 +4,7 @@
 	"category": "text",
 	"description": "Highlighted note (instance block of the playground)",
 	"supports": {
-		"width": true
+		"width": true,
+		"backgroundColor": ["primary", "accent"]
 	}
 }

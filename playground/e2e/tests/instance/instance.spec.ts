@@ -21,6 +21,20 @@ test('instance block: inserted in the editor, server-rendered on the public site
 	expect(html).toContain('class="site-theme')
 })
 
+test('block.json colour list: the callout offers only primary + accent backgrounds', async ({ staffPage: page }) => {
+	await createPage(page)
+	await insertBlock(page, 'Callout')
+	const background = page
+		.locator('aside')
+		.last()
+		.locator('div.border-b', { has: page.getByText('Background Color', { exact: true }) })
+	const swatches = background.getByTestId('color-swatch')
+	await expect(swatches).toHaveCount(2)
+	await expect(swatches.nth(0)).toHaveAttribute('title', 'primary')
+	await expect(swatches.nth(1)).toHaveAttribute('title', 'accent')
+	await expect(background.getByRole('button', { name: 'None', exact: true })).toBeVisible()
+})
+
 test('component override: the playground NotFound wraps the original', async ({ page }) => {
 	const response = await page.goto('/no-such-page-instance')
 	expect(response?.status()).toBe(404)
