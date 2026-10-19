@@ -15,7 +15,7 @@ const emit = defineEmits<{
 }>()
 
 const store = useEditorStore()
-const { published: isPublished, canPublish, publishLabel, publishHint } = usePublishState()
+const { published: isPublished, canPublish, publishLabel, publishHint, publish, unpublish } = usePublishState()
 
 const viewHref = computed(() =>
 	isPublished.value ? `${props.publicBase}/${store.pageSlug}` : (props.previewPath ?? ''),
@@ -86,16 +86,16 @@ function handleTitleBlur() {
 				v-if="viewHref"
 				:to="viewHref"
 				class="header-icon-btn no-underline"
-				:title="isPublished ? 'View' : 'Preview'"
-				:aria-label="isPublished ? 'View' : 'Preview'"
+				:title="isPublished ? 'View page' : 'Preview draft'"
+				:aria-label="isPublished ? 'View page' : 'Preview draft'"
 				target="_blank"
 			>
-				<Icon name="external-link" :size="18" />
+				<Icon name="eye" :size="18" />
 			</RouterLink>
 			<button
 				class="flex size-32 shrink-0 cursor-pointer items-center justify-center rounded border-none bg-primary md:size-36 text-white hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
 				:class="{ 'animate-pulse': store.saveStatus === 'saving' }"
-				:title="store.saveStatus === 'saving' ? 'Saving...' : store.isDirty ? 'Save' : 'No unsaved changes'"
+				:title="store.saveStatus === 'saving' ? 'Saving...' : store.isDirty ? 'Save (Ctrl+S)' : 'No unsaved changes'"
 				aria-label="Save"
 				data-testid="page-save"
 				:disabled="!store.isDirty || store.saveStatus === 'saving'"
@@ -109,7 +109,7 @@ function handleTitleBlur() {
 				:title="publishHint"
 				:disabled="!canPublish"
 				data-testid="page-publish"
-				@click="store.publish()"
+				@click="publish"
 			>
 				{{ publishLabel }}
 			</button>
@@ -121,7 +121,7 @@ function handleTitleBlur() {
 					:aria-label="publishLabel"
 					:disabled="!canPublish"
 					data-testid="page-publish-icon"
-					@click="store.publish()"
+					@click="publish"
 				>
 					<Icon
 						name="globe"
@@ -130,24 +130,19 @@ function handleTitleBlur() {
 				</button>
 			</span>
 			<!-- < md: hidden, the Page tab has it -->
-			<span
+			<button
 				v-if="isPublished"
-				class="contents max-md:hidden"
+				class="flex cursor-pointer items-center gap-6 rounded border border-gray-300 bg-white px-12 py-6 text-sm whitespace-nowrap text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white max-md:hidden"
+				:disabled="store.publishing"
+				data-testid="page-unpublish"
+				@click="unpublish"
 			>
-				<button
-					class="header-icon-btn disabled:cursor-not-allowed disabled:opacity-40"
-					title="Unpublish"
-					aria-label="Unpublish"
-					:disabled="store.publishing"
-					data-testid="page-unpublish"
-					@click="store.unpublish()"
-				>
-					<Icon
-						name="globe-slash"
-						:size="18"
-					/>
-				</button>
-			</span>
+				<Icon
+					name="globe-slash"
+					:size="16"
+				/>
+				Unpublish
+			</button>
 			<button
 				class="header-icon-btn"
 				:class="{ 'header-icon-btn--active': store.showSettingsPanel }"
