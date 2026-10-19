@@ -1,5 +1,6 @@
 using api_backend.Models.Auth.JWT;
 using api_backend.Models.Pages;
+using api_backend.Services.Cms;
 using api_backend.Services.Pages;
 using api_backend.Services.Rendering;
 using Microsoft.AspNetCore.Authorization;
@@ -10,17 +11,18 @@ using Microsoft.EntityFrameworkCore;
 namespace api_backend.Controllers;
 
 /// <summary>
-/// Server-rendered public pages. nginx proxies <c>/</c> and every single-segment path here; the response is
-/// the stored HTML (<see cref="RenderWorker"/>), or an <c>X-Accel-Redirect</c> telling nginx which static file
-/// to serve instead: <c>/index.html</c> (admin SPA) for app routes, <c>/public.html</c> (client-rendered shell)
-/// when no current HTML exists yet. Not part of the OpenAPI contract (HTML, not for the generated client).
+/// Server-rendered public pages and customer screens. nginx proxies <c>/</c>, every single-segment path and
+/// <c>/user/{name}</c> here; the response is the stored HTML (<see cref="RenderWorker"/>), or an
+/// <c>X-Accel-Redirect</c> telling nginx which static file to serve instead: <c>/index.html</c> (admin SPA) for its
+/// routes, <c>/public.html</c> (client-rendered shell) when no current HTML exists yet. Not part of the OpenAPI
+/// contract (HTML, not for the generated client).
 /// </summary>
 [ApiController]
 [Route("api/public/html")]
 [AllowAnonymous]
 [EnableRateLimiting(RateLimitPolicies.Pages)]
 [ApiExplorerSettings(IgnoreApi = true)]
-public class PublicHtmlController(AppDbContext db, RenderStatus status) : ControllerBase
+public class PublicHtmlController(AppDbContext db, RenderStatus status, CmsConfig cms) : ControllerBase
 {
 	public const string SpaShell = "/index.html";
 	public const string PublicShell = "/public.html";
@@ -44,9 +46,31 @@ public class PublicHtmlController(AppDbContext db, RenderStatus status) : Contro
 		slug = slug.ToLowerInvariant();
 		if (slug == "home")
 			return RedirectPermanent("/");
+		if (PublicScreens.Contains(slug))
+			return Screen(slug);
 		if (PageService.ReservedSlugs.Contains(slug))
 			return Accel(SpaShell);
 		return await ServeAsync(slug, ct);
+	}
+
+	/// <summary>Customer account pages (<c>/user/profile</c>, ...).</summary>
+	[HttpGet("user/{name}"), HttpHead("user/{name}")]
+	public IActionResult Account(string name) => Screen($"user/{name.ToLowerInvariant()}");
+
+	/// <summary>
+	/// A customer screen: the same HTML for everyone (account data loads client-side), rendered with every full
+	/// render. Public auth off or unknown → 404 like an unknown page.
+	/// </summary>
+	private IActionResult Screen(string path)
+	{
+		if (!cms.PublicAuth || !PublicScreens.Contains(path))
+			return Html(status.NotFoundHtml ?? FallbackNotFound, 404);
+		// not rendered yet (startup, renderer down) or by an older build (missing assets): the shell renders it
+		if (status.Screens is not { } screens || screens.Version != status.CurrentVersion
+			|| !screens.Html.TryGetValue(path, out var html))
+			return Accel(PublicShell);
+		Response.Headers.CacheControl = "no-cache";
+		return Html(status.NeedsRefresh(screens.RenderedAt) ? MarkRefresh(html) : html, 200);
 	}
 
 	private async Task<IActionResult> ServeAsync(string slug, CancellationToken ct)

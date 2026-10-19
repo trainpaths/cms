@@ -31,6 +31,8 @@ public class PageServiceTests
 	[InlineData("-a", false)]
 	[InlineData("login", false)]
 	[InlineData("admin", false)]
+	[InlineData("user", false)]
+	[InlineData("profile", true)]
 	public void ValidateSlug_EnforcesFormatAndReservedWords(string slug, bool valid) =>
 		(PageService.ValidateSlug(slug) is null).Should().Be(valid);
 

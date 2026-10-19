@@ -3,6 +3,7 @@ using api_backend.Models.Dto;
 using api_backend.Models.Menus;
 using api_backend.Models.Pages;
 using api_backend.Models.Rendering;
+using api_backend.Services.Cms;
 using api_backend.Services.Menus;
 using api_backend.Services.Pages;
 using api_backend.Services.Site;
@@ -15,10 +16,12 @@ namespace api_backend.Services.Rendering;
 /// Pre-renders published pages to HTML (stored in <c>rendered_pages</c>, served by <c>PublicHtmlController</c>)
 /// so nothing renders at visitor request time. Driven by <see cref="RenderQueue"/> (content changes) and a
 /// periodic check that re-renders everything when the renderer's version changed (frontend deploy) or a
-/// published page has no current HTML (renderer was down, fresh install).
+/// published page has no current HTML (renderer was down, fresh install). Full renders also produce the in-memory
+/// not-found page and customer screens.
 /// </summary>
 public sealed class RenderWorker(
 	RenderQueue queue,
+	CmsConfig cms,
 	IRendererClient renderer,
 	RenderStatus status,
 	IServiceScopeFactory scopeFactory,
@@ -113,7 +116,7 @@ public sealed class RenderWorker(
 			p => p.Status == PageStatus.Published
 				 && !db.RenderedPages.Any(r => r.PageId == p.Id && r.RendererVersion == version), ct);
 
-		if (changed || stale || status.NotFoundHtml is null)
+		if (changed || stale || status.NotFoundHtml is null || status.Screens is null)
 		{
 			if (changed) logger.LogInformation("Renderer version {Version}; re-rendering public pages.", version);
 			queue.Requeue(null);
@@ -199,7 +202,13 @@ public sealed class RenderWorker(
 		{
 			await db.RenderedPages.Where(r => r.Page!.Status != PageStatus.Published).ExecuteDeleteAsync(ct);
 			var notFound = await renderer.RenderAsync(new RenderState("not-found", null, menu, config, baseUrl), ct);
+			var screens = new Dictionary<string, string>();
+			// never served with public auth off (PublicHtmlController): don't render them either
+			if (cms.PublicAuth)
+				foreach (var path in PublicScreens.All)
+					screens[path] = (await renderer.RenderAsync(new RenderState(path, null, menu, config, baseUrl), ct)).Html;
 			status.NotFoundHtml = notFound.Html;
+			status.Screens = new RenderedScreens(screens, startedAt, notFound.Version);
 			status.CurrentVersion = notFound.Version;
 		}
 		logger.LogInformation("Rendered {Count} public page(s){All} in {Milliseconds} ms.",

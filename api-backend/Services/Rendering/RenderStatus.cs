@@ -14,6 +14,12 @@ public sealed class RenderStatus
 	/// <summary>Not-found page (rendered with the current menu/footer); kept in memory, re-rendered with everything.</summary>
 	public volatile string? NotFoundHtml;
 
+	/// <summary>
+	/// Customer screens by <see cref="PublicScreens"/> path, like <see cref="NotFoundHtml"/> (empty with public auth
+	/// off). Replaced as a whole.
+	/// </summary>
+	public volatile RenderedScreens? Screens;
+
 	private long _allChangedAt;
 	private long _refreshedAt;
 	private readonly ConcurrentDictionary<Guid, DateTimeOffset> _pageChangedAt = new();
@@ -48,3 +54,9 @@ public sealed class RenderStatus
 	public bool NeedsRefresh(DateTimeOffset renderedAt) =>
 		renderedAt.UtcTicks <= Interlocked.Read(ref _refreshedAt);
 }
+
+/// <summary>
+/// Screen HTML of one full render; <see cref="RenderedAt"/> = its start (refresh marker check), <see cref="Version"/> =
+/// the renderer build (served only while current).
+/// </summary>
+public sealed record RenderedScreens(IReadOnlyDictionary<string, string> Html, DateTimeOffset RenderedAt, string Version);

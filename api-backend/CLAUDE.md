@@ -72,8 +72,8 @@ TagsController         /api/tags             [Authorize(StaffOnly)], rate limit 
 - `Services/Pages/PageService.cs` returns `PageResult<T>` (`PageError`: NotFound | SlugTaken | Invalid);
   the controller maps errors to ProblemDetails. Status is exposed as lowercase `"draft"|"published"`.
 - Slugs: kebab-case, ≤100, generated from title when omitted (dedup `-2`, `-3`), `ReservedSlugs` rejected
-  (frontend top-level routes — keep in sync with `frontend/src/router/index.ts`; `PublicHtmlController` also uses
-  the list to send those paths to the admin SPA).
+  (customer screens incl. `user` for `/user/*`, admin SPA routes, API paths — keep in sync with `PublicScreens` and
+  `frontend/src/router/index.ts`; `PublicHtmlController` also uses the list to send non-screen ones to the admin SPA).
 - Block validation (`ValidateBlocks`): id non-empty ≤64, name `^[a-z0-9-]+$`, attributes primitive only,
   depth ≤10, ≤2000 blocks; null attributes/innerBlocks normalized to empty. No knowledge of block types.
 - `AppDbContext` maps `Blocks` via a System.Text.Json value converter (camelCase) + ValueComparer, column type `jsonb`.
@@ -153,19 +153,25 @@ PublicHtmlController   /api/public/html      [AllowAnonymous], rate limit "pages
   GET|HEAD /{slug}             → (one query: page + current rendered row) 200 stored HTML (weak ETag, no-cache, 304) | 404 rendered not-found page
                                  | 301 → / (`home`) | X-Accel-Redirect: /index.html (ReservedSlugs → admin SPA)
                                  | X-Accel-Redirect: /public.html (no fresh HTML yet → client-rendered shell)
+                                 | customer screen (PublicScreens: login, register, ...) → see below
+  GET|HEAD /user/{name}        → customer account page (user/profile, user/password) | 404 not-found page
+  screens: public auth off or unknown → 404 not-found page; RenderStatus.Screens of the current renderer version →
+           200 (no-cache, data-refresh marker after a quiet change); else → /public.html shell
 ```
 - `Services/Rendering/`: `RenderQueue` (`IRenderQueue`, called by controllers after a successful write: `Page(id)` =
   that page's content (stale → shell until re-rendered), `Refresh()` = main menu, site config, media alt/delete, page
   live title/slug change (`PageService.UpdateAsync` → `PageUpdate.LiveRenamed`), publish/unpublish (+ `Page(id)`)/delete
   (all pages, stored HTML stays servable, marked right away; the worker's widening is only a safety net), `All()` = backup restore only (everything stale); `Requeue(id?)` = worker-internal, no invalidation),
-  `RenderStatus` (singleton: renderer `CurrentVersion`, in-memory `NotFoundHtml`, change timestamps → `IsFresh`,
+  `RenderStatus` (singleton: renderer `CurrentVersion`, in-memory `NotFoundHtml` + `Screens` (`RenderedScreens`: HTML
+  by `PublicScreens` path, render start, version; rendered with every full render, only with public auth), change timestamps → `IsFresh`,
   refresh marker → `NeedsRefresh`: `PublicHtmlController` adds `data-refresh` to `#__STATE__` and an `-r` ETag suffix,
   the public client then refetches the main menu + site config),
   `PublicCache` (singleton: resolved public menus by handle + `SiteConfigResponse`, generation-checked; invalidated by
   `RenderQueue.Refresh()/All()` and every `MenusController` write; readers: public menu/site-config endpoints, the
   worker, `PublicStateController`; tests writing the DB directly must `Invalidate()`),
   `HttpRendererClient` (`IRendererClient`, typed HttpClient to the Node renderer; `RenderState` mirrors
-  `frontend/src/public/state.ts`), `RenderWorker` (hosted: debounced render loop + version check every
+  `frontend/src/public/state.ts`), `PublicScreens` (screen paths; mirrors
+  `frontend/src/public/screens/index.ts`), `RenderWorker` (hosted: debounced render loop + version check every
   `CheckIntervalSeconds`; failures retry after 30 s; widen check = one query over the queued ids; chunks of 20 pages:
   `PageService.GetPublishedByIdsAsync`, existing row ids (old HTML never read: `Update` of a fresh entity), committed per
   chunk, row by row after an FK violation; logs the duration).
