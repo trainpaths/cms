@@ -30,7 +30,7 @@ inner blocks are structured, repeatable children with their own editing (a card'
 ```ts
 {
 	name, title, category: 'text' | 'media' | 'containers' | 'embeds', icon, description?,
-	supports?: { width?, backgroundColor?, textColor? },   // enables settings-panel sections
+	supports?: { width?, backgroundColor?, textColor? },   // enables settings-panel sections; colours: true | ["key", ...]
 	attributes: Record<string, { type, default }>,
 	allowedBlocks?: string[],                              // which children the block accepts
 	parent?: string[],                                     // child-only: allowed parents, never top level
@@ -53,6 +53,9 @@ inner blocks are structured, repeatable children with their own editing (a card'
 - Colour attributes hold a **theme palette key** (`cms.config.json` `theme.colors`, picked in `editor/ColorPicker.vue`),
   rendered as `var(--color-<key>)` by `core/colors.ts` `blockColorStyle` (legacy hex values pass, anything else is
   dropped); `cms()` defines the variables on `.site-theme` (`frontend/server/theme.js`).
+- `supports.backgroundColor` / `textColor`: `true` offers the whole palette, a list of keys only those, in that order
+  (`"backgroundColor": ["primary", "secondary"]`; `core/colors.ts` `paletteFor`, keys missing from the theme are skipped
+  with a dev warning). A stored colour outside the list still renders.
 - Colours are set inline on the wrapper and **inherited**: a block's own default text/bg class
   (`text-gray-700`, `bg-white`, ...) must only apply when the attribute is empty, or it overrides the choice.
 

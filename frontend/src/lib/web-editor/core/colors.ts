@@ -10,6 +10,27 @@ declare const __CMS_THEME_COLORS__: Record<string, string> | undefined
 export const themeColors: Record<string, string> =
 	typeof __CMS_THEME_COLORS__ === 'undefined' ? {} : __CMS_THEME_COLORS__
 
+const warned = new Set<string>()
+
+/**
+ * Palette a block offers for one colour setting (`supports.backgroundColor` / `textColor` in block.json): `true` = all
+ * theme colours, a list = those keys in that order (keys the theme lacks are skipped), else none.
+ */
+export function paletteFor(support: boolean | string[] | undefined): Record<string, string> {
+	if (support === true) return themeColors
+	if (!Array.isArray(support)) return {}
+	const palette: Record<string, string> = {}
+	for (const key of support) {
+		if (key in themeColors) palette[key] = themeColors[key]
+		// once per key: the settings panel calls this on every render
+		else if (import.meta.env.DEV && !warned.has(key)) {
+			warned.add(key)
+			console.warn(`[cms] block colour "${key}" is not in theme.colors`)
+		}
+	}
+	return palette
+}
+
 const KEY = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 // before the palette, colours were free hex values
 const LEGACY_HEX = /^#[0-9a-fA-F]{3,8}$/

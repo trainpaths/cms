@@ -88,7 +88,7 @@ Same folder format as the built-ins (`node_modules/@trainpaths/cms/src/lib/web-e
 ```
 src/blocks/callout/
   block.json        { "name": "callout", "title": "Callout", "category": "text", "description": "...",
-                      "supports": { "width": true, "backgroundColor": true, "textColor": true } }
+                      "supports": { "width": true, "backgroundColor": ["primary", "light"], "textColor": true } }
   index.ts          export default defineBlock(meta, { icon, attributes: { text: { type: 'string', default: '' } },
                       edit, settings? })
   CalloutEdit.vue   editor UI, props { block }
@@ -167,6 +167,8 @@ background colours the editor offers (no custom colours; none configured = no sw
 `--color-<key>` on `.site-theme` into `index.html` + `public.html` (it outranks `.site-theme` rules in `style.css`), so a
 nb-ui token key (`primary`, `accent`, `white`...) also recolours the site's components. Blocks store the key and render
 `var(--color-<key>)`: changing a value recolours existing content; removing a key leaves those blocks uncoloured.
+A block can limit its swatches in `block.json`: `"supports": { "backgroundColor": ["primary", "light"] }` offers only
+those palette keys (in that order), `true` all of them.
 Rebuild the frontend after changing it (the dev server restarts by itself). The palette sets CSS variables only: for
 utilities like `bg-brand` in your own blocks, also declare the token in `@theme`.
 

@@ -5,6 +5,7 @@ import ColorPicker from './ColorPicker.vue'
 import SettingsSection from './SettingsSection.vue'
 import SidebarTabs from './SidebarTabs.vue'
 import { getBlockType } from '../core/blockRegistry'
+import { paletteFor } from '../core/colors'
 import { useEditorStore } from '../../../stores/editor'
 import { useSelection } from '../composables/useSelection'
 
@@ -114,14 +115,20 @@ const widthOptions = [
 				v-if="blockType.supports?.backgroundColor"
 				title="Background Color"
 			>
-				<ColorPicker v-model="backgroundColor" />
+				<ColorPicker
+					v-model="backgroundColor"
+					:colors="paletteFor(blockType.supports.backgroundColor)"
+				/>
 			</SettingsSection>
 
 			<SettingsSection
 				v-if="blockType.supports?.textColor"
 				title="Text Color"
 			>
-				<ColorPicker v-model="textColor" />
+				<ColorPicker
+					v-model="textColor"
+					:colors="paletteFor(blockType.supports.textColor)"
+				/>
 			</SettingsSection>
 
 			<p

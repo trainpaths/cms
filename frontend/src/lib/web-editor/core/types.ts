@@ -7,8 +7,9 @@ export interface AttributeDefinition {
 
 export interface BlockSupports {
 	width?: boolean
-	backgroundColor?: boolean
-	textColor?: boolean
+	/** true = the whole theme palette; a list = only these palette keys, in this order */
+	backgroundColor?: boolean | string[]
+	textColor?: boolean | string[]
 }
 
 export type BlockCategory = 'text' | 'media' | 'containers' | 'embeds'

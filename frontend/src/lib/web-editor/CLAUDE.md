@@ -25,7 +25,9 @@ core/blockViews.ts  getBlockView(name): globs blocks/*/*View.vue + /src/blocks/*
                     site + preview. Separate so the public site has no editor code
 core/defineBlock.ts defineBlock(meta, definition): block.json + editor definition → BlockType
 core/colors.ts      block colours: `themeColors` (palette from `__CMS_THEME_COLORS__`, defined by cms(); {} in Vitest),
-                    colorValue (key → var(--color-key), legacy hex as is, else none), blockColorStyle (both wrappers)
+                    paletteFor(supports.backgroundColor|textColor: true = all, key list = those in order, missing keys
+                    skipped + dev warning once), colorValue (key → var(--color-key), legacy hex as is, else none),
+                    blockColorStyle (both wrappers)
 core/serializer.ts  serialize/parse helpers (unused by the store, kept for import/export)
 blocks/<name>/      block.json (name, title, category, description, supports, parent?) + index.ts (`export default defineBlock(meta, {icon,
                     attributes, edit, settings?})`) + <Name>Edit/View/Icon.vue [+ <Name>Settings.vue]. Picked up
@@ -35,9 +37,10 @@ editor/Editor.vue   editor for ONE page: props pageId/publicBase/previewPath, em
                     flushes unsaved changes on leave; hosts the error toast; non-editable config page
                     (store.pageEditable false) → template notice instead of the BlockList
 editor/EditorHeader.vue   back (stays on phones: the only visible way out), left-sidebar toggle, title (saves on blur; hidden
-                    < sm → PageSettings shows it), undo/redo, View/Preview link, Save (disabled when clean / saving),
-                    Publish ("Publish" / "Publish changes" text button md+, `globe` icon button < md; rules + tooltip from
-                    usePublishState), Unpublish (`globe-slash` icon, only when published, hidden < md: Page tab has it),
+                    < sm → PageSettings shows it), undo/redo, View/Preview link (`eye` icon, like the pages list), Save
+                    (disabled when clean / saving), Publish ("Publish" / "Publish changes" text button md+, `globe` icon
+                    button < md; rules, tooltip + confirm from usePublishState), Unpublish (bordered `globe-slash` +
+                    text button, only when published, hidden < md: Page tab has it),
                     right-sidebar toggle; toggles show open state by colour (`.header-icon-btn--active`, `aria-pressed`)
 editor/EditorLayout.vue   md+: flex row, left LeftSidebar | scrolling <main> (flex-1, min-w-320, `@container/canvas`) | right
                           settings; widths md 240/240, lg 240/280, xl 280/280 (slot + inner panel carry the same classes);
@@ -67,8 +70,9 @@ editor/BlockOutline.vue   read-only tree of the page (BlockOutlineItem recursive
 editor/scrollBlockIntoView.ts  nextTick + scroll canvas `[data-block-id]` to center (inserter + outline)
 editor/BlockInserterSidebar.vue  search + categories; entries click-insert (after selection, climbing out of
                           parents whose allowedBlocks reject the type, then scroll into view) or drag in
-editor/BlockSettingsPanel.vue    right sidebar: "Page" | "Block" tabs (store.rightSidebarTab; selecting a block → Block,
-                          clearing → Page). Block = BlockType.settings + width/background/text colour per `supports`,
+editor/BlockSettingsPanel.vue    right sidebar: "Block" | "Page" tabs (store.rightSidebarTab; selecting a block → Block,
+                          clearing → Page). Block = BlockType.settings + width/background/text colour per `supports`
+                          (ColorPicker gets `paletteFor(supports.…)`),
                           "No block selected" when empty. No deselect button: X only closes the sidebar
 editor/PageSettings.vue   title (< sm only), slug (saved on blur/Enter via store.updateSlug; disabled when locked),
                           "Search & sharing": meta title (≤70) + description (≤200) with counters and the resulting tab
@@ -77,13 +81,15 @@ editor/PageSettings.vue   title (< sm only), slug (saved on blur/Enter via store
                           not part of undo), Status: "Draft" / "Published" / "Published · unpublished changes" +
                           Publish / Publish changes + Unpublish (same rules as the header: usePublishState)
 editor/ToolbarDropdown.vue  compact inline-toolbar choice (current value + menu); paragraph align, heading level
-editor/ColorPicker.vue    theme palette swatches + none (no custom colours), model = palette key
+editor/ColorPicker.vue    palette swatches (`colors` prop, default the whole theme) + none (no custom colours),
+                          model = palette key
 editor/SettingsSection.vue  settings section
 view/ViewBlockList.vue → ViewBlockRenderer.vue (looks up `getBlockView(name)`, core/blockViews.ts) → ViewBlockWrapper.vue
 composables/        usePublishState (publish rules shared by header + Page tab: published, canPublish (saved, nothing
                     unsaved/saving, and draft or unpublished changes), publishLabel, publishHint ("Save first" / "No changes
-                    to publish"), statusText), useIsMobile (shared matchMedia ref, < 768px; store + BlockWrapper), useSelection (select/clear/prev/next/parent/child), useKeyboardNav (arrows, Esc, Delete;
-                    undo Ctrl/Cmd+Z, redo Ctrl/Cmd+Shift+Z or Ctrl+Y), useToolbarPosition,
+                    to publish"), statusText, publish/unpublish = nb-ui useConfirm, then the store action), useIsMobile (shared matchMedia ref, < 768px; store + BlockWrapper), useSelection (select/clear/prev/next/parent/child), useKeyboardNav (arrows, Esc, Delete;
+                    undo Ctrl/Cmd+Z, redo Ctrl/Cmd+Shift+Z or Ctrl+Y, save Ctrl/Cmd+S (also in inputs); ignores keys
+                    from inside `[role=dialog|alertdialog]`), useToolbarPosition,
                     useBlockAttribute (writable computed over one attribute), useAutoResize (textarea grow),
                     useBlockDrag (shared dragged-block + dropTarget state, one indicator app-wide; canDropInto:
                     allowedBlocks/parent/no self-nesting)

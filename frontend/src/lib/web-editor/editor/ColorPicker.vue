@@ -1,11 +1,16 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { themeColors } from '../core/colors'
 
-/** Theme palette swatches (cms.config.json `theme.colors`) + none; the model is the colour key. */
+/**
+ * Palette swatches + none; the model is the colour key. `colors` defaults to the whole theme palette
+ * (cms.config.json `theme.colors`); blocks pass `paletteFor(supports.…)`.
+ */
 
+const props = withDefaults(defineProps<{ colors?: Record<string, string> }>(), { colors: () => themeColors })
 const model = defineModel<string>({ default: '' })
 
-const swatches = Object.entries(themeColors).map(([key, value]) => ({ key, value }))
+const swatches = computed(() => Object.entries(props.colors).map(([key, value]) => ({ key, value })))
 </script>
 
 <template>
