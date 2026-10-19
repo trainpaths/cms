@@ -17,7 +17,8 @@ test.describe('App navigation', () => {
 	})
 
 	test('exit icon logs out', async ({ staffPage: page }) => {
-		await page.getByRole('button', { name: 'Log out' }).click()
+		// the dashboard has its own "Log Out" button too
+		await page.getByTestId('app-nav-logout').click()
 		await expect(page).toHaveURL('/admin/login')
 		await page.goto('/admin')
 		await expect(page).toHaveURL('/admin/login')

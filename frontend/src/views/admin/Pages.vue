@@ -336,7 +336,6 @@ async function handleDeletePage(page: PageSummary) {
 				</Button>
 				<ActionMenu
 					:items="rowActions(page)"
-					:label="`Actions for ${page.title}`"
 					test-id="page-actions"
 					class="mr-2"
 				/>
