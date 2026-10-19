@@ -4,7 +4,7 @@ import { test, expect, createPage, loginAsStaff, staffCredentials, type Page } f
 test.describe.configure({ mode: 'serial' })
 
 async function openBackups(page: Page) {
-	await page.goto('/profile?tab=backups')
+	await page.goto('/admin/profile?tab=backups')
 	await expect(page.getByTestId('backup-settings')).toBeVisible()
 }
 
@@ -13,7 +13,7 @@ function rows(page: Page) {
 }
 
 test('schedule, back up now, download', async ({ staffPage: page }) => {
-	await page.goto('/profile')
+	await page.goto('/admin/profile')
 	await page.getByRole('tab', { name: 'Backups' }).click()
 	await expect(page).toHaveURL(/tab=backups/)
 	// compose default bind mount (CI, default .env)
@@ -47,7 +47,7 @@ test('schedule, back up now, download', async ({ staffPage: page }) => {
 	await expect(card.getByTestId('dashboard-backups-schedule')).toHaveText('Monthly on day 15, 04:00 UTC')
 	await expect(card.getByTestId('dashboard-backups-count')).toContainText(/\d+ backups?/)
 	await card.getByTestId('dashboard-backups-link').click()
-	await expect(page).toHaveURL(/\/profile\?tab=backups/)
+	await expect(page).toHaveURL(/\/admin\/profile\?tab=backups/)
 
 	// leave the schedule off for the rest of the suite
 	await page.getByTestId('backup-interval').selectOption('off')
@@ -100,7 +100,7 @@ test('staff without super admin role see no Backups tab or dashboard card', asyn
 	await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
 	await expect(page.getByTestId('dashboard-backups')).toHaveCount(0)
 
-	await page.goto('/profile?tab=backups')
+	await page.goto('/admin/profile?tab=backups')
 	await expect(page.getByText(email)).toBeVisible()
 	await expect(page.getByRole('tab', { name: 'Backups' })).toHaveCount(0)
 	const editor = await (await request.post('/api/auth/staff/login', { data: { email, password } })).json()

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { uniqueEmail, testPassword } from '../../fixtures/test-utils'
+import { uniqueEmail, registerCustomer, logoutCustomer } from '../../fixtures/test-utils'
 
 test.describe('Forgot Password', () => {
 	test('reachable from the login page', async ({ page }) => {
@@ -12,15 +12,8 @@ test.describe('Forgot Password', () => {
 
 	test('shows neutral confirmation for a registered email', async ({ page }) => {
 		const email = uniqueEmail('forgot-registered')
-
-		await page.goto('/register')
-		await page.getByPlaceholder('Email').fill(email)
-		await page.getByPlaceholder('Password').fill(testPassword())
-		await page.getByRole('button', { name: /Register as customer/i }).click()
-		await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
-
-		await page.goto('/profile')
-		await page.getByRole('button', { name: 'Logout' }).click()
+		await registerCustomer(page, email)
+		await logoutCustomer(page)
 
 		await page.goto('/forgot-password')
 		await page.getByPlaceholder('Email').fill(email)
@@ -37,19 +30,6 @@ test.describe('Forgot Password', () => {
 
 		await expect(page.getByText(/a password reset link has been sent/i)).toBeVisible()
 		await expect(page.getByPlaceholder('Email')).toBeHidden()
-	})
-
-	test('authenticated user is redirected away (guest-only route)', async ({ page }) => {
-		const email = uniqueEmail('forgot-guest')
-
-		await page.goto('/register')
-		await page.getByPlaceholder('Email').fill(email)
-		await page.getByPlaceholder('Password').fill(testPassword())
-		await page.getByRole('button', { name: /Register as customer/i }).click()
-		await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
-
-		await page.goto('/forgot-password')
-		await expect(page).toHaveURL('/admin')
 	})
 
 	test('back-to-login link returns to login', async ({ page }) => {

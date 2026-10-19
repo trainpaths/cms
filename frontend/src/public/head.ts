@@ -1,6 +1,7 @@
 import type { BlockInstance, PublicPage, SiteConfig } from '../lib/web-editor'
 import { firmName } from '../lib/siteConfig'
 import { pathOf, type PublicState } from './state'
+import { screenOf } from './screens'
 
 const DESCRIPTION_MAX = 160
 /**
@@ -23,6 +24,12 @@ export function documentTitle(page: Pick<PublicPage, 'title' | 'metaTitle'> | nu
 
 /** Document title of a public page (also used by client navigation). */
 export const pageTitle = (state: Pick<PublicState, 'page' | 'config'>) => documentTitle(state.page, state.config)
+
+/** Document title of a customer screen: "{screen title} - {firm name}". */
+export function screenTitle(title: string, config: SiteConfig | null): string {
+	const firm = firmName(config)
+	return firm ? `${title} - ${firm}` : title
+}
 
 const escapeAttr = (value: string) =>
 	value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -70,13 +77,15 @@ function previewImage(state: PublicState): string | null {
  * so this is all they see.
  */
 export function headTags(state: PublicState): string {
-	const title = pageTitle(state)
+	const screen = screenOf(state)
+	const title = screen ? screenTitle(screen.title, state.config) : pageTitle(state)
 	const icon = state.config?.icon?.url ?? null
 	const tags = [`<title>${escapeAttr(title)}</title>`]
 
 	if (icon) tags.push(`<link rel="icon" href="${escapeAttr(icon)}">`)
 	else tags.push(`<link rel="icon" type="image/svg+xml" href="${CMS_ICON}">`)
 
+	// not-found + customer screens
 	if (!state.page) {
 		tags.push('<meta name="robots" content="noindex">')
 		return tags.join('\n')

@@ -17,6 +17,7 @@ const tabs = [
 	{ key: 'profile', label: 'Profile' },
 	{ key: 'backups', label: 'Backups' },
 ]
+const loggedOut = () => router.push({ name: 'admin-login' })
 // in the query so a reload or link lands on the same tab
 const tab = computed({
 	get: () => (route.query.tab === 'backups' ? 'backups' : 'profile'),
@@ -37,12 +38,19 @@ const tab = computed({
 			data-testid="profile-tabs"
 		>
 			<template #profile>
-				<ProfileDetails />
+				<ProfileDetails
+					password-to="/admin/change-password"
+					@logged-out="loggedOut"
+				/>
 			</template>
 			<template #backups>
 				<BackupsPanel v-if="tab === 'backups'" />
 			</template>
 		</Tabs>
-		<ProfileDetails v-else />
+		<ProfileDetails
+			v-else
+			password-to="/admin/change-password"
+			@logged-out="loggedOut"
+		/>
 	</div>
 </template>

@@ -1,11 +1,12 @@
 import { createWebHistory } from 'vue-router'
 import { client } from '../api/client.gen'
-import { toApiError } from '../api-error'
-import { getApiPublicStateBySlug } from '../api/sdk.gen'
+import { setupInterceptors } from '../interceptors'
+import { getApiPublicState, getApiPublicStateBySlug } from '../api/sdk.gen'
 import { createPublicApp } from './createPublicApp'
 import { headTags } from './head'
 import type { PublicState } from './state'
 import { refreshSurroundings } from './refresh'
+import { SCREENS } from './screens'
 
 function embeddedState(): PublicState | null {
 	try {
@@ -18,8 +19,10 @@ function embeddedState(): PublicState | null {
 /** Fallback shell (page not rendered yet, or dev without SSR): fetch what the server would have embedded, in one call. */
 async function fetchState(): Promise<PublicState> {
 	const slug = location.pathname.slice(1) || 'home'
+	// screens and deeper paths aren't pages (`user/profile`: no slash in the path parameter); menu + config only
+	const pageless = slug.includes('/') || SCREENS.some((screen) => screen.slug === slug)
 	// failed request → like a missing page (page null → not-found)
-	const fetched = await getApiPublicStateBySlug({ path: { slug } }).then(
+	const fetched = await (pageless ? getApiPublicState() : getApiPublicStateBySlug({ path: { slug } })).then(
 		(r) => r.data,
 		() => null,
 	)
@@ -41,11 +44,15 @@ async function fetchState(): Promise<PublicState> {
  */
 export async function hydratePublic(): Promise<void> {
 	client.setConfig({ baseUrl: '' })
-	// same ApiError as the admin (auth store logout from the admin bar)
-	client.interceptors.error.use(toApiError)
 	const embedded = embeddedState()
 	const state = embedded ?? (await fetchState())
 	const { app, router, pinia } = createPublicApp(state, createWebHistory(), !!embedded)
+	// bearer + refresh for the account screens, same ApiError as the admin. Session gone → customer login (staff
+	// calls here, the admin bar's logout, never refresh)
+	setupInterceptors(() => {
+		if (router.hasRoute('login'))
+			void router.push({ name: 'login', query: { redirect: router.currentRoute.value.fullPath } })
+	})
 	await router.isReady()
 	app.mount('#app')
 	// stored HTML older than a menu/site config change (the API marks it while the quiet re-render runs): refetch

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
+import { useAuthStore } from '../../stores/auth'
 import { storeToRefs } from 'pinia'
 import { Button, Input, Card, Alert, Link, Form } from '@trainpaths/nb-ui'
 
@@ -10,7 +10,10 @@ const router = useRouter()
 const authStore = useAuthStore()
 const { error, loading } = storeToRefs(authStore)
 
-const token = computed(() => (typeof route.query.token === 'string' ? route.query.token : ''))
+// the stored HTML has no query: read the token only after hydration
+const mounted = ref(false)
+onMounted(() => (mounted.value = true))
+const token = computed(() => (mounted.value && typeof route.query.token === 'string' ? route.query.token : ''))
 
 const newPassword = ref('')
 const confirmPassword = ref('')
@@ -50,7 +53,7 @@ async function handleSubmit() {
 		newPassword.value = ''
 		confirmPassword.value = ''
 		setTimeout(() => {
-			router.push('/login')
+			router.push({ name: 'login' })
 		}, 2000)
 	}
 }
@@ -62,7 +65,7 @@ async function handleSubmit() {
 			<h1 class="text-2xl font-bold mb-24">Choose a new password</h1>
 
 			<Alert
-				v-if="!token"
+				v-if="mounted && !token"
 				type="error"
 				class="mb-16"
 			>

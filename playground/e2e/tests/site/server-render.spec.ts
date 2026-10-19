@@ -13,6 +13,19 @@ test.describe('Server-rendered public pages', () => {
 			await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/privacy-policy$/)
 		})
 
+		test('customer screens are in the HTML too', async ({ page }) => {
+			await page.goto('/login')
+			await expect(page.getByRole('heading', { name: 'Login', exact: true })).toBeVisible()
+			await expect(page.getByPlaceholder('Password')).toBeVisible()
+			await expect(page.getByTestId('site-header')).toBeVisible()
+			await expect(page).toHaveTitle(/^Log in/)
+			await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex')
+
+			// account pages: the layout + a shell, the data loads after hydration
+			await page.goto('/user/profile')
+			await expect(page.getByRole('heading', { name: 'Profile' })).toBeVisible()
+		})
+
 		test('unknown pages are a real 404', async ({ page }) => {
 			const response = await page.goto('/no-such-page-e2e')
 			expect(response?.status()).toBe(404)
@@ -37,6 +50,21 @@ test.describe('Server-rendered public pages', () => {
 		await expect(page.getByRole('heading', { name: 'Legal', level: 1 })).toBeVisible()
 		await expect(page).toHaveTitle('Legal')
 		expect(documents).toEqual([])
+		expect(problems).toEqual([])
+	})
+
+	test('customer screens hydrate without mismatches', async ({ page }) => {
+		const problems: string[] = []
+		page.on('console', (msg) => {
+			if (msg.type() === 'error' || /hydration/i.test(msg.text())) problems.push(msg.text())
+		})
+		for (const path of ['/login?redirect=/legal', '/register', '/reset-password?token=abc', '/user/profile']) {
+			await page.goto(path)
+			await expect(page.getByRole('heading').first()).toBeVisible()
+		}
+		// reset link with a token shows the form, not the "invalid link" notice the stored HTML can't know about
+		await page.goto('/reset-password?token=abc')
+		await expect(page.getByText(/invalid or incomplete/i)).toBeHidden()
 		expect(problems).toEqual([])
 	})
 

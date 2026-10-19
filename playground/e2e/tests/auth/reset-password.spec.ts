@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { uniqueEmail, testPassword } from '../../fixtures/test-utils'
+import { uniqueEmail, registerCustomer } from '../../fixtures/test-utils'
 
 test.describe('Reset Password', () => {
 	test('missing token shows an invalid-link error', async ({ page }) => {
@@ -40,13 +40,7 @@ test.describe('Reset Password', () => {
 	})
 
 	test('reachable while authenticated (public route)', async ({ page }) => {
-		const email = uniqueEmail('reset-public')
-
-		await page.goto('/register')
-		await page.getByPlaceholder('Email').fill(email)
-		await page.getByPlaceholder('Password').fill(testPassword())
-		await page.getByRole('button', { name: /Register as customer/i }).click()
-		await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+		await registerCustomer(page, uniqueEmail('reset-public'))
 
 		await page.goto('/reset-password?token=some-token')
 		await expect(page).toHaveURL(/\/reset-password/)

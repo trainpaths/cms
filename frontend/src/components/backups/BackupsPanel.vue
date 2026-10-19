@@ -31,7 +31,6 @@ import { saveBlob } from '../../lib/download'
 import { formatBytes, uploadBackup } from '../../lib/backupUpload'
 import { backupIntervals, weekdayNames } from '../../lib/backupSchedule'
 import { useAuthStore } from '../../stores/auth'
-import { loginRouteFor } from '../../router'
 
 /** Full site backups (super admins): schedule, storage info, back up now, upload, download, restore, delete. */
 
@@ -214,7 +213,7 @@ async function restore(item: BackupInfo) {
 			duration: 10000,
 		})
 		await auth.logout()
-		await router.push(loginRouteFor('staff'))
+		await router.push({ name: 'admin-login' })
 	} catch (err: unknown) {
 		error.value = errorMessage(err, 'Restore failed')
 		restoring.value = null

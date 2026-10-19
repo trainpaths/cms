@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Smoke Tests', () => {
 	test('unauthenticated user redirects to login', async ({ page }) => {
-		await page.goto('/profile')
-		await expect(page).toHaveURL('/login')
+		await page.goto('/user/profile')
+		await expect(page).toHaveURL('/login?redirect=/user/profile')
 		await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible()
 	})
 
@@ -14,7 +14,8 @@ test.describe('Smoke Tests', () => {
 
 	test('register page has login link', async ({ page }) => {
 		await page.goto('/register')
-		await expect(page.getByRole('link', { name: 'Login' })).toBeVisible()
+		// the site header may have a Login menu item too
+		await expect(page.getByText('Already have an account?').getByRole('link', { name: 'Login' })).toBeVisible()
 	})
 
 	test('customer and staff logins are separate pages', async ({ page }) => {

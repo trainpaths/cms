@@ -1,39 +1,61 @@
 import { test, expect } from '@playwright/test'
-import { uniqueEmail, testPassword } from '../../fixtures/test-utils'
+import { uniqueEmail, testPassword, registerCustomer, loginCustomer, logoutCustomer } from '../../fixtures/test-utils'
 
 test.describe('Customer Login', () => {
-	test('successful login with valid credentials', async ({ page }) => {
+	test('successful login returns home', async ({ page }) => {
 		const email = uniqueEmail('login-valid')
-		const password = testPassword()
+		await registerCustomer(page, email)
+		await logoutCustomer(page)
 
-		await page.goto('/register')
+		await loginCustomer(page, email)
+	})
+
+	test('returns to the page the visitor came from, without a full page load', async ({ page }) => {
+		const email = uniqueEmail('login-return')
+		await registerCustomer(page, email)
+		await logoutCustomer(page)
+
+		await page.goto('/privacy-policy')
+		await expect(page.getByRole('heading', { name: 'Privacy Policy', level: 1 })).toBeVisible()
+		const documents: string[] = []
+		page.on('request', (req) => {
+			if (req.resourceType() === 'document') documents.push(req.url())
+		})
+
+		const loginLink = page.getByTestId('site-header').getByRole('link', { name: 'Login' }).first()
+		test.skip((await loginLink.count()) === 0, 'main menu has no Login item (menus.spec replaces it)')
+		await loginLink.click()
+		await expect(page).toHaveURL(/\/login\?redirect=/)
 		await page.getByPlaceholder('Email').fill(email)
-		await page.getByPlaceholder('Password').fill(password)
-		await page.getByRole('button', { name: /Register as customer/i }).click()
-		await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
-
-		await page.goto('/profile')
-		await page.getByRole('button', { name: 'Logout' }).click()
-
-		await page.getByPlaceholder('Email').fill(email)
-		await page.getByPlaceholder('Password').fill(password)
+		await page.getByPlaceholder('Password').fill(testPassword())
 		await page.getByRole('button', { name: /^Log in$/ }).click()
 
-		await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+		await expect(page).toHaveURL('/privacy-policy')
+		await expect(page.getByRole('heading', { name: 'Privacy Policy', level: 1 })).toBeVisible()
+		expect(documents).toEqual([])
+	})
+
+	test('header shows Account while signed in, Login after logout', async ({ page }) => {
+		await page.goto('/')
+		const header = page.getByTestId('site-header')
+		test.skip((await header.getByRole('link', { name: 'Login' }).count()) === 0, 'main menu has no Login item')
+		await registerCustomer(page, uniqueEmail('login-header'))
+		await expect(header.getByRole('link', { name: 'Account' }).first()).toBeVisible()
+		await expect(header.getByRole('link', { name: 'Login' })).toHaveCount(0)
+
+		await header.getByRole('link', { name: 'Account' }).first().click()
+		await expect(page).toHaveURL('/user/profile')
+		await page.getByRole('button', { name: 'Logout' }).click()
+		await expect(page).toHaveURL('/')
+		await expect(header.getByRole('link', { name: 'Login' }).first()).toBeVisible()
 	})
 
 	test('invalid password shows error', async ({ page }) => {
 		const email = uniqueEmail('login-badpw')
+		await registerCustomer(page, email)
+		await logoutCustomer(page)
 
-		await page.goto('/register')
-		await page.getByPlaceholder('Email').fill(email)
-		await page.getByPlaceholder('Password').fill(testPassword())
-		await page.getByRole('button', { name: /Register as customer/i }).click()
-		await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
-
-		await page.goto('/profile')
-		await page.getByRole('button', { name: 'Logout' }).click()
-
+		await page.goto('/login')
 		await page.getByPlaceholder('Email').fill(email)
 		await page.getByPlaceholder('Password').fill('WrongPassword123!')
 		await page.getByRole('button', { name: /^Log in$/ }).click()

@@ -1,6 +1,10 @@
 import { createRouter, createWebHistory, START_LOCATION, type NavigationGuard } from 'vue-router'
-import { useAuthStore, type AuthType } from '../stores/auth'
-import { useInstanceStore } from '../stores/instance'
+import { useAuthStore } from '../stores/auth'
+
+/**
+ * Admin SPA: staff (site owners) only. Customer screens (login, account pages) belong to the public site
+ * (`src/public/screens/`).
+ */
 
 /**
  * Public pages are a separate, server-rendered app (src/public/): links into them are full page loads.
@@ -12,26 +16,16 @@ const toPublicSite: NavigationGuard = (to, from) => {
 	return false
 }
 
+const staffOnly = { requiresAuth: true, requiresStaff: true }
+
 const router = createRouter({
 	history: createWebHistory(),
 	routes: [
-		{
-			path: '/login',
-			name: 'login',
-			component: () => import('../views/Login.vue'),
-			meta: { guest: true, publicNav: true, publicAuth: true },
-		},
 		{
 			path: '/admin/login',
 			name: 'admin-login',
 			component: () => import('../views/admin/AdminLogin.vue'),
 			meta: { guest: true },
-		},
-		{
-			path: '/register',
-			name: 'register',
-			component: () => import('../views/Register.vue'),
-			meta: { guest: true, publicNav: true, publicAuth: true },
 		},
 		{
 			// public home = the page with slug `home` (seeded on a fresh install, DefaultPages.cs)
@@ -45,77 +39,58 @@ const router = createRouter({
 			path: '/admin',
 			name: 'dashboard',
 			component: () => import('../views/Dashboard.vue'),
-			meta: { requiresAuth: true },
+			meta: staffOnly,
 		},
 		{
-			path: '/profile',
+			path: '/admin/profile',
 			name: 'profile',
 			component: () => import('../views/Profile.vue'),
-			meta: { requiresAuth: true },
+			meta: staffOnly,
 		},
 		{
-			path: '/change-password',
+			path: '/admin/change-password',
 			name: 'change-password',
 			component: () => import('../views/ChangePassword.vue'),
-			meta: { requiresAuth: true },
+			meta: staffOnly,
 		},
-		{
-			path: '/forgot-password',
-			name: 'forgot-password',
-			component: () => import('../views/ForgotPassword.vue'),
-			meta: { guest: true, publicNav: true, publicAuth: true },
-		},
-		{
-			// No auth meta: reachable whether or not the user is logged in (clicked from an email).
-			path: '/reset-password',
-			name: 'reset-password',
-			component: () => import('../views/ResetPassword.vue'),
-			meta: { publicAuth: true },
-		},
-		{
-			path: '/verify-email',
-			name: 'verify-email',
-			component: () => import('../views/VerifyEmail.vue'),
-			meta: { publicAuth: true },
-		},
-		// Block editor (staff = site owners)
+		// Block editor
 		{
 			path: '/admin/pages',
 			name: 'admin-pages',
 			component: () => import('../views/admin/Pages.vue'),
-			meta: { requiresAuth: true, requiresStaff: true },
+			meta: staffOnly,
 		},
 		{
 			path: '/admin/pages/:id',
 			name: 'admin-page-editor',
 			component: () => import('../views/admin/PageEditor.vue'),
 			props: true,
-			meta: { requiresAuth: true, requiresStaff: true, hideNav: true },
+			meta: { ...staffOnly, hideNav: true },
 		},
 		{
 			path: '/admin/pages/:id/preview',
 			name: 'admin-page-preview',
 			component: () => import('../views/admin/PagePreview.vue'),
 			props: true,
-			meta: { requiresAuth: true, requiresStaff: true, hideNav: true },
+			meta: { ...staffOnly, hideNav: true },
 		},
 		{
 			path: '/admin/media',
 			name: 'admin-media',
 			component: () => import('../views/admin/Media.vue'),
-			meta: { requiresAuth: true, requiresStaff: true },
+			meta: staffOnly,
 		},
 		{
 			path: '/admin/menus',
 			name: 'admin-menus',
 			component: () => import('../views/admin/Menus.vue'),
-			meta: { requiresAuth: true, requiresStaff: true },
+			meta: staffOnly,
 		},
 		{
 			path: '/admin/configuration',
 			name: 'admin-configuration',
 			component: () => import('../views/admin/Configuration.vue'),
-			meta: { requiresAuth: true, requiresStaff: true },
+			meta: staffOnly,
 		},
 		{
 			// Published CMS pages. Static routes above always win (vue-router ranks them higher);
@@ -133,29 +108,22 @@ const router = createRouter({
 	],
 })
 
-/** Login screen for a session type: staff sign in at /admin/login, customers at /login. */
-export function loginRouteFor(type: AuthType | null) {
-	return { name: type === 'staff' ? 'admin-login' : 'login' }
-}
-
 router.beforeEach(async (to) => {
-	// customer account screens exist only with public auth (instance config)
-	if (to.meta.publicAuth && !useInstanceStore().config.publicAuth) {
-		return { name: 'not-found', params: { pathMatch: to.path.slice(1).split('/') } }
-	}
-
 	const authStore = useAuthStore()
 
 	if (to.meta.requiresAuth && !(await authStore.ensureSession())) {
 		authStore.setRedirectAfterLogin(to.fullPath)
-		return { name: to.path.startsWith('/admin') ? 'admin-login' : 'login' }
+		return { name: 'admin-login' }
 	}
 
+	// a customer session: nothing for them here. Real page load: a redirect to `home` on the first navigation
+	// would 404 (toPublicSite)
 	if (to.meta.requiresStaff && authStore.authType !== 'staff') {
-		return { name: 'dashboard' }
+		window.location.replace('/')
+		return false
 	}
 
-	if (to.meta.guest && authStore.isAuthenticated) {
+	if (to.meta.guest && authStore.authType === 'staff' && authStore.isAuthenticated) {
 		return { name: 'dashboard' }
 	}
 

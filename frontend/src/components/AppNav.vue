@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, watch, onBeforeUnmount } from 'vue'
+import { ref, watch, onBeforeUnmount } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { Icon, type IconName } from '@trainpaths/nb-ui'
 import { useAuthStore } from '../stores/auth'
-import { loginRouteFor } from '../router'
 import { CMS_ICON } from '../public/head'
 
 /**
@@ -15,25 +14,21 @@ import { CMS_ICON } from '../public/head'
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const { user, authType } = storeToRefs(authStore)
+const { user } = storeToRefs(authStore)
 const open = ref(false)
 
-const items = computed(() => {
-	const staff = authType.value === 'staff'
-	const all: { to: string; label: string; icon: IconName; show: boolean }[] = [
-		{ to: '/admin', label: 'Dashboard', icon: 'masonry', show: true },
-		{ to: '/admin/pages', label: 'Pages', icon: 'file', show: staff },
-		{ to: '/admin/menus', label: 'Menus', icon: 'list-tree', show: staff },
-		{ to: '/admin/media', label: 'Media', icon: 'image', show: staff },
-		{ to: '/admin/configuration', label: 'Configuration', icon: 'settings', show: staff },
-	]
-	return all.filter((item) => item.show)
-})
+const items: { to: string; label: string; icon: IconName }[] = [
+	{ to: '/admin', label: 'Dashboard', icon: 'masonry' },
+	{ to: '/admin/pages', label: 'Pages', icon: 'file' },
+	{ to: '/admin/menus', label: 'Menus', icon: 'list-tree' },
+	{ to: '/admin/media', label: 'Media', icon: 'image' },
+	{ to: '/admin/configuration', label: 'Configuration', icon: 'settings' },
+]
 
 function isActive(to: string) {
 	if (to === '/admin') return route.path === '/admin'
 	// change-password belongs to the user section
-	if (to === '/profile') return route.path === '/profile' || route.path === '/change-password'
+	if (to === '/admin/profile') return route.path === '/admin/profile' || route.path === '/admin/change-password'
 	return route.path === to || route.path.startsWith(`${to}/`)
 }
 
@@ -44,9 +39,8 @@ function linkClass(to: string) {
 }
 
 async function logout() {
-	const type = authType.value
 	await authStore.logout()
-	router.push(loginRouteFor(type))
+	router.push({ name: 'admin-login' })
 }
 
 watch(
@@ -136,11 +130,11 @@ onBeforeUnmount(() => (document.body.style.overflow = ''))
 
 		<div class="mt-auto flex items-center gap-4 border-t border-gray-200 p-8">
 			<RouterLink
-				to="/profile"
+				to="/admin/profile"
 				class="flex min-w-0 flex-1 items-center gap-12 rounded-md px-12 py-10 text-sm no-underline md:py-8"
-				:class="linkClass('/profile')"
+				:class="linkClass('/admin/profile')"
 				:title="user?.email ?? undefined"
-				:aria-current="isActive('/profile') ? 'page' : undefined"
+				:aria-current="isActive('/admin/profile') ? 'page' : undefined"
 			>
 				<Icon
 					name="user"

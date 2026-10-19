@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
+import { useAuthStore } from '../../stores/auth'
 import { storeToRefs } from 'pinia'
 import { Button, Input, Card, Alert, Link, Form } from '@trainpaths/nb-ui'
+import { useGuestScreen } from '../session'
 
-// Customer login. Staff sign in at /admin/login (AdminLogin.vue).
+// Customer login (public site). Staff sign in at /admin/login (admin SPA, AdminLogin.vue).
 const router = useRouter()
 const authStore = useAuthStore()
 const { error, loading } = storeToRefs(authStore)
+const { target, carry } = useGuestScreen()
 
 const email = ref('')
 const password = ref('')
@@ -17,10 +19,7 @@ authStore.clearError()
 
 async function handleSubmit() {
 	const success = await authStore.login('customer', email.value, password.value)
-	if (success) {
-		const redirect = authStore.consumeRedirectAfterLogin()
-		router.push(redirect ?? { name: 'dashboard' })
-	}
+	if (success) router.push(target())
 }
 </script>
 
@@ -57,7 +56,7 @@ async function handleSubmit() {
 
 			<p class="mt-16 text-black opacity-60">
 				Don't have an account?
-				<Link to="/register">Register</Link>
+				<Link :to="carry('/register')">Register</Link>
 			</p>
 			<p class="mt-8 text-black opacity-60">
 				<Link to="/forgot-password">Forgot password?</Link>

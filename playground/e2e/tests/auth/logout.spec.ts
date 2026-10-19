@@ -2,30 +2,27 @@ import { test, expect } from '../../fixtures/auth.fixture'
 import { REFRESH_COOKIE } from '../../fixtures/test-utils'
 
 test.describe('Logout', () => {
-	test('logout clears authenticated state', async ({ authenticatedPage }) => {
-		await authenticatedPage.goto('/profile')
-		await expect(authenticatedPage.getByRole('heading', { name: 'Profile' })).toBeVisible()
+	test('logout goes home and ends the session', async ({ authenticatedPage: page }) => {
+		await page.goto('/user/profile')
+		await expect(page.getByRole('heading', { name: 'Profile' })).toBeVisible()
 
-		await authenticatedPage.getByRole('button', { name: 'Logout' }).click()
+		await page.getByRole('button', { name: 'Logout' }).click()
 
-		await expect(authenticatedPage.getByRole('heading', { name: 'Login' })).toBeVisible()
-		await expect(authenticatedPage.getByPlaceholder('Email')).toBeVisible()
+		await expect(page).toHaveURL('/')
+		await page.goto('/user/profile')
+		await expect(page).toHaveURL(/\/login\?redirect=/)
 	})
 
-	test('logout clears the refresh cookie', async ({ authenticatedPage }) => {
-		const refreshCookie = async () =>
-			(await authenticatedPage.context().cookies()).find((c) => c.name === REFRESH_COOKIE)
+	test('logout clears the refresh cookie', async ({ authenticatedPage: page }) => {
+		const refreshCookie = async () => (await page.context().cookies()).find((c) => c.name === REFRESH_COOKIE)
 
-		await authenticatedPage.goto('/profile')
-		await expect(authenticatedPage.getByRole('heading', { name: 'Profile' })).toBeVisible()
+		await page.goto('/user/profile')
+		await expect(page.getByRole('button', { name: 'Logout' })).toBeVisible()
 		expect(await refreshCookie()).toBeDefined()
 
-		await authenticatedPage.getByRole('button', { name: 'Logout' }).click()
-		await expect(authenticatedPage.getByRole('heading', { name: 'Login' })).toBeVisible()
+		await page.getByRole('button', { name: 'Logout' }).click()
+		await expect(page).toHaveURL('/')
 
 		expect(await refreshCookie()).toBeUndefined()
-
-		await authenticatedPage.reload()
-		await expect(authenticatedPage.getByRole('heading', { name: 'Login' })).toBeVisible()
 	})
 })
