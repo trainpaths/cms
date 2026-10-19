@@ -45,13 +45,14 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 	public const int MaxMetaDescriptionLength = 200;
 
 	/// <summary>
-	/// Slugs the public <c>/:slug</c> route can't use because the frontend or API owns the path.
-	/// Keep in sync with the static routes in <c>frontend/src/router/index.ts</c>.
+	/// Slugs the public <c>/:slug</c> route can't use because the frontend or API owns the path: the customer screens
+	/// (<see cref="Rendering.PublicScreens"/>; <c>user</c> = the account pages under it), the admin SPA's routes
+	/// (<c>frontend/src/router/index.ts</c>) and the API's. Keep in sync with both.
 	/// </summary>
 	public static readonly HashSet<string> ReservedSlugs =
 	[
-		"login", "register", "profile", "change-password", "forgot-password", "reset-password",
-		"verify-email", "dashboard", "admin", "api", "health", "assets", "_diagnostics",
+		"login", "register", "forgot-password", "reset-password", "verify-email", "user",
+		"dashboard", "admin", "api", "health", "assets", "_diagnostics",
 	];
 
 	[GeneratedRegex("^[a-z0-9]+(?:-[a-z0-9]+)*$")]

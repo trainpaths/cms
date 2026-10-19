@@ -12,6 +12,7 @@ using api_backend.Services.Cms;
 using api_backend.Services.Rendering;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -38,7 +39,10 @@ public sealed class FakeRenderer : IRendererClient
 		Rendered.Enqueue(state.Slug);
 		var firm = state.Config?.Fields.GetValueOrDefault(CoreSiteConfig.FirmName);
 		var html = state.Page is null
-			? $"<html>not-found|{Version}</html>"
+			? PublicScreens.Contains(state.Slug)
+				? $"<html><script type=\"application/json\" id=\"__STATE__\">{{}}</script>screen:{state.Slug}" +
+				  $"|menu:{state.Menu?.Items.Count}|{Version}</html>"
+				: $"<html>not-found|{Version}</html>"
 			: $"<html><script type=\"application/json\" id=\"__STATE__\">{{}}</script>{state.Page.Title}" +
 			  $"|blocks:{state.Page.Blocks.Count}|menu:{state.Menu?.Items.Count}|firm:{firm}" +
 			  $"|alt:{string.Join(',', state.Page.Media.Select(m => m.Alt))}|{Version}</html>";
@@ -60,11 +64,17 @@ public class RenderingTests(ApiFactory factory) : IClassFixture<ApiFactory>
 		}
 	}
 
-	private async Task<Site> StartAsync()
+	private async Task<Site> StartAsync(bool publicAuth = true)
 	{
 		var renderer = new FakeRenderer();
 		var app = factory.WithWebHostBuilder(b =>
 		{
+			if (!publicAuth)
+				b.ConfigureTestServices(s =>
+				{
+					s.RemoveAll<CmsConfig>();
+					s.AddSingleton(ApiFactory.Cms with { PublicAuth = false });
+				});
 			b.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>
 			{
 				["Renderer:DebounceMilliseconds"] = "20",
@@ -334,7 +344,7 @@ public class RenderingTests(ApiFactory factory) : IClassFixture<ApiFactory>
 	{
 		await using var site = await StartAsync();
 
-		var reserved = await site.Client.GetAsync("/api/public/html/login", Ct);
+		var reserved = await site.Client.GetAsync("/api/public/html/admin", Ct);
 		Accel(reserved).Should().Be(PublicHtmlController.SpaShell);
 
 		var home = await site.Client.GetAsync("/api/public/html/home", Ct);
@@ -344,6 +354,62 @@ public class RenderingTests(ApiFactory factory) : IClassFixture<ApiFactory>
 		var unknown = await WaitForAsync(site, "/api/public/html/does-not-exist",
 			(r, body) => r.StatusCode == HttpStatusCode.NotFound && body.Contains("not-found|"));
 		unknown.Content.Headers.ContentType!.MediaType.Should().Be("text/html");
+	}
+
+	[Fact]
+	public async Task CustomerScreens_AreRenderedAndServed_UnknownAccountPathIs404()
+	{
+		await using var site = await StartAsync();
+
+		var login = await WaitForAsync(site, "/api/public/html/login",
+			(r, body) => r.StatusCode == HttpStatusCode.OK && body.Contains("screen:login|"));
+		login.Content.Headers.ContentType!.MediaType.Should().Be("text/html");
+		login.Headers.CacheControl!.NoCache.Should().BeTrue();
+		Accel(login).Should().BeNull();
+
+		var profile = await site.Client.GetAsync("/api/public/html/user/Profile", Ct);
+		(await profile.Content.ReadAsStringAsync(Ct)).Should().Contain("screen:user/profile|");
+
+		var unknown = await site.Client.GetAsync("/api/public/html/user/nope", Ct);
+		unknown.StatusCode.Should().Be(HttpStatusCode.NotFound);
+		(await unknown.Content.ReadAsStringAsync(Ct)).Should().Contain("not-found|");
+
+		// former SPA route, now an ordinary (unknown) page slug
+		(await site.Client.GetAsync("/api/public/html/profile", Ct)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+	}
+
+	[Fact]
+	public async Task CustomerScreens_AreMarkedAfterAMainMenuEdit_ThenReRendered()
+	{
+		await using var site = await StartAsync();
+		await WaitForAsync(site, "/api/public/html/login", (_, body) => body.Contains("screen:login|"));
+		var main = await MainMenuAsync(site);
+
+		var hold = Hold(site);
+		await SetMenuItemsAsync(site, main.Id, 3);
+		var stale = await site.Client.GetAsync("/api/public/html/login", Ct);
+		Marked(await stale.Content.ReadAsStringAsync(Ct)).Should().BeTrue();
+
+		Release(site, hold);
+		// a full render that started before the edit may already show the new menu, still marked (started earlier);
+		// the edit's own render clears the marker
+		await WaitForAsync(site, "/api/public/html/login", (_, body) => body.Contains("|menu:3|") && !Marked(body));
+	}
+
+	[Fact]
+	public async Task CustomerScreens_WithPublicAuthOff_Are404AndNeverRendered()
+	{
+		await using var site = await StartAsync(publicAuth: false);
+
+		// the not-found page is rendered with every full render: once it's there, so would the screens be
+		await WaitForAsync(site, "/api/public/html/does-not-exist", (_, body) => body.Contains("not-found|"));
+		foreach (var path in new[] { "login", "register", "user/profile" })
+		{
+			var response = await site.Client.GetAsync($"/api/public/html/{path}", Ct);
+			response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+			(await response.Content.ReadAsStringAsync(Ct)).Should().Contain("not-found|");
+		}
+		site.Renderer.Rendered.Should().NotContain(PublicScreens.All);
 	}
 
 	[Fact]
