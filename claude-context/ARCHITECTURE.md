@@ -180,10 +180,14 @@ of its **content** (title, meta title, meta description, blocks): the **working 
 - Seeded pages start published with snapshot = working copy (no pending changes).
 
 ## Auth model
-- Editor endpoints: `[Authorize(Policy = StaffOnly)]`. Router guard: `meta.requiresStaff` checks
-  `authStore.authType === 'staff'`. Staff = site owners.
+- Two apps, split by audience: the **admin SPA** (`/admin*`) is staff-only (site owners); everything the website's
+  visitors use, customer accounts included, is the **public site** (server-rendered, see Public pages → Customer
+  screens). Why: the visitor's login and account pages should load as fast as the site, in its layout and theme, and
+  a customer has no business in the admin chrome.
+- Editor endpoints: `[Authorize(Policy = StaffOnly)]`. Admin router: every `/admin*` route has `meta.requiresStaff`
+  (`authStore.authType === 'staff'`); a customer session there → full page load to `/`.
 - Customer accounts only with `publicAuth` in the instance config (default off): otherwise the customer auth API
-  answers 404 (`PublicAuthGateAttribute`), the admin router sends `meta.publicAuth` routes to not-found and the main
+  answers 404 (`PublicAuthGateAttribute`), the public site has no screens (`/login` is an unknown page) and the main
   menu seed has no Login link. Reserved slugs stay reserved either way.
 - Public reads: `GET /api/public/pages/{slug}` is anonymous and only returns **published** pages (404 otherwise), as
   their published snapshot.
@@ -191,14 +195,15 @@ of its **content** (title, meta title, meta description, blocks): the **working 
 ## Slugs and the public route
 - Public URL is `/{slug}` (clean, single segment). vue-router ranks static routes above `/:slug`, so app
   routes always win; the API additionally rejects `PageService.ReservedSlugs`
-  (`login`, `register`, `profile`, `change-password`, `forgot-password`, `reset-password`, `verify-email`,
-  `dashboard`, `admin`, `api`, `health`, `assets`, `_diagnostics`). **Adding a top-level frontend route?
-  Add its first segment to `ReservedSlugs`.**
+  (customer screens `login`, `register`, `forgot-password`, `reset-password`, `verify-email`, `user` (account pages
+  `/user/*`), then `dashboard`, `admin`, `api`, `health`, `assets`, `_diagnostics`). **Adding a top-level frontend
+  route? Add its first segment to `ReservedSlugs`.**
 - Slug rules: kebab-case, 1–100 chars. Omitted on create → generated from the title, de-duplicated with
   `-2`, `-3`…; a reserved generated slug gets `-page`. An explicitly taken slug → 409.
 - Slug changes are saved separately from content (`PUT` with only `slug`) so a bad slug never blocks autosave.
 - `ReservedSlugs` also routes requests: nginx sends every single-segment path to the API's HTML endpoint, which
-  answers reserved ones with the admin SPA (see Public pages). A frontend route missing from the list gets a 404.
+  answers customer screens itself and the other reserved ones with the admin SPA (see Public pages). A frontend route
+  missing from the list gets a 404.
 
 ## Public pages: rendered when content changes (Vue SSR, no Nuxt)
 Why: an SPA shows nothing until JS boots and the page is fetched (~2–3 extra round trips, LCP ~2–3.5 s on
@@ -247,16 +252,34 @@ staff save ─► API IRenderQueue ─► RenderWorker ─POST /render─► ren
 - **Deploys:** stored HTML names hashed asset files of its build. The renderer reports a version (hash of
   template + SSR bundle); only HTML of the current version is served, and a version change re-renders everything
   (periodic check, 60 s; also on API start). The not-found page lives in memory (re-rendered with everything).
-- **Routing:** nginx proxies `^/[a-z0-9-]*$` (incl. `/`) to `GET /api/public/html/{slug}`. Responses: stored HTML
-  (ETag, `no-cache`), 404 + rendered not-found page, 301 `/home` → `/`, or `X-Accel-Redirect` to `/index.html`
-  (reserved slug → admin SPA) / `/public.html` (no fresh HTML). Admin-SPA links to `home`/`public-page` are full
-  page loads.
+- **Customer screens** (with `publicAuth`): `/login`, `/register`, `/forgot-password`, `/reset-password`,
+  `/verify-email` and the account pages `/user/profile`, `/user/password` are routes of the public app
+  (`src/public/screens/`, lazy chunks), rendered like the not-found page: in memory (`RenderStatus.Screens`), once per
+  full render with the current menu/config, so a menu change re-renders them; they get the refresh marker like stored
+  pages and are served only while their renderer version is current. They show the same HTML to everyone: the redirect
+  query, a reset token and the session are read after hydration; account pages render a shell and load the user once
+  `ensureSession()` confirms a customer (else → `/login?redirect=…`). Login/register navigate back client-side to the
+  page the visitor came from (the router adds `?redirect=` when leaving a page for them; `safeRedirect` allows
+  same-site paths only, never a guest screen or `/admin`). The header's `/login` menu item reads "Account" for a
+  signed-in customer (client-only, from the `auth_type` hint and the auth store).
+  `publicAuth` is checked on the server only: the worker renders screens and `PublicHtmlController` serves them only
+  with it on; off, a screen path gets the not-found page. The public app always has the screen routes and finds out
+  from the embedded state: on the first navigation a screen route whose `slug` isn't that screen's (it's `not-found`)
+  becomes the catch-all route under the same URL, so it hydrates as not-found. (Left open: with public auth off, a
+  client-side link to `/login` the owner adds to a menu shows a form whose API answers 404.) One list of screen slugs in three
+  places, kept in sync: `src/public/screens/index.ts` (Vitest checks it against `server/screens.js`, read by dev SSR)
+  and the API's `PublicScreens`.
+- **Routing:** nginx proxies `^/(user/)?[a-z0-9-]*$` (incl. `/`) to `GET /api/public/html/{slug}` (`user/{name}`).
+  Responses: stored HTML (ETag, `no-cache`), a customer screen (`no-cache`), 404 + rendered not-found page (unknown
+  slug, unknown `user/*`, screens with public auth off), 301 `/home` → `/`, or `X-Accel-Redirect` to `/index.html`
+  (other reserved slug → admin SPA) / `/public.html` (no fresh HTML). Admin-SPA links to `home`/`public-page` are full
+  page loads; so are public-app links into `/admin`.
 - No renderer configured (`Renderer:BaseUrl` empty, e.g. tests) → everything falls back to the shell.
 - **Site meta** (`src/public/head.ts`): document title "{page meta title} - {firm name}", the firm name alone without
   a meta title (no firm name: meta title, then page title); description = page meta description, else the first
   paragraph; og:site_name = firm name; og:image = first image, else the site's share image; `<html lang>` = instance
   `site.lang`, written into index.html + public.html at build time by `cms()` (a static value: no runtime plumbing).
-- Dev: `pnpm dev` server-renders public pages itself (`frontend/server/dev-ssr.js`, Vite `ssrLoadModule`), so
+- Dev: `pnpm dev` server-renders public pages and customer screens itself (`frontend/server/dev-ssr.js`, Vite `ssrLoadModule`), so
   hydration mismatches show up in development; the renderer container isn't needed.
 
 ## Limits

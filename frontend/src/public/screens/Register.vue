@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
+import { useAuthStore } from '../../stores/auth'
 import { storeToRefs } from 'pinia'
 import { Button, Input, Card, Alert, Link, Form } from '@trainpaths/nb-ui'
+import { useGuestScreen } from '../session'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const { error, loading } = storeToRefs(authStore)
+const { target, carry } = useGuestScreen()
 
 const email = ref('')
 const password = ref('')
@@ -16,9 +18,7 @@ const displayName = ref('')
 // Staff accounts are created by a super admin (authStore.registerStaff), not via self-signup.
 async function handleSubmit() {
 	const success = await authStore.register(email.value, password.value, displayName.value || undefined)
-	if (success) {
-		router.push({ name: 'dashboard' })
-	}
+	if (success) router.push(target())
 }
 </script>
 
@@ -60,7 +60,7 @@ async function handleSubmit() {
 
 			<p class="mt-16 text-black opacity-60">
 				Already have an account?
-				<Link to="/login">Login</Link>
+				<Link :to="carry('/login')">Login</Link>
 			</p>
 		</Card>
 	</div>

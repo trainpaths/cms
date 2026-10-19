@@ -1,13 +1,16 @@
 <script setup lang="ts">
-/** Account details (display name edit, roles, change password, log out): the Profile tab of views/Profile.vue. */
+/**
+ * Account details (display name edit, roles, change password, log out): the Profile tab of views/Profile.vue (staff)
+ * and public/screens/UserProfile.vue (customers). `logged-out`: the parent decides where to go.
+ */
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { loginRouteFor } from '../router'
 import { storeToRefs } from 'pinia'
 import { Button, Input, FormField, Card, DescriptionList, DescriptionItem, Alert, Link } from '@trainpaths/nb-ui'
 
-const router = useRouter()
+defineProps<{ passwordTo: string }>()
+const emit = defineEmits<{ 'logged-out': [] }>()
+
 const authStore = useAuthStore()
 const { user, authType, error, loading } = storeToRefs(authStore)
 
@@ -47,9 +50,8 @@ async function saveProfile() {
 }
 
 async function handleLogout() {
-	const type = authType.value
 	await authStore.logout()
-	router.push(loginRouteFor(type))
+	emit('logged-out')
 }
 </script>
 
@@ -126,7 +128,7 @@ async function handleLogout() {
 			</Card>
 
 			<div class="flex items-center gap-16 mt-16">
-				<Link to="/change-password">Change Password</Link>
+				<Link :to="passwordTo">Change Password</Link>
 				<Button @click="handleLogout">Logout</Button>
 			</div>
 		</div>

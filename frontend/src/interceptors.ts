@@ -1,8 +1,6 @@
-import type { Router } from 'vue-router'
 import { client } from './api/client.gen'
 import { toApiError } from './api-error'
 import { useAuthStore } from './stores/auth'
-import { loginRouteFor } from './router'
 
 // These answer 401 for bad credentials/cookies; refreshing and retrying them makes no sense
 // (and retrying refresh itself would deadlock on the shared refresh promise).
@@ -11,7 +9,11 @@ const NO_REFRESH = /\/api\/auth\/(customer|staff)\/(login|register|refresh|logou
 // fetch() consumes the request body, so keep a copy to replay after a refresh.
 const replayable = new WeakMap<Request, Request>()
 
-export function setupInterceptors(router: Router) {
+/**
+ * Bearer token, refresh-and-replay on 401, `ApiError`s. `onUnauthenticated` runs when a 401 survives the refresh
+ * (session gone, auth already cleared): the app sends the user to its login screen.
+ */
+export function setupInterceptors(onUnauthenticated: () => void) {
 	client.interceptors.request.use((request) => {
 		const token = useAuthStore().accessToken
 		if (token) request.headers.set('Authorization', `Bearer ${token}`)
@@ -31,9 +33,8 @@ export function setupInterceptors(router: Router) {
 			return fetch(retry)
 		}
 
-		const type = authStore.authType
 		authStore.clearAuthData()
-		router.push(loginRouteFor(type))
+		onUnauthenticated()
 		return response
 	})
 

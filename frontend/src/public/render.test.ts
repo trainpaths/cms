@@ -5,6 +5,12 @@ import type { PublicState } from './state'
 import { splice } from '../../server/template'
 import { setHtmlLang, siteLang } from '../../server/site-lang'
 import { injectThemeStyle, themeColors, themeStyle } from '../../server/theme'
+import { SCREEN_SLUGS } from '../../server/screens'
+import { SCREENS } from './screens'
+import { createPublicRouter } from './router'
+import { usePublicPageStore } from './store'
+import { createPinia } from 'pinia'
+import { createMemoryHistory } from 'vue-router'
 import type { BlockInstance } from '../lib/web-editor'
 
 const block = (
@@ -121,6 +127,51 @@ describe('render', () => {
 		const { html, head } = await render(state({ slug: 'nope', page: null }))
 		expect(html).toContain('Page not found')
 		expect(head).toContain('noindex')
+	})
+})
+
+describe('customer screens', () => {
+	it('render inside the site layout, titled and noindex', async () => {
+		const { html, head } = await render(state({ slug: 'login', page: null }))
+		expect(html).toContain('<form')
+		expect(html).toContain('placeholder="Password"')
+		expect(html).toContain('href="/contact"') // header
+		expect(html).toContain('ACME') // footer
+		expect(head).toContain('<title>Log in - ACME</title>')
+		expect(head).toContain('noindex')
+	})
+
+	it('render account pages as a shell without user data', async () => {
+		const { html, head } = await render(state({ slug: 'user/profile', page: null }))
+		expect(html).toContain('Profile')
+		expect(html).not.toContain('Logout')
+		expect(head).toContain('<title>Profile - ACME</title>')
+	})
+
+	it('render links without the redirect query (added after hydration)', async () => {
+		const { html } = await render(state({ slug: 'login', page: null }))
+		expect(html).toContain('href="/register"')
+	})
+
+	it('hydrate as not-found when the server sent the not-found page for a screen path (public auth off)', async () => {
+		const pinia = createPinia()
+		usePublicPageStore(pinia).set('not-found', null)
+		const router = createPublicRouter(createMemoryHistory(), pinia)
+		await router.push('/login?x=1')
+		expect(router.currentRoute.value.name).toBe('external')
+		expect(router.currentRoute.value.fullPath).toBe('/login?x=1')
+	})
+
+	it('hydrate as the screen the server rendered', async () => {
+		const pinia = createPinia()
+		usePublicPageStore(pinia).set('user/profile', null)
+		const router = createPublicRouter(createMemoryHistory(), pinia)
+		await router.push('/user/profile')
+		expect(router.currentRoute.value.name).toBe('user-profile')
+	})
+
+	it('match the slugs dev SSR serves (and the API mirrors)', () => {
+		expect(SCREENS.map((screen) => screen.slug)).toEqual(SCREEN_SLUGS)
 	})
 })
 

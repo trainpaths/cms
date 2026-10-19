@@ -37,7 +37,7 @@ onMounted(async () => {
 			<div class="flex items-center justify-between gap-16">
 				<h3 class="m-0 text-base font-semibold text-black">Backups</h3>
 				<Link
-					to="/profile?tab=backups"
+					to="/admin/profile?tab=backups"
 					data-testid="dashboard-backups-link"
 					>Manage backups</Link
 				>

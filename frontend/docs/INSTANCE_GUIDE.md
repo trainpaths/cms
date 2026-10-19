@@ -50,7 +50,7 @@ No file = defaults. Full schema: `node_modules/@trainpaths/cms/cms.config.schema
 ```jsonc
 {
 	"$schema": "./node_modules/@trainpaths/cms/cms.config.schema.json",
-	"publicAuth": false,                 // customer accounts (/login, /register...); off: screens + API gone
+	"publicAuth": false,                 // customer accounts (/login, /register, /user/*...); off: screens + API gone
 	"site": { "lang": "de" },            // <html lang> (set by cms() at build time: rebuild the frontend)
 	"blocks": { "exclude": ["list"] },   // built-in blocks hidden from the inserters
 	"theme": {                           // site palette (see Theme; set by cms() at build time: rebuild the frontend)
@@ -145,6 +145,16 @@ import Base from '@trainpaths/cms/src/components/SiteFooter.vue'
 `before`/`after`), every block's `*View.vue` / `*Edit.vue` (`block`), and nb-ui components
 (`src/overrides/ui/<Name>.vue`). Overriding anything else works, but may break on any upgrade.
 
+**Customer screens** (only with `publicAuth`): `/login`, `/register`, `/forgot-password`, `/reset-password`,
+`/verify-email` and the account pages `/user/profile`, `/user/password` belong to the public site, not the admin: same
+layout and theme as your pages, server-rendered (stored like pages, re-rendered with menu/site config changes; account
+data loads in the browser). Login and register return to the page the visitor came from (`?redirect=/path`, set when
+they follow a link to `/login`; only same-site paths). For a signed-in customer the main menu's `/login` item reads
+"Account" and links to `/user/profile` (`site/SiteNavLink.vue`: a header override that renders its own links does this
+itself). Override them by file name like any component (`Login.vue`, `Register.vue`, `ForgotPassword.vue`,
+`ResetPassword.vue`, `VerifyEmail.vue`, `UserProfile.vue`, `UserPassword.vue`; not stable override points). The admin
+(`/admin*`) is staff-only: customers who open it land on `/`.
+
 Header/footer overrides and templates should read the menu and site config **reactively** (the props, or
 `usePublicMenusStore().menus.main` / `useSiteConfigStore().config` from `@trainpaths/cms/site`), not copy them once in
 setup: after a menu or site config change, pages still waiting for their background re-render refetch both after
@@ -212,7 +222,7 @@ paragraph. Link-preview image: the page's first image, else the share image from
 - Dev: the API stack in Docker (postgres, seaweedfs, `cms-api` with your `cms.config.json` mounted at
   `/app/cms.config.json`) + `vite` (dev server renders public pages itself; `/api` proxied to `VITE_API_BASE_URL`).
 - Images (see the starter's Dockerfile): **frontend** (nginx with `node_modules/@trainpaths/cms/nginx.conf` + your
-  `dist/`), **renderer** (Node: `server/render-server.js` + `template.js` from the package, `dist/public.html`,
+  `dist/`; it sends `/`, single-segment paths and `/user/*` to the API's HTML endpoint: keep that in a custom config), **renderer** (Node: `server/render-server.js` + `template.js` from the package, `dist/public.html`,
   `dist-ssr/`; run from that directory), **api** (`FROM ghcr.io/trainpaths/cms-api:<version>` +
   `COPY cms.config.json /app/`).
 - Environment: the CMS repo's `.env.example` lists every variable (DB, JWT key, S3 keys, SMTP, first admin).

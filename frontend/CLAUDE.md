@@ -2,8 +2,9 @@
 
 Vue 3 + TypeScript + Tailwind v4 + Vite + hey-api + vue-router + Pinia.
 The block editor lives in `src/lib/web-editor/` → see its `CLAUDE.md`.
-**Two apps:** the admin SPA (`createAdmin()` in `src/main.ts`) and the server-rendered public site (`src/public/`).
-Why/how: `claude-context/ARCHITECTURE.md` → Public pages.
+**Two apps, split by audience:** the staff-only admin SPA (`createAdmin()` in `src/main.ts`, `/admin*`) and the
+server-rendered public site (`src/public/`): pages + the customer screens (login, register, password flows, account
+pages under `/user/*`). Why/how: `claude-context/ARCHITECTURE.md` → Auth model, Public pages.
 
 **Instance developer guide:** `docs/INSTANCE_GUIDE.md` (in `files`, read from node_modules by instance repos) — update it
 with every change to `cms.config.json`, exports, extension/override points or the image setup.
@@ -60,41 +61,54 @@ files (outranks the instance's `.site-theme` rules) + `define` `__CMS_THEME_COLO
 - Tailwind: `src/style.css` `@source`s the package (`.`, minus `api/`); the app root is auto-scanned.
 - Instance config (`cms.config.json`): only the API reads it at runtime (`site.lang`: `cms()` sets `<html lang>` of
   index.html + public.html at build time, `server/site-lang.js`, invalid tag fails the build); the admin loads `/api/public/instance`
-  (`stores/instance.ts`, in `createAdmin()`): `publicAuth` (router: routes with `meta.publicAuth` → not-found when off)
-  and `excludedBlocks` (`isOffered(name)`, used by `Inserter.vue` / `BlockInserterSidebar.vue`). Locked/template/editable page flags
+  (`stores/instance.ts`, in `createAdmin()`): `excludedBlocks` (`isOffered(name)`, used by `Inserter.vue` / `BlockInserterSidebar.vue`). Locked/template/editable page flags
   come with `PageSummary`/`PageDetail` (slug + delete disabled, non-editable → notice instead of the canvas).
 
 ## Public site (`src/public/`, `server/`)
 ```
-state.ts            PublicState {slug, page|null, menu, config, baseUrl}: what a page renders from (API RenderState mirrors it)
+state.ts            PublicState {slug, page|null, menu, config, baseUrl}: what a page or screen renders from
+                    (API RenderState mirrors it)
 createPublicApp.ts  app factory (SSR app or client app), seeds stores (publicPage, menus, siteConfig); returns app, router, pinia
-PublicApp.vue       .site-theme root: AdminBar (client-only) + SiteHeader + PageView (template or PageContent; or NotFound) + SiteFooter
+PublicApp.vue       .site-theme root: AdminBar (client-only) + SiteHeader + RouterView + SiteFooter
+PublicPage.vue      route component of pages: PageView (template or PageContent) of the store's page, else NotFound
 templates.ts        getTemplate(name): the instance's src/templates/*.vue; TemplatePage / TemplateProps types
-router.ts           routes `home` / `/home` redirect / `public-page` / catch-all; first navigation keeps the server
-                    state, later ones load the page first; unknown page, app route or deeper path → full page load
+router.ts           routes `home` / `/home` redirect / customer screens (lazy) / `public-page` / catch-all; first
+                    navigation keeps the server state (a screen path the server answered with not-found, i.e. public
+                    auth off → catch-all, same URL), later ones load the page first; unknown page, admin route or
+                    deeper path → full page load; leaving a page for login/register adds `?redirect=`
+screens/            customer screens: index.ts SCREENS (slug, route name, title, account) + screenOf(state) + RouteMeta
+                    `screen`; Login, Register, ForgotPassword, ResetPassword, VerifyEmail (guest), UserProfile,
+                    UserPassword (account: `/user/*`)
+session.ts          useGuestScreen (target() after login, carry(path) keeps redirect, signed-in → straight on),
+                    useCustomerSession (account pages: ready once ensureSession() confirms a customer, else → login)
+redirect.ts         safeRedirect: same-site paths only, no guest screen, no /admin (+ redirect.test.ts)
 store.ts            usePublicPageStore: current slug + page, load(slug)
 head.ts             <head> tags: title via documentTitle ("{metaTitle} - {firmName}", firm name alone without a meta title;
                     no firm name → meta title, then page title), description (metaDescription, else the first
                     paragraph), canonical, OG/Twitter (og:title = meta or page title, og:site_name = firm, og:image =
                     first image, else config.shareImage), icon; serializeState
-entry-server.ts     render(state) → {head, html, state}   (built with `vite build --ssr` → dist-ssr/)
+entry-server.ts     render(state) → {head, html, state}: page, screen (screenOf) or not-found (`vite build --ssr` → dist-ssr/)
 entry-client.ts     hydrates from #__STATE__; without it (shell) fetches page + menu + config in one
-                    `GET /api/public/state/{slug}`, adds head tags; after mounting, a `data-refresh` on #__STATE__ (stored
-                    HTML older than a menu/config change, set by the API during the quiet re-render) → refresh.ts
+                    `GET /api/public/state/{slug}` (screens/deeper paths: no slug), adds head tags; interceptors (401 →
+                    login with redirect); after mounting, a `data-refresh` on #__STATE__ (stored HTML older than a
+                    menu/config change, set by the API during the quiet re-render) → refresh.ts
 refresh.ts          refreshSurroundings(pinia): one `GET /api/public/state` (no slug) → seeds menus.main + the site
                     config store, keeps both on failure (not awaited, no hydration mismatch)
-render.test.ts      Vitest: render output, escaping (vitest.config.ts: vue + nbUi only)
+render.test.ts      Vitest: render output, escaping, screens (vitest.config.ts: vue + nbUi only)
 server/render-server.js  renderer service: POST /render, GET /version (hash of template + SSR bundle), /health; reads
                          dist/public.html + dist-ssr/entry-server.js from the working directory (= instance app root)
 server/template.js       splice(): fills public.html placeholders (function replacers: content may contain `$&`); types in .d.ts
 server/site-lang.js      build time, part of cms(): parseConfig (JSONC), site.lang (validated) → <html lang>
 server/theme.js          build time, part of cms(): theme.colors (validated like the API) → themeStyle <style> + palette
-server/dev-ssr.js        part of cms(): dev server-renders published pages via the app's /src/entry-server.ts
-                         (one `/api/public/state/{slug}` fetch; falls through to the SPA when page is null)
+server/dev-ssr.js        part of cms(): dev server-renders published pages + customer screens via the app's
+                         /src/entry-server.ts (one `/api/public/state[/{slug}]` fetch, screens also `/api/public/instance`
+                         for publicAuth; falls through to the SPA when neither a page nor a screen with public auth on)
+server/screens.js        SCREEN_SLUGS (dev SSR; mirrors screens/index.ts and the API's PublicScreens)
 ```
 - Public code imports **directly** (`../lib/web-editor/view/ViewBlockList.vue`, `../stores/media`), type-only from the
   barrel: the barrel pulls the editor into the public bundle.
-- Shared components (SiteHeader/Footer, PageContent, block views) are server-rendered: no `window`/`document` in setup.
+- Shared components (SiteHeader/Footer, PageContent, block views, screens) are server-rendered: no `window`/`document`
+  in setup. Screens render the same HTML for everyone: query (`redirect`, `token`) and session only after mount.
 - Check hydration in the browser console (dev logs mismatches) after changing them.
 
 ## Styling rules
@@ -139,20 +153,16 @@ Base layer restores v3 defaults: gray-200 border colour, gray-400 placeholders, 
 - Types are exact (required/nullable follow C# nullability, enums are string unions), so `lib/web-editor/core/types.ts`
   re-exports them. Backend DTO change → `pnpm build:back` → `pnpm gen-api` → vue-tsc shows every affected caller.
 
-## Router (`src/router/index.ts`)
+## Router (`src/router/index.ts`) — admin SPA, staff only
+Customer screens are routes of the public app (`src/public/router.ts`, see Public site).
 | Path | View | Access |
 |------|------|--------|
-| `/login` | `Login.vue` (customer login; like register / forgot / reset / verify: `meta.publicAuth`, not-found when the instance has public auth off) | guest |
 | `/admin/login` | `admin/AdminLogin.vue` ("Admin Login" for staff; Back → `/`, no register/forgot links) | guest |
-| `/register` | `Register.vue` (customer signup) | guest |
 | `/` | `home`: hand-off to the public site (full page load; `toPublicSite` guard; first navigation → not-found) | public |
-| `/admin` | `Dashboard.vue` (welcome + profile links; super admins: `components/backups/BackupsSummary.vue` = schedule (`lib/backupSchedule.ts` scheduleSummary), next/last run, retention, saved count + automatic + total size, latest, free space, last error, "Manage backups" → `/profile?tab=backups`; name `dashboard`) | auth |
-| `/profile` | `Profile.vue`: super admins get tabs (`?tab=backups`) **Profile** (`components/ProfileDetails.vue`) + **Backups** (`components/backups/BackupsPanel.vue`: schedule off/daily/weekly/every 2 weeks/monthly (UTC, local time hint;
-weekday for weekly + biweekly, day 1-28 for monthly), storage folder (`hostPath`, else "Developer has not set backup folder"), back up now, upload with progress (`lib/backupUpload.ts`, XHR), list rows: Restore (primary) / download + delete icons (download = blob; restore = confirm → logout → admin login)); others just ProfileDetails | auth |
-| `/change-password` | `ChangePassword.vue` | auth |
-| `/forgot-password` | `ForgotPassword.vue` | guest |
-| `/reset-password` | `ResetPassword.vue` (`?token=`) | public |
-| `/verify-email` | `VerifyEmail.vue` (`?token=`) | public |
+| `/admin` | `Dashboard.vue` (welcome + profile links; super admins: `components/backups/BackupsSummary.vue` = schedule (`lib/backupSchedule.ts` scheduleSummary), next/last run, retention, saved count + automatic + total size, latest, free space, last error, "Manage backups" → `/admin/profile?tab=backups`; name `dashboard`) | staff |
+| `/admin/profile` | `Profile.vue`: super admins get tabs (`?tab=backups`) **Profile** (`components/ProfileDetails.vue`) + **Backups** (`components/backups/BackupsPanel.vue`: schedule off/daily/weekly/every 2 weeks/monthly (UTC, local time hint;
+weekday for weekly + biweekly, day 1-28 for monthly), storage folder (`hostPath`, else "Developer has not set backup folder"), back up now, upload with progress (`lib/backupUpload.ts`, XHR), list rows: Restore (primary) / download + delete icons (download = blob; restore = confirm → logout → admin login)); others just ProfileDetails | staff |
+| `/admin/change-password` | `ChangePassword.vue` (wraps `components/ChangePasswordForm.vue`, shared with the customer screen) | staff |
 | `/admin/pages` | `admin/Pages.vue` (list with search / tag filter / status filter (All statuses / Published / Not published; only here, `v-model:status` shows it) / updatedAt sort toggle (clock + arrow icon button, down = newest first) (`PageFilters` + `composables/usePageFilter.ts`), tag chips, row = view/preview link + "…" `components/ActionMenu.vue` (Edit → modal `components/PageEditDialog.vue` (slug, published (switching on publishes the saved copy), tags; one PUT with only what changed, all or nothing), Duplicate (`POST /api/pages/{id}/duplicate`: "<title> (copy)", slug `-2`…, stays on the list), Export (JSON of the saved page), Delete (confirm; disabled for locked pages)); "+ New Page" opens a row: Import (primary outline, upload icon + "Import", icon only below sm; file → `parsePageExport` → `POST /api/pages/import` → editor of the new draft, toast warns about missing images), title input, Create, cancel (x icon)) | staff |
 | `/admin/pages/:id` | `admin/PageEditor.vue` → `WebEditor` (no nav) | staff |
 | `/admin/pages/:id/preview` | `admin/PagePreview.vue` (draft preview, no nav) | staff |
@@ -164,22 +174,23 @@ weekday for weekly + biweekly, day 1-28 for monthly), storage folder (`hostPath`
 
 **Nav:** `App.vue` renders `components/AppNav.vue` on `meta.requiresAuth` routes unless `meta.hideNav` (editor,
 preview): md+ fixed left sidebar (`w-220`; content gets `md:pl-220`): `<favicon> CMS`, items with nb-ui `Icon`s
-(Dashboard, Pages, Menus, Media, Configuration; staff-only items hidden for customers), bottom row `User` → `/profile` +
-exit icon button (log out). Below md: sticky 56px top bar + burger → the same `#app-nav-menu` as a full-screen
-overlay below the bar (body scroll locked). Customer auth screens (`/login`, `/register`, `/forgot-password`, `meta.publicNav`) render
-`components/PublicNav.vue` (loads menu + config → `SiteHeader`) instead; `/admin/login` and the other auth screens have no nav. Fixed overlays: md+ the sidebar is on the left (no top offset).
+(Dashboard, Pages, Menus, Media, Configuration), bottom row `User` → `/admin/profile` + exit icon button (log out).
+Below md: sticky 56px top bar + burger → the same `#app-nav-menu` as a full-screen overlay below the bar (body scroll
+locked). `/admin/login` has no nav. Fixed overlays: md+ the sidebar is on the left (no top offset).
 **Admin bar** (`components/AdminBar.vue`, public site): thin dark bar above `SiteHeader` for staff → `/admin`, log out
 (auth store `logout()`, refresh cookie). Client-only: shown after mount from the `auth_type` hint (`readAuthType()`),
 no API call, so SSR/hydration are identical for everyone (an expired session lands on the admin login).
 
-Guard (`router.beforeEach`): `meta.requiresAuth` → `ensureSession()` else `/admin/login` for `/admin*` paths,
-`/login` otherwise (remembers `redirectAfterLogin`); `meta.requiresStaff` → `authType === 'staff'` else `dashboard`; `meta.guest` → authenticated users go to `dashboard` (`/admin`).
+Guard (`router.beforeEach`): `meta.requiresAuth` → `ensureSession()` else `/admin/login` (remembers
+`redirectAfterLogin`); `meta.requiresStaff` (every `/admin*` route) → `authType === 'staff'` else a full page load to
+`/` (customer session; a guard redirect to `home` would 404 on the first navigation); `meta.guest` → signed-in staff go
+to `dashboard`.
 **New top-level route?** Also add its first path segment to `ReservedSlugs` in
 `api-backend/Services/Pages/PageService.cs` so no page can claim it.
 
 `PageContent.vue` renders title + `ViewBlockList` and seeds the media store from `page.media`; shared by
 the public site (`src/public/PublicApp.vue`) and `PagePreview.vue`. Both also render `components/SiteHeader.vue` (nav partial: logo → home + the
-`main` menu from `usePublicMenusStore`, seeded on a fresh install with Home `/` + Login `/login` (`MenuService.EnsureMainAsync`); md+ row with hover/focus dropdowns, deeper levels indented inside; burger panel
+`main` menu from `usePublicMenusStore`, seeded on a fresh install with Home `/` + Login `/login` (`MenuService.EnsureMainAsync`; `site/SiteNavLink.vue` shows the `/login` item as "Account" → `/user/profile` for a signed-in customer, client-only); md+ row with hover/focus dropdowns, deeper levels indented inside; burger panel
 below md; pieces in `components/site/`) and `components/SiteFooter.vue` (logo + `config.fields.firmName` + filled
 `config.groups.contact` entries: address lines, mailto/tel/link by type; bottom row = `config.footerLinks`, the
 published config pages marked `footer`). Hidden only when all are empty. Other groups: instance overrides/templates.
@@ -192,8 +203,8 @@ their server-rendered `<head>` (`headTags()` in `src/public/head.ts`, falls back
 
 ## Pinia stores
 - `src/stores/auth.ts` — `user`, `accessToken` (memory only), `authType`, `isAuthenticated`, `loading`,
-  `error`, `redirectAfterLogin`. Refresh token is an HttpOnly cookie; `main.ts` awaits `ensureSession()`
-  before mounting. Actions: `login`, `register`, `registerStaff`, `logout`, `fetchCurrentUser`,
+  `error`, `redirectAfterLogin` (admin). Refresh token is an HttpOnly cookie; `main.ts` awaits `ensureSession()`
+  before mounting; the public app only on screens, after mount (`public/session.ts`). SSR-safe (storage reads guarded). Actions: `login`, `register`, `registerStaff`, `logout`, `fetchCurrentUser`,
   `refreshAuth` (single-flight), `ensureSession`, `changePassword`, `updateProfile`, email flows.
   localStorage holds `auth_type` only.
 - `src/stores/editor.ts` — `useEditorStore` (block tree, history, page state, saving).
@@ -223,9 +234,10 @@ their server-rendered `<head>` (`headTags()` in `src/public/head.ts`, falls back
   `byId` cache that image blocks render from (seeded from page responses via `seed`).
 
 ## Token refresh (`src/interceptors.ts`)
-On 401 (except login/register/refresh/logout): single-flight `refreshAuth()`, replay the request;
-on failure clear auth and go to `loginRouteFor(authType)` (router: staff → `/admin/login`, else `/login`;
-also used after logout / password change).
+`setupInterceptors(onUnauthenticated)`, installed by both apps. On 401 (except login/register/refresh/logout):
+single-flight `refreshAuth()`, replay the request; on failure clear auth and call `onUnauthenticated` (admin →
+`/admin/login`, public → `/login?redirect=<current>`). Logout / password change: the component emits, its parent
+navigates (`ProfileDetails` `logged-out` + `passwordTo` prop, `ChangePasswordForm` `changed` + `backTo`).
 
 ## UI library (`@trainpaths/nb-ui`, separate public repo github.com/trainpaths/nb-ui)
 Installed from a git tag (`"@trainpaths/nb-ui": "github:trainpaths/nb-ui#vX.Y.Z"`; pnpm fetches the codeload tarball, no
@@ -273,13 +285,14 @@ src/main.ts            createAdmin(): admin SPA bootstrap
 src/public/            public site (SSR + hydration), see above; the instance's public.html is its template
 server/                render service + dev SSR (JS)
 vite-plugin.js         cms(): the instance Vite setup + overrides
-src/router/index.ts    routes + guards
+src/router/index.ts    admin routes + guards
 src/style.css          Tailwind import + nb-ui theme.css + @source of the package + v3-compat base (+ web-editor.css)
 src/lib/web-editor/     block editor library (own CLAUDE.md)
 src/views/             route views (admin/ = page management)
 src/components/        app shell pieces (AppNav, AdminBar, SiteHeader + site/, SiteFooter, ConfigImageField, PageFilters,
                        PageEditDialog, ActionMenu ("…" menu like nb-ui Dropdown + per-item title/testid; nb-ui icon names),
-                       menus/ tree editor, ProfileDetails, backups/BackupsPanel + BackupsSummary (dashboard))
+                       menus/ tree editor, ProfileDetails + ChangePasswordForm (staff + customer), backups/BackupsPanel +
+                       BackupsSummary (dashboard))
 src/composables/       usePageFilter (search/tag/status/sort over PageSummary[])
 src/lib/menus/tree.ts  pure menu tree ops (locate, move, indent/outdent, depth checks)
 src/lib/pageExport.ts  page export file (`{format: "cms-page", version, exportedAt, page}`): toPageExport, parsePageExport
@@ -288,6 +301,6 @@ src/lib/pageExport.ts  page export file (`{format: "cms-page", version, exported
 src/lib/download.ts    saveBlob / saveJson (browser file download)
 src/lib/backupSchedule.ts  interval/weekday labels + scheduleSummary (panel + dashboard)
 src/lib/backupUpload.ts uploadBackup (XHR for progress; ensureSession + bearer itself) + formatBytes
-nginx.conf             `/` + `/{slug}` → API HTML endpoint (X-Accel-Redirect to index.html/public.html), SPA fallback, /api proxy (64k; /api/pages 2m; /api/menus 512k; /api/media 11m; /api/backups 2g, unbuffered, 15 min timeouts; proxy headers set once at server level; real client IP from the host proxy's X-Forwarded-For, trusted from 172.16.0.0/12), CSP (img-src 'self' only: uploads are same-origin)
+nginx.conf             `/` + `/{slug}` + `/user/{name}` → API HTML endpoint (X-Accel-Redirect to index.html/public.html), SPA fallback, /api proxy (64k; /api/pages 2m; /api/menus 512k; /api/media 11m; /api/backups 2g, unbuffered, 15 min timeouts; proxy headers set once at server level; real client IP from the host proxy's X-Forwarded-For, trusted from 172.16.0.0/12), CSP (img-src 'self' only: uploads are same-origin)
 public/favicon.svg     CMS admin icon (emitted by cms() unless the instance has its own)
 ```

@@ -1,15 +1,11 @@
 <script setup lang="ts">
-import { usePublicPageStore } from './store'
 import { usePublicMenusStore } from '../stores/menus'
 import { useSiteConfigStore } from '../stores/siteConfig'
-import PageView from '../views/PageView.vue'
-import NotFound from '../views/NotFound.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import SiteHeader from '../components/SiteHeader.vue'
 import AdminBar from '../components/AdminBar.vue'
 
-/** Root of the server-rendered public site: one layout, the routes only switch the page in the store. */
-const store = usePublicPageStore()
+/** Root of the server-rendered public site: one layout around the route (page, not-found or customer screen). */
 const menus = usePublicMenusStore()
 const siteConfig = useSiteConfigStore()
 </script>
@@ -22,13 +18,7 @@ const siteConfig = useSiteConfigStore()
 			:config="siteConfig.config"
 			:menu="menus.menus.main ?? null"
 		/>
-		<PageView
-			v-if="store.page"
-			:key="store.slug"
-			:page="store.page"
-			:config="siteConfig.config"
-		/>
-		<NotFound v-else />
+		<RouterView />
 		<SiteFooter :config="siteConfig.config" />
 	</div>
 </template>

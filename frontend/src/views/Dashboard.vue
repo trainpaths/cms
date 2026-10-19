@@ -18,8 +18,8 @@ const isSuperAdmin = computed(() => authType.value === 'staff' && !!user.value?.
 		<p class="text-black opacity-70 mb-16">Welcome, {{ user?.displayName || user?.email || 'User' }}!</p>
 
 		<div class="flex gap-16">
-			<Link to="/profile">View Profile</Link>
-			<Link to="/change-password">Change Password</Link>
+			<Link to="/admin/profile">View Profile</Link>
+			<Link to="/admin/change-password">Change Password</Link>
 		</div>
 
 		<p class="mt-24 text-sm text-black opacity-50">Logged in as {{ authType }}</p>

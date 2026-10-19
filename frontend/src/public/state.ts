@@ -5,9 +5,9 @@ import type { PublicMenu, PublicPage, SiteConfig } from '../lib/web-editor'
  * the server render embeds it as `#__STATE__`, and the client hydrates from it.
  */
 export interface PublicState {
-	/** Requested slug (`home` for `/`). */
+	/** Requested slug (`home` for `/`); a customer screen's path without the slash (`login`, `user/profile`). */
 	slug: string
-	/** null → not-found page. */
+	/** null → the customer screen (`screens/`) of a screen slug, else the not-found page. */
 	page: PublicPage | null
 	/** The `main` menu. */
 	menu: PublicMenu | null

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useAuthStore } from '../stores/auth'
+import { useAuthStore } from '../../stores/auth'
 import { storeToRefs } from 'pinia'
 import { Button, Input, Card, Alert, Link, Form } from '@trainpaths/nb-ui'
 

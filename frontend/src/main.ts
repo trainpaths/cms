@@ -22,6 +22,6 @@ export async function createAdmin(): Promise<void> {
 	await Promise.all([useAuthStore().ensureSession(), useInstanceStore().load()])
 
 	app.use(router)
-	setupInterceptors(router)
+	setupInterceptors(() => router.push({ name: 'admin-login' }))
 	app.mount('#app')
 }

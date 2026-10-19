@@ -1,12 +1,8 @@
 import { test, expect, request, type Page } from '@playwright/test'
-import { uniqueEmail, testPassword, REFRESH_COOKIE } from '../../fixtures/test-utils'
+import { uniqueEmail, REFRESH_COOKIE, registerCustomer } from '../../fixtures/test-utils'
 
 async function registerAndGetRefreshCookie(page: Page, prefix: string) {
-	await page.goto('/register')
-	await page.getByPlaceholder('Email').fill(uniqueEmail(prefix))
-	await page.getByPlaceholder('Password').fill(testPassword())
-	await page.getByRole('button', { name: /Register as customer/i }).click()
-	await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+	await registerCustomer(page, uniqueEmail(prefix))
 
 	const cookie = (await page.context().cookies()).find((c) => c.name === REFRESH_COOKIE)
 	expect(cookie).toBeDefined()
@@ -54,7 +50,8 @@ test.describe('Token Refresh', () => {
 	test('session is restored from the cookie after navigation reload', async ({ page }) => {
 		await registerAndGetRefreshCookie(page, 'transparent')
 
-		await page.goto('/profile')
-		await expect(page.getByRole('heading', { name: 'Profile' })).toBeVisible()
+		// the account page's heading is in the stored HTML; the button needs the restored session
+		await page.goto('/user/profile')
+		await expect(page.getByRole('button', { name: 'Logout' })).toBeVisible()
 	})
 })

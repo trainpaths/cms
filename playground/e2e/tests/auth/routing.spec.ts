@@ -1,10 +1,39 @@
 import { test, expect } from '@playwright/test'
-import { uniqueEmail, testPassword } from '../../fixtures/test-utils'
+import { uniqueEmail, registerCustomer, logoutCustomer } from '../../fixtures/test-utils'
 
 test.describe('Auth Routing', () => {
-	test('unauthenticated user redirected from protected route to login', async ({ page }) => {
-		await page.goto('/profile')
-		await expect(page).toHaveURL('/login')
+	test('account pages send visitors to login, which comes back', async ({ page }) => {
+		const email = uniqueEmail('redirect-dest')
+		await registerCustomer(page, email)
+		await logoutCustomer(page)
+
+		await page.goto('/user/password')
+		await expect(page).toHaveURL('/login?redirect=/user/password')
+
+		await page.getByPlaceholder('Email').fill(email)
+		await page.getByPlaceholder('Password').fill('TestPassword123!')
+		await page.getByRole('button', { name: /^Log in$/ }).click()
+
+		await expect(page).toHaveURL('/user/password')
+		await expect(page.getByPlaceholder('Current password')).toBeVisible()
+	})
+
+	test('the redirect carries over to register', async ({ page }) => {
+		await page.goto('/login?redirect=/legal')
+		await page.getByRole('link', { name: 'Register' }).click()
+		await expect(page).toHaveURL('/register?redirect=%2Flegal')
+		await page.getByPlaceholder('Email').fill(uniqueEmail('redirect-register'))
+		await page.getByPlaceholder('Password').fill('TestPassword123!')
+		await page.getByRole('button', { name: /Register as customer/i }).click()
+		await expect(page).toHaveURL('/legal')
+	})
+
+	test('unsafe redirects go home instead', async ({ page }) => {
+		await page.goto('/register?redirect=//evil.test')
+		await page.getByPlaceholder('Email').fill(uniqueEmail('redirect-unsafe'))
+		await page.getByPlaceholder('Password').fill('TestPassword123!')
+		await page.getByRole('button', { name: /Register as customer/i }).click()
+		await expect(page).toHaveURL('/')
 	})
 
 	test('unauthenticated user redirected from admin area to staff login', async ({ page }) => {
@@ -12,59 +41,24 @@ test.describe('Auth Routing', () => {
 		await expect(page).toHaveURL('/admin/login')
 	})
 
-	test('unauthenticated user redirected from change-password to login', async ({ page }) => {
-		await page.goto('/change-password')
-		await expect(page).toHaveURL('/login')
-	})
-
-	test('authenticated user redirected from login to dashboard', async ({ page }) => {
-		const email = uniqueEmail('auth-redirect')
-
-		await page.goto('/register')
-		await page.getByPlaceholder('Email').fill(email)
-		await page.getByPlaceholder('Password').fill(testPassword())
-		await page.getByRole('button', { name: /Register as customer/i }).click()
-		await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+	test('signed-in customer opening login or register goes home', async ({ page }) => {
+		await registerCustomer(page, uniqueEmail('auth-redirect'))
 
 		await page.goto('/login')
-		await expect(page).toHaveURL('/admin')
-		await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+		await expect(page).toHaveURL('/')
+		await expect(page.getByRole('heading', { name: 'Home', level: 1 })).toBeVisible()
+
+		await page.goto('/register')
+		await expect(page).toHaveURL('/')
 	})
 
-	test('authenticated user redirected from register to dashboard', async ({ page }) => {
-		const email = uniqueEmail('auth-redirect-reg')
+	test('customers have no access to the admin', async ({ page }) => {
+		await registerCustomer(page, uniqueEmail('no-admin'))
 
-		await page.goto('/register')
-		await page.getByPlaceholder('Email').fill(email)
-		await page.getByPlaceholder('Password').fill(testPassword())
-		await page.getByRole('button', { name: /Register as customer/i }).click()
-		await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
-
-		await page.goto('/register')
-		await expect(page).toHaveURL('/admin')
-	})
-
-	test('redirect after login preserves intended destination', async ({ page }) => {
-		await page.goto('/profile')
-		await expect(page).toHaveURL('/login')
-
-		const email = uniqueEmail('redirect-dest')
-		await page.goto('/register')
-		await page.getByPlaceholder('Email').fill(email)
-		await page.getByPlaceholder('Password').fill(testPassword())
-		await page.getByRole('button', { name: /Register as customer/i }).click()
-		await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
-
-		await page.goto('/profile')
-		await page.getByRole('button', { name: 'Logout' }).click()
-
-		await page.goto('/change-password')
-		await expect(page).toHaveURL('/login')
-
-		await page.getByPlaceholder('Email').fill(email)
-		await page.getByPlaceholder('Password').fill(testPassword())
-		await page.getByRole('button', { name: /^Log in$/ }).click()
-
-		await expect(page).toHaveURL('/change-password')
+		for (const path of ['/admin', '/admin/pages', '/admin/profile']) {
+			await page.goto(path)
+			await expect(page).toHaveURL('/')
+			await expect(page.getByRole('heading', { name: 'Home', level: 1 })).toBeVisible()
+		}
 	})
 })

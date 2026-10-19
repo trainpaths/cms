@@ -1,5 +1,5 @@
-import { test as base, type Page, expect } from '@playwright/test'
-import { uniqueEmail, testPassword } from './test-utils'
+import { test as base, type Page } from '@playwright/test'
+import { uniqueEmail, testPassword, registerCustomer } from './test-utils'
 
 type AuthFixtures = {
 	authenticatedPage: Page
@@ -15,13 +15,7 @@ export const test = base.extend<AuthFixtures>({
 	},
 
 	authenticatedPage: async ({ page, testUser }, use) => {
-		await page.goto('/register')
-		await page.getByPlaceholder('Email').fill(testUser.email)
-		await page.getByPlaceholder('Password').fill(testUser.password)
-		await page.getByPlaceholder('Display name (optional)').fill('E2E Test User')
-		await page.getByRole('button', { name: /Register as customer/i }).click()
-
-		await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+		await registerCustomer(page, testUser.email, { password: testUser.password, displayName: 'E2E Test User' })
 
 		await use(page)
 
