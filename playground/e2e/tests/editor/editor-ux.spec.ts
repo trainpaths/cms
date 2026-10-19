@@ -22,6 +22,17 @@ test.describe('Editor UX', () => {
 		await expect(blocks.first().getByPlaceholder('Click to add text...')).toBeVisible()
 	})
 
+	test('Ctrl+S saves the page, also while typing in a field', async ({ staffPage: page }) => {
+		await insertBlock(page, 'Paragraph')
+		const save = page.getByTestId('page-save')
+		await page.getByPlaceholder('Click to add text...').fill('Saved by shortcut')
+		await expect(save).toBeEnabled()
+		await page.keyboard.press('ControlOrMeta+s')
+		await expect(save).toBeDisabled()
+		await page.reload()
+		await expect(page.getByPlaceholder('Click to add text...')).toHaveValue('Saved by shortcut')
+	})
+
 	test('dragging onto an empty page creates the first block', async ({ staffPage: page }) => {
 		await inserter(page, 'Heading').dragTo(main(page).getByText('Start adding blocks from the sidebar'))
 		await expect(main(page).locator('[data-block-id]')).toHaveCount(1)

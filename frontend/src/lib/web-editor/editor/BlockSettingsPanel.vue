@@ -12,8 +12,8 @@ const store = useEditorStore()
 const { selectedBlock } = useSelection()
 
 const tabs = [
-	{ id: 'page', label: 'Page' },
 	{ id: 'block', label: 'Block' },
+	{ id: 'page', label: 'Page' },
 ] as const
 
 const blockType = computed(() => {

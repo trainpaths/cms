@@ -14,7 +14,7 @@ import { saveJson } from '../../download'
 const store = useEditorStore()
 const tags = useTagsStore()
 const siteConfig = useSiteConfigStore()
-const { published, canPublish, publishLabel, publishHint, statusText } = usePublishState()
+const { published, canPublish, publishLabel, publishHint, statusText, publish, unpublish } = usePublishState()
 onMounted(() => {
 	tags.load()
 	siteConfig.load()
@@ -155,7 +155,7 @@ async function commitSlug() {
 					:title="publishHint"
 					:disabled="!canPublish"
 					data-testid="settings-publish"
-					@click="store.publish()"
+					@click="publish"
 				>
 					{{ publishLabel }}
 				</button>
@@ -164,7 +164,7 @@ async function commitSlug() {
 					class="cursor-pointer rounded border border-gray-300 bg-white px-12 py-4 text-xs text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
 					:disabled="store.publishing"
 					data-testid="settings-unpublish"
-					@click="store.unpublish()"
+					@click="unpublish"
 				>
 					Unpublish
 				</button>

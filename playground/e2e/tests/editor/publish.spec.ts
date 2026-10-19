@@ -83,6 +83,7 @@ test('saving never publishes: visitors see the live copy until "Publish changes"
 	await expect(save).toBeDisabled()
 
 	await publishButton.click()
+	await page.getByTestId('confirm-ok').click()
 	await expect(status).toHaveText('Published')
 	await expect(publishButton).toBeDisabled()
 	await expect
@@ -109,6 +110,7 @@ test('< md: Publish is a globe icon with the same rules, Unpublish lives in the 
 	await expect(page.getByRole('button', { name: 'Back', exact: true })).toBeVisible()
 
 	await icon.click()
+	await page.getByTestId('confirm-ok').click()
 	await expect(icon).toBeDisabled()
 	await expect(icon).toHaveAttribute('title', 'No changes to publish')
 	await expect(page.getByTestId('page-unpublish')).toBeHidden()
@@ -118,9 +120,34 @@ test('< md: Publish is a globe icon with the same rules, Unpublish lives in the 
 	await expect(page.getByTestId('settings-publish')).toHaveText('Publish changes')
 	await expect(page.getByTestId('settings-publish')).toBeDisabled()
 	await page.getByTestId('settings-unpublish').click()
+	await page.getByTestId('confirm-ok').click()
 	await expect(page.getByTestId('page-status')).toHaveText('Draft')
 	await expect(page.getByTestId('settings-unpublish')).toHaveCount(0)
 	await expect(icon).toBeEnabled()
+})
+
+test('Publish and Unpublish ask first; Cancel changes nothing', async ({ staffPage: page }) => {
+	await createPage(page)
+	await page.getByTestId('sidebar-tab-page').click()
+	const status = page.getByTestId('page-status')
+	const dialog = page.getByTestId('confirm-dialog')
+
+	await page.getByTestId('page-publish').click()
+	await expect(dialog).toContainText('Publish this page?')
+	await page.getByTestId('confirm-cancel').click()
+	await expect(dialog).toBeHidden()
+	await expect(status).toHaveText('Draft')
+
+	await publish(page)
+	await expect(status).toHaveText('Published')
+
+	await page.getByTestId('page-unpublish').click()
+	await expect(dialog).toContainText('Unpublish this page?')
+	await page.keyboard.press('Escape')
+	await expect(dialog).toBeHidden()
+	await expect(status).toHaveText('Published')
+	await unpublish(page)
+	await expect(status).toHaveText('Draft')
 })
 
 test('reserved slugs are rejected', async ({ staffPage: page }) => {

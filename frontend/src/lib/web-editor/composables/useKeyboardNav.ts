@@ -7,9 +7,18 @@ export function useKeyboardNav() {
 	const { selectPrev, selectNext, selectParent, selectFirstChild, clear } = useSelection()
 
 	function handleKeydown(e: KeyboardEvent) {
+		// confirm dialogs etc.: focus is on their buttons, Backspace must not delete the block
+		if ((e.target as HTMLElement)?.closest?.('[role="dialog"], [role="alertdialog"]')) return
+
 		if (e.ctrlKey || e.metaKey) {
 			// Shift turns 'z' into 'Z'; Ctrl+Y is the Windows redo
 			const key = e.key.toLowerCase()
+			// also in inputs: replaces the browser's "save page as"
+			if (key === 's') {
+				e.preventDefault()
+				store.savePage()
+				return
+			}
 			if (key === 'z' || key === 'y') {
 				e.preventDefault()
 				if (key === 'y' || e.shiftKey) {

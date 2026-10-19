@@ -80,6 +80,7 @@ export async function publish(page: Page) {
 	if (await save.isEnabled()) await save.click()
 	// waits for the save to finish: Publish stays disabled while saving
 	await page.getByTestId('page-publish').click()
+	await page.getByTestId('confirm-ok').click()
 	await expect(page.getByTestId('page-unpublish')).toBeVisible()
 	await expect(page.getByTestId('page-publish')).toHaveText('Publish changes')
 }
@@ -87,6 +88,7 @@ export async function publish(page: Page) {
 /** Editor header Unpublish. */
 export async function unpublish(page: Page) {
 	await page.getByTestId('page-unpublish').click()
+	await page.getByTestId('confirm-ok').click()
 	await expect(page.getByTestId('page-publish')).toHaveText('Publish')
 	await expect(page.getByTestId('page-unpublish')).toHaveCount(0)
 }
