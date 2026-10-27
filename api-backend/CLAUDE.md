@@ -165,7 +165,7 @@ TranslateController    /api/translate        [Authorize(StaffOnly)], rate limit 
                                  chars, DeepL can't do the language | 502 DeepL failed (detail = TranslationException message)
 ```
 - `ITranslator` (seam) → `DeepLTranslator` (typed HttpClient, 30 s): host by key (`:fx` → api-free.deepl.com),
-  `Authorization: DeepL-Auth-Key`, batches of 50, empty texts skipped, source = default code upper-case, target
+  `Authorization: DeepL-Auth-Key`, batches of ≤ 50 texts and ≤ 100 KB (DeepL: 128 KiB body), 3 in parallel, empty texts skipped, source = default code upper-case, target
   `EN-US`/`EN-GB`, `PT-PT`/`PT-BR`, else the code; `de-CH` results get `ß` → `ss`; 403/429/456/5xx/network →
   `TranslationException` with a user-facing message.
 - `TranslationOptions` (`Translation:DeepL:ApiKey`, `Enabled`); `InstanceConfig.MachineTranslation` tells the admin
