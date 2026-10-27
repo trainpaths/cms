@@ -21,3 +21,15 @@ export function stripLocale(pathname: string): { code: string; path: string } {
 		return { code: first, path: rest && rest !== '/' ? rest : '/' }
 	return { code: DEFAULT_LANGUAGE.code, path: pathname }
 }
+
+/**
+ * A link target in language `code` (link blocks): a site path (`/about?x#y`) gets the prefix like router links do;
+ * external URLs, `//host`, admin/API paths and paths that already start with a language code stay as they are.
+ */
+export function localeHref(url: string, code: string): string {
+	if (!url.startsWith('/') || url.startsWith('//')) return url
+	const [, path = '', suffix = ''] = /^([^?#]*)(.*)$/s.exec(url) ?? []
+	const first = path.split('/')[1] ?? ''
+	if (['admin', 'api'].includes(first) || LANGUAGES.some((l) => l.code === first)) return url
+	return localePath(path, code) + suffix
+}

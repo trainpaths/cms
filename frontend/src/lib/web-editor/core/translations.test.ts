@@ -61,7 +61,6 @@ describe('textFields', () => {
 			'h.text',
 			'c.title',
 			'l.label',
-			'l.url',
 		])
 	})
 
@@ -71,7 +70,6 @@ describe('textFields', () => {
 			'null.metaDescription',
 			'c.title',
 			'l.label',
-			'l.url',
 		])
 		expect(textFields(tree(), page, translations, 'fr').map((f) => `${f.blockId}.${f.key}`)).toContain('h.text')
 	})

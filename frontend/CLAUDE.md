@@ -107,7 +107,8 @@ components/UnsavedDialog.vue     translated copy of nb-ui's UnsavedChangesDialog
 state.ts            PublicState {slug, page|null, menu, config, baseUrl, lang (code)}: what a page or screen renders
                     from (API RenderState mirrors it)
 locale.ts           language prefixes (default unprefixed): localeBase(code) = router history base (`/de/`),
-                    localePath('/about', 'de') = `/de/about` ('/' → `/de`), stripLocale(pathname) → {code, path}.
+                    localePath('/about', 'de') = `/de/about` ('/' → `/de`), stripLocale(pathname) → {code, path},
+                    localeHref(url, code) (link blocks: site paths prefixed, external/admin/API/already prefixed kept).
                     Router links get the prefix from the history base; this is for code building URLs itself
 createPublicApp.ts  app factory (SSR app or client app), seeds stores (publicPage, menus, siteConfig); returns app, router, pinia
 PublicApp.vue       .site-theme root: AdminBar (client-only) + SiteHeader + RouterView + SiteFooter

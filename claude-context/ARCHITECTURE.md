@@ -332,7 +332,8 @@ remaining phases (one PR each): `claude-context/localization/` (README first).
 - **Content** (Phase 3): per-field translations on one shared block tree (`translations: { code: { attr } }` per
   block, opt-in `translatable` attributes, page title/meta per language in `pages.Translations` jsonb, published with
   the rest), resolved by the API for public reads (`PageService.Localize`: overlay of non-empty values, else the default;
-  `translations` stripped). Layout, images and colours stay shared; add/move/delete of blocks affects every language.
+  `translations` stripped). Layout, images, colours and link URLs stay shared (a link block's site path follows the
+  page's language: `localeHref`, like router links); add/move/delete of blocks affects every language.
   Menus and footer links show the translated live title (`PageService.LiveTitle`; `PublicCache` keyed per language; a
   translated title change re-renders other pages like a rename). Editor: `store.editLang` (header select + Page tab
   "Translations" with untranslated counts); `useBlockAttribute` reads/writes the edited language for translatable
@@ -344,7 +345,7 @@ remaining phases (one PR each): `claude-context/localization/` (README first).
   default-language text of every untranslated translatable field (+ title/meta), one `POST /api/translate` (staff,
   ≤500 texts, ≤10 000 chars each, source = default language), results land in the working copy as one change and one
   undo step (`applyTranslations`). Nothing is saved or published by itself: the owner reviews, saves, publishes.
-  `ITranslator` seam → `DeepLTranslator` (free keys `:fx` → api-free.deepl.com; batches of 50; `EN-US`/`EN-GB`,
+  `ITranslator` seam → `DeepLTranslator` (free keys `:fx` → api-free.deepl.com; batches of ≤ 50 texts and ≤ 100 KB, 3 in parallel; `EN-US`/`EN-GB`,
   `PT-PT`/`PT-BR` targets; no Swiss German at DeepL → `ß` replaced by `ss` for `de-CH`; empty texts never sent).
   **Privacy**: page text leaves the server to DeepL. The Pro API doesn't keep texts; the free API may use them to
   improve its models. Site owners must know before a key is set. Cost = characters translated (only missing fields by
