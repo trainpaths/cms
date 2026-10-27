@@ -48,3 +48,25 @@ test('a German translation is published at /de/<slug>, untranslated languages sh
 	await visitor.goto(`/${slug}`)
 	await expect(visitor.getByText('Hello world')).toBeVisible()
 })
+
+test('preview: the footer language switch changes the previewed language, not the admin', async ({
+	staffPage: page,
+	context,
+}) => {
+	await createPage(page, 'Preview page')
+	await page.getByTestId('edit-language').selectOption('de')
+	await page.getByTestId('page-title').fill('Vorschauseite')
+	await page.getByTestId('page-title').blur() // saves
+	await expect(page.getByTestId('page-save')).toBeDisabled()
+
+	await page.goto(`${new URL(page.url()).pathname}/preview?lang=de`)
+	await expect(page.getByRole('heading', { name: 'Vorschauseite' })).toBeVisible()
+	const footer = page.getByTestId('site-footer')
+	await footer.getByTestId('language-dropdown').getByRole('button', { name: 'Deutsch' }).click()
+	await page.getByRole('menuitem', { name: 'Français' }).click()
+
+	await expect(page).toHaveURL(/[?&]lang=fr$/)
+	await expect(page.getByRole('heading', { name: 'Preview page' })).toBeVisible()
+	await expect(page.getByTestId('preview-language')).toHaveValue('fr')
+	expect((await context.cookies()).find((c) => c.name === 'cms_lang')).toBeUndefined()
+})

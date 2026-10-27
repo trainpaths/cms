@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, ref, onMounted, provide, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { Link, Loading, Select } from '@trainpaths/nb-ui'
-import { getApiPagesById } from '../../api/sdk.gen'
+import { getApiPagesById, getApiPublicState } from '../../api/sdk.gen'
+import type { PublicStateResponse } from '../../api/types.gen'
 import type { PageDetail } from '../../lib/web-editor'
 import PageView from '../PageView.vue'
 import SiteFooter from '../../components/SiteFooter.vue'
@@ -10,13 +11,16 @@ import SiteHeader from '../../components/SiteHeader.vue'
 import { usePublicMenusStore } from '../../stores/menus'
 import { useSiteConfigStore } from '../../stores/siteConfig'
 import { DEFAULT_LANGUAGE, IS_LOCALIZED, LANGUAGES, languageLabel, languageOf } from '../../i18n/languages'
+import { LANGUAGE_SWITCH } from '../../i18n'
 import { localizeBlocks, localizeText } from '../../lib/web-editor/core/localize'
 
 const props = defineProps<{ id: string }>()
 
 const page = ref<PageDetail | null>(null)
 // the saved working copy in one language, like the public site will show it (`?lang=` from the editor)
-const lang = ref(languageOf(useRoute().query.lang).code)
+const route = useRoute()
+const router = useRouter()
+const lang = ref(languageOf(route.query.lang).code)
 const languageOptions = LANGUAGES.map(({ code }) => ({ value: code, label: languageLabel(code) }))
 const localized = computed(() =>
 	page.value
@@ -30,6 +34,37 @@ const failed = ref(false)
 const siteConfig = useSiteConfigStore()
 const menus = usePublicMenusStore()
 menus.load('main')
+
+// menu + footer link titles in the previewed language (the stores keep the default's: the admin shares them)
+const surroundings = ref<PublicStateResponse | null>(null)
+watch(
+	lang,
+	async (code) => {
+		surroundings.value = null
+		// reload keeps the language (default: no query, like the editor's link)
+		const query = code === DEFAULT_LANGUAGE.code ? undefined : code
+		if (route.query.lang !== query) void router.replace({ query: { ...route.query, lang: query } })
+		if (code === DEFAULT_LANGUAGE.code) return
+		try {
+			const { data } = await getApiPublicState({ query: { lang: code } })
+			if (lang.value === code) surroundings.value = data
+		} catch {
+			// the default's titles
+		}
+	},
+	{ immediate: true },
+)
+const menu = computed(() => (surroundings.value ? (surroundings.value.menu ?? null) : (menus.menus.main ?? null)))
+const config = computed(() => surroundings.value?.config ?? siteConfig.config)
+
+// the footer's language dropdown switches the preview, not the admin's language
+provide(LANGUAGE_SWITCH, {
+	current: computed(() => languageOf(lang.value)),
+	languages: LANGUAGES,
+	change: (code) => {
+		lang.value = code
+	},
+})
 
 onMounted(async () => {
 	siteConfig.load()
@@ -63,14 +98,14 @@ onMounted(async () => {
 		:lang="languageOf(lang).tag"
 	>
 		<SiteHeader
-			:config="siteConfig.config"
-			:menu="menus.menus.main ?? null"
+			:config="config"
+			:menu="menu"
 		/>
 		<PageView
 			:page="localized"
-			:config="siteConfig.config"
+			:config="config"
 		/>
-		<SiteFooter :config="siteConfig.config" />
+		<SiteFooter :config="config" />
 	</div>
 	<p
 		v-else-if="failed"
