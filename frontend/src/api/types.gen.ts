@@ -46,6 +46,11 @@ export type Block = {
     attributes: {
         [key: string]: unknown;
     };
+    translations?: {
+        [key: string]: {
+            [key: string]: unknown;
+        };
+    } | null;
     innerBlocks: Array<Block>;
 };
 
@@ -132,6 +137,9 @@ export type ImportPageRequest = {
     metaTitle?: string | null;
     metaDescription?: string | null;
     tags?: Array<string> | null;
+    translations?: {
+        [key: string]: PageTextTranslation;
+    } | null;
 };
 
 export type ImportPageResult = {
@@ -199,6 +207,9 @@ export type PageDetail = {
     editable: boolean;
     metaTitle: string;
     metaDescription: string;
+    translations: {
+        [key: string]: PageTextTranslation;
+    };
 };
 
 export type PageStatus = 'draft' | 'published';
@@ -215,6 +226,12 @@ export type PageSummary = {
     publishedAt?: string | null;
     hasUnpublishedChanges: boolean;
     locked: boolean;
+};
+
+export type PageTextTranslation = {
+    title: string;
+    metaTitle: string;
+    metaDescription: string;
 };
 
 export type ProblemDetails = {
@@ -331,6 +348,9 @@ export type UpdatePageRequest = {
     metaDescription?: string | null;
     status?: PageStatus | null;
     tags?: Array<string> | null;
+    translations?: {
+        [key: string]: PageTextTranslation;
+    } | null;
 };
 
 export type UpdateProfileRequest = {
@@ -993,7 +1013,9 @@ export type GetApiPublicMenusByHandleData = {
     path: {
         handle: string;
     };
-    query?: never;
+    query?: {
+        lang?: string;
+    };
     url: '/api/public/menus/{handle}';
 };
 
@@ -1029,7 +1051,9 @@ export type GetApiPublicPagesBySlugResponse = GetApiPublicPagesBySlugResponses[k
 export type GetApiPublicSiteConfigData = {
     body?: never;
     path?: never;
-    query?: never;
+    query?: {
+        lang?: string;
+    };
     url: '/api/public/site-config';
 };
 

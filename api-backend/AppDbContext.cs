@@ -35,6 +35,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 	private static readonly JsonSerializerOptions BlockJson = new(JsonSerializerDefaults.Web);
 
 	// block trees compare + snapshot by their JSON
+	private static ValueComparer<Dictionary<string, PageTextTranslation>> TranslationsComparer() => new(
+		(a, c) => JsonSerializer.Serialize(a, BlockJson) == JsonSerializer.Serialize(c, BlockJson),
+		v => JsonSerializer.Serialize(v, BlockJson).GetHashCode(),
+		v => JsonSerializer.Deserialize<Dictionary<string, PageTextTranslation>>(JsonSerializer.Serialize(v, BlockJson), BlockJson)!);
+
 	private static ValueComparer<List<Block>?> BlocksComparer() => new(
 		(a, c) => JsonSerializer.Serialize(a, BlockJson) == JsonSerializer.Serialize(c, BlockJson),
 		v => JsonSerializer.Serialize(v, BlockJson).GetHashCode(),
@@ -162,6 +167,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 					v => JsonSerializer.Deserialize<List<Block>>(v, BlockJson) ?? new List<Block>(),
 					BlocksComparer())
 				.IsRequired();
+			e.Property(x => x.Translations)
+				.HasColumnType("jsonb")
+				.HasConversion(
+					v => JsonSerializer.Serialize(v, BlockJson),
+					v => JsonSerializer.Deserialize<Dictionary<string, PageTextTranslation>>(v, BlockJson) ?? new(),
+					TranslationsComparer())
+				.IsRequired()
+				.HasDefaultValueSql("'{}'::jsonb");
 
 			// published snapshot (null title/blocks = never published)
 			e.Property(x => x.PublishedTitle).HasMaxLength(200);
@@ -175,6 +188,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 					v => JsonSerializer.Serialize(v, BlockJson),
 					v => JsonSerializer.Deserialize<List<Block>>(v, BlockJson),
 					BlocksComparer());
+			e.Property(x => x.PublishedTranslations)
+				.HasColumnType("jsonb")
+				.HasConversion(
+					v => JsonSerializer.Serialize(v, BlockJson),
+					v => JsonSerializer.Deserialize<Dictionary<string, PageTextTranslation>>(v, BlockJson) ?? new(),
+					TranslationsComparer())
+				.IsRequired()
+				.HasDefaultValueSql("'{}'::jsonb");
 
 			e.HasOne(x => x.CreatedBy)
 				.WithMany()

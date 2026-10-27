@@ -23,7 +23,8 @@ public record PageSummary(
 /// <summary>
 /// The working copy (what the editor saves; the public site shows the published snapshot).
 /// <see cref="Template"/>, <see cref="Locked"/> (slug fixed, undeletable) and <see cref="Editable"/> (blocks writable) come
-/// from the instance config's entry for the slug.
+/// from the instance config's entry for the slug. <see cref="Translations"/>: title/meta per language code (block
+/// text translations ride inside <see cref="Blocks"/>).
 /// </summary>
 public record PageDetail(
 	Guid Id,
@@ -41,7 +42,8 @@ public record PageDetail(
 	bool Locked,
 	bool Editable,
 	string MetaTitle,
-	string MetaDescription);
+	string MetaDescription,
+	Dictionary<string, PageTextTranslation> Translations);
 
 /// <summary>Slug is generated from the title when omitted.</summary>
 public record CreatePageRequest(
@@ -59,7 +61,8 @@ public record ImportPageRequest(
 	[Required] List<Block> Blocks,
 	[MaxLength(PageService.MaxMetaTitleLength)] string? MetaTitle,
 	[MaxLength(PageService.MaxMetaDescriptionLength)] string? MetaDescription,
-	[MaxLength(TagLimits.MaxPerPage)] List<string>? Tags);
+	[MaxLength(TagLimits.MaxPerPage)] List<string>? Tags,
+	Dictionary<string, PageTextTranslation>? Translations = null);
 
 /// <summary><see cref="MissingMediaIds"/>: <c>mediaId</c>s in the blocks that this site's media library doesn't have.</summary>
 public record ImportPageResult(PageDetail Page, List<Guid> MissingMediaIds);
@@ -69,6 +72,7 @@ public record ImportPageResult(PageDetail Page, List<Guid> MissingMediaIds);
 /// Content fields (title, meta, blocks) only change the working copy, never the live page. <see cref="Status"/>
 /// <c>published</c> publishes the working copy as saved by this request (also on a published page: "publish changes"),
 /// <c>draft</c> unpublishes. <see cref="Tags"/> replaces the page's tags (normalized: trimmed, lowercase, deduplicated).
+/// <see cref="Translations"/> replaces the title/meta translations (working copy, like the other content fields).
 /// </summary>
 public record UpdatePageRequest(
 	[MaxLength(PageService.MaxTitleLength)] string? Title,
@@ -77,12 +81,16 @@ public record UpdatePageRequest(
 	[MaxLength(PageService.MaxMetaTitleLength)] string? MetaTitle = null,
 	[MaxLength(PageService.MaxMetaDescriptionLength)] string? MetaDescription = null,
 	PageStatus? Status = null,
-	[MaxLength(TagLimits.MaxPerPage)] List<string>? Tags = null);
+	[MaxLength(TagLimits.MaxPerPage)] List<string>? Tags = null,
+	Dictionary<string, PageTextTranslation>? Translations = null);
 
 /// <summary>A tag in use and how many pages carry it (autocomplete, "popular" suggestions).</summary>
 public record TagUsage(string Name, int PageCount);
 
-/// <summary><see cref="Template"/>: the instance template that renders the page instead of the default layout.</summary>
+/// <summary>
+/// <see cref="Template"/>: the instance template that renders the page instead of the default layout. Already in the
+/// requested language (<see cref="PageService.Localize"/>): no <c>translations</c> anywhere.
+/// </summary>
 public record PublicPage(
 	string Title,
 	string Slug,

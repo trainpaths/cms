@@ -31,6 +31,8 @@ public class Page
 	public string MetaDescription { get; set; } = "";
 
 	public List<Block> Blocks { get; set; } = new();
+	/// <summary>Title/meta per language code (the columns above are the default language's).</summary>
+	public Dictionary<string, PageTextTranslation> Translations { get; set; } = new();
 	/// <summary>Blocks at all depths; kept in sync with <see cref="Blocks"/> so lists don't read the tree.</summary>
 	public int BlockCount { get; set; }
 	public List<PageTag> PageTags { get; set; } = new();
@@ -40,6 +42,7 @@ public class Page
 	public string PublishedMetaTitle { get; set; } = "";
 	public string PublishedMetaDescription { get; set; } = "";
 	public List<Block>? PublishedBlocks { get; set; }
+	public Dictionary<string, PageTextTranslation> PublishedTranslations { get; set; } = new();
 	/// <summary>Published and the working copy differs from the snapshot; kept on every write so lists don't compare trees.</summary>
 	public bool HasUnpublishedChanges { get; set; }
 
@@ -52,3 +55,6 @@ public class Page
 	public Guid? UpdatedById { get; set; }
 	public Staff? UpdatedBy { get; set; }
 }
+
+/// <summary>A page's title and meta in one language; empty = untranslated (the default language's value applies).</summary>
+public record PageTextTranslation(string Title = "", string MetaTitle = "", string MetaDescription = "");

@@ -93,6 +93,107 @@ public class PageServiceTests
 		result.Value!.Slug.Should().Be("de");
 	}
 
+	private static PageService.LivePage Live(List<Block> blocks, Dictionary<string, PageTextTranslation>? translations = null) =>
+		new(Guid.NewGuid(), "about", "About", "Meta", "Desc", blocks, translations ?? [], null);
+
+	[Fact]
+	public void Localize_OverlaysTranslatedAttributes_FallsBack_AndStripsTranslations()
+	{
+		var paragraph = Block("paragraph", new() { ["text"] = Json("\"Hello\""), ["alignment"] = Json("\"left\"") });
+		paragraph.Translations = new()
+		{
+			["de"] = new() { ["text"] = Json("\"Hallo\"") },
+			["fr"] = new() { ["text"] = Json("\"\"") },
+		};
+		var heading = Block("heading", new() { ["text"] = Json("\"Title\""), ["level"] = Json("2") });
+		heading.Translations = new() { ["de"] = new() { ["level"] = Json("3") } };
+		var group = Block("group", null, heading);
+		var page = Live([paragraph, group], new() { ["de"] = new PageTextTranslation("Über uns", "", "Beschreibung") });
+
+		var de = PageService.Localize(page, "de", "en");
+		de.Title.Should().Be("Über uns");
+		de.MetaTitle.Should().Be("Meta"); // empty → default
+		de.MetaDescription.Should().Be("Beschreibung");
+		de.Blocks[0].Attributes["text"].GetString().Should().Be("Hallo");
+		de.Blocks[0].Attributes["alignment"].GetString().Should().Be("left");
+		de.Blocks[1].InnerBlocks[0].Attributes["level"].GetInt32().Should().Be(3); // non-string primitive
+		de.Blocks.Should().AllSatisfy(b => b.Translations.Should().BeNull());
+		de.Translations.Should().BeEmpty();
+
+		PageService.Localize(page, "fr", "en").Blocks[0].Attributes["text"].GetString().Should().Be("Hello");
+		var en = PageService.Localize(page, "en", "en");
+		en.Title.Should().Be("About");
+		en.Blocks[0].Attributes["text"].GetString().Should().Be("Hello");
+		en.Blocks[0].Translations.Should().BeNull();
+		// source untouched (cached live pages are shared)
+		paragraph.Translations.Should().NotBeNull();
+		paragraph.Attributes["text"].GetString().Should().Be("Hello");
+	}
+
+	[Theory]
+	[InlineData("German")]
+	[InlineData("d")]
+	public void ValidateBlocks_RejectsBadLanguageCodes(string code)
+	{
+		var block = Block("paragraph");
+		block.Translations = new() { [code] = new() { ["text"] = Json("\"x\"") } };
+		PageService.ValidateBlocks([block]).Should().Contain("language code");
+	}
+
+	[Fact]
+	public void ValidateBlocks_RejectsNonPrimitiveTranslations_AndDropsEmptyOnes()
+	{
+		var bad = Block("paragraph");
+		bad.Translations = new() { ["de"] = new() { ["text"] = Json("[1]") } };
+		PageService.ValidateBlocks([bad]).Should().Contain("must be a string");
+
+		var empty = Block("paragraph");
+		empty.Translations = new() { ["de"] = new(), ["xx"] = new() { ["text"] = Json("\"kept\"") } };
+		PageService.ValidateBlocks([empty]).Should().BeNull();
+		empty.Translations.Should().ContainKey("xx").And.NotContainKey("de"); // unknown codes are kept
+
+		var none = Block("paragraph");
+		none.Translations = new() { ["de"] = new() };
+		PageService.ValidateBlocks([none]).Should().BeNull();
+		none.Translations.Should().BeNull();
+	}
+
+	[Fact]
+	public async Task Translations_Validation_Snapshot_Duplicate_Import()
+	{
+		await using var db = TestDbContextFactory.Create();
+		var service = new PageService(db, CmsConfig.Default);
+		var created = (await service.CreateAsync(new CreatePageRequest("Page", null, null), StaffId, Ct)).Value!;
+
+		(await service.UpdateAsync(created.Id, new UpdatePageRequest(null, null, null,
+			Translations: new() { ["Deutsch"] = new PageTextTranslation("x") }), StaffId, Ct)).Error.Should().Be(PageError.Invalid);
+		(await service.UpdateAsync(created.Id, new UpdatePageRequest(null, null, null,
+			Translations: new() { ["de"] = new PageTextTranslation("", new string('x', 71)) }), StaffId, Ct))
+			.Detail.Should().Contain("Meta title (de)");
+
+		await service.UpdateAsync(created.Id, new UpdatePageRequest(null, null, null, Status: PageStatus.Published), StaffId, Ct);
+		var edited = await service.UpdateAsync(created.Id, new UpdatePageRequest(null, null, null,
+			Translations: new() { ["de"] = new PageTextTranslation(" Seite "), ["fr"] = new PageTextTranslation() }), StaffId, Ct);
+		edited.Value!.Page.HasUnpublishedChanges.Should().BeTrue();
+		edited.Value.LiveRenamed.Should().BeFalse(); // working copy only
+		var published = await service.UpdateAsync(created.Id, new UpdatePageRequest(null, null, null, Status: PageStatus.Published), StaffId, Ct);
+		published.Value!.Page.HasUnpublishedChanges.Should().BeFalse();
+		published.Value.LiveRenamed.Should().BeTrue(); // the German live title changed
+
+		var detail = (await service.GetAsync(created.Id, Ct))!;
+		detail.Translations.Should().ContainSingle().Which.Value.Title.Should().Be("Seite"); // trimmed, empty fr dropped
+
+		var copy = (await service.DuplicateAsync(created.Id, StaffId, Ct)).Value!;
+		copy.Translations["de"].Title.Should().Be("Seite");
+
+		var imported = (await service.ImportAsync(new ImportPageRequest("Imported", null, [], null, null, null,
+			new() { ["it"] = new PageTextTranslation("Importato") }), StaffId, Ct)).Value!;
+		imported.Page.Translations["it"].Title.Should().Be("Importato");
+		// v1 export files have no translations
+		(await service.ImportAsync(new ImportPageRequest("Old", null, [], null, null, null), StaffId, Ct))
+			.Value!.Page.Translations.Should().BeEmpty();
+	}
+
 	[Fact]
 	public async Task Create_WithTakenSlug_ReturnsSlugTaken()
 	{

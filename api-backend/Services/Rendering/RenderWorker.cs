@@ -160,9 +160,15 @@ public sealed class RenderWorker(
 				|| pages.Any(p => p.Status != PageStatus.Published || p.RenderedTitle != p.Title || p.RenderedSlug != p.Slug);
 		}
 
+		// main menu + site config per language (page titles in them are translated)
 		var cache = services.GetRequiredService<PublicCache>();
-		var menu = await cache.MenuAsync(services.GetRequiredService<MenuService>(), Menu.MainHandle, ct);
-		var config = await cache.SiteConfigAsync(services.GetRequiredService<SiteConfigService>(), ct);
+		var menus = new Dictionary<string, PublicMenu?>();
+		var configs = new Dictionary<string, SiteConfigResponse>();
+		foreach (var code in codes)
+		{
+			menus[code] = await cache.MenuAsync(services.GetRequiredService<MenuService>(), Menu.MainHandle, code, ct);
+			configs[code] = await cache.SiteConfigAsync(services.GetRequiredService<SiteConfigService>(), code, ct);
+		}
 		var pageService = services.GetRequiredService<PageService>();
 		var baseUrl = options.Value.PublicBaseUrl.TrimEnd('/');
 
@@ -178,7 +184,7 @@ public sealed class RenderWorker(
 		var count = 0;
 		foreach (var chunk in targets.Chunk(ChunkSize))
 		{
-			var published = await pageService.GetPublishedByIdsAsync(chunk, ct);
+			var published = await pageService.GetPublishedByIdsAsync(chunk, codes, ct);
 			var existing = (await db.RenderedPages.Where(r => chunk.Contains(r.PageId))
 				.Select(r => new { r.PageId, r.Lang }).ToListAsync(ct))
 				.Select(r => (r.PageId, r.Lang)).ToHashSet();
@@ -186,10 +192,12 @@ public sealed class RenderWorker(
 			foreach (var id in chunk)
 			{
 				// unpublished meanwhile: its queued job widens to all and cleans up
-				if (!published.TryGetValue(id, out var page)) continue;
+				if (!published.TryGetValue(id, out var languages)) continue;
 				foreach (var code in codes)
 				{
-					var result = await renderer.RenderAsync(new RenderState(page.Slug, page, menu, config, baseUrl, code), ct);
+					var page = languages[code];
+					var result = await renderer.RenderAsync(
+						new RenderState(page.Slug, page, menus[code], configs[code], baseUrl, code), ct);
 					results.Add((id, code, page, result));
 					Track(db, id, code, existing.Contains((id, code)), page, result, startedAt);
 				}
@@ -218,14 +226,15 @@ public sealed class RenderWorker(
 			string? version = null;
 			foreach (var code in codes)
 			{
-				var result = await renderer.RenderAsync(new RenderState("not-found", null, menu, config, baseUrl, code), ct);
+				var result = await renderer.RenderAsync(
+					new RenderState("not-found", null, menus[code], configs[code], baseUrl, code), ct);
 				notFound[code] = result.Html;
 				version ??= result.Version; // default language's
 				// never served with public auth off (PublicHtmlController): don't render them either
 				if (cms.PublicAuth)
 					foreach (var path in PublicScreens.All)
 						screens[RenderedScreens.Key(code, path)] =
-							(await renderer.RenderAsync(new RenderState(path, null, menu, config, baseUrl, code), ct)).Html;
+							(await renderer.RenderAsync(new RenderState(path, null, menus[code], configs[code], baseUrl, code), ct)).Html;
 			}
 			status.NotFoundHtml = notFound;
 			status.Screens = new RenderedScreens(screens, startedAt, version!);

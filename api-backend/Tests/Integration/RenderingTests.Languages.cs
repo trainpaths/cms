@@ -50,6 +50,23 @@ public partial class RenderingTests
 	}
 
 	[Fact]
+	public async Task Localized_EachLanguageRendersItsTranslation()
+	{
+		await using var site = await StartAsync(cms: Localized);
+		var (id, slug) = await CreatePublishedAsync(site, "English title");
+		(await SendAsync(site, HttpMethod.Put, $"/api/pages/{id}", new JsonObject
+		{
+			["translations"] = new JsonObject { ["de"] = new JsonObject { ["title"] = "Deutscher Titel" } },
+			["status"] = "published",
+		})).StatusCode.Should().Be(HttpStatusCode.OK);
+
+		await WaitForAsync(site, $"/api/public/html/de/{slug}", (_, body) => body.Contains("Deutscher Titel|"));
+		(await BodyAsync(site, $"/api/public/html/fr/{slug}")).Should().Contain("English title|");
+		site.Renderer.States.Where(s => s.Page?.Slug == slug)
+			.Should().AllSatisfy(s => s.Page!.Blocks.Should().AllSatisfy(b => b.Translations.Should().BeNull()));
+	}
+
+	[Fact]
 	public async Task Localized_NotFoundAndScreens_PerLanguage()
 	{
 		await using var site = await StartAsync(cms: Localized);
