@@ -4,7 +4,7 @@ import InlineToolbar from '../../editor/InlineToolbar.vue'
 import MediaActions from '../../media/MediaActions.vue'
 import type { BlockInstance } from '../../core/types'
 import { useSelection } from '../../composables/useSelection'
-import { useAttributeFallback, useBlockAttribute } from '../../composables/useBlockAttribute'
+import { useBlockText } from '../../composables/useBlockAttribute'
 import { useMediaImage } from '../../media/useMediaImage'
 import { assignMedia } from '../../media/assignMedia'
 import { useImageWidth } from './width'
@@ -15,8 +15,7 @@ const { isSelected } = useSelection()
 const selected = computed(() => isSelected(props.block.id))
 
 const { src, alt, missing } = useMediaImage(() => props.block)
-const caption = useBlockAttribute(() => props.block, 'caption', '')
-const originalCaption = useAttributeFallback(() => props.block, 'caption')
+const { value: caption, original: originalCaption } = useBlockText(() => props.block, 'caption')
 const width = useImageWidth(() => props.block)
 
 const imgError = ref(false)

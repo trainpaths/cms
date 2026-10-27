@@ -17,7 +17,7 @@ function translating(store: ReturnType<typeof useEditorStore>, block: BlockInsta
  * Writable computed over one block attribute. Writes go through `updateBlockAttributes`
  * (history + autosave), so toolbar and sidebar controls on the same attribute stay in sync.
  * A `translatable` attribute while the editor edits another language reads/writes that language's translation
- * (empty = untranslated: `fallback`; show the default's text with `useAttributeFallback`).
+ * (empty = untranslated: `fallback`; text inputs use `useBlockText`, which also gives the default's text).
  */
 export function useBlockAttribute<T extends AttrValue>(
 	block: () => BlockInstance,
@@ -40,10 +40,17 @@ export function useBlockAttribute<T extends AttrValue>(
 }
 
 /**
- * The default language's value of a translatable attribute while another language is edited (for a greyed
- * placeholder: `:placeholder="original || $t('…')"`), else ''.
+ * A translatable text attribute for a block's Edit component: `value` = `useBlockAttribute(block, key, '')` (the edited
+ * language's text), `original` = the default language's text while another language is edited, else '' (greyed
+ * placeholder: `:placeholder="original || $t('…')"`).
  */
-export function useAttributeFallback(block: () => BlockInstance, key: string): ComputedRef<string> {
+export function useBlockText(
+	block: () => BlockInstance,
+	key: string,
+): { value: WritableComputedRef<string>; original: ComputedRef<string> } {
 	const store = useEditorStore()
-	return computed(() => (translating(store, block(), key) ? String(block().attributes[key] ?? '') : ''))
+	return {
+		value: useBlockAttribute(block, key, ''),
+		original: computed(() => (translating(store, block(), key) ? String(block().attributes[key] ?? '') : '')),
+	}
 }

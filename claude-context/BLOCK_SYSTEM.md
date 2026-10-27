@@ -68,8 +68,8 @@ inner blocks are structured, repeatable children with their own editing (a card'
 2. `blocks/<name>/<Name>Edit.vue` — props `{ block: BlockInstance }`; bind attributes with
    `useBlockAttribute(() => props.block, 'key', fallback)` (writes go through `store.updateBlockAttributes`, or
    `updateBlockTranslation` for a translatable attribute while another language is edited;
-   never mutate directly — history/autosave depend on it). Translatable text inputs: placeholder
-   `useAttributeFallback(() => props.block, 'key').value || <normal placeholder>` (shows the default's text). Multi-line text: `<textarea>` + `useAutoResize`. Inline toolbar controls go in `<InlineToolbar :show="selected" :block-id="block.id">`.
+   never mutate directly — history/autosave depend on it). Translatable text inputs: `const { value, original } =
+   useBlockText(() => props.block, 'key')`, placeholder `original || <normal placeholder>` (shows the default's text). Multi-line text: `<textarea>` + `useAutoResize`. Inline toolbar controls go in `<InlineToolbar :show="selected" :block-id="block.id">`.
    Containers render `<BlockList :blocks="block.innerBlocks" :parent-id="block.id" />`.
 3. `blocks/<name>/<Name>View.vue` — read-only render; containers use `<ViewBlockList :blocks="block.innerBlocks" />`.
    Pad the root yourself (wrappers don't), with the same padding class as the Edit root.

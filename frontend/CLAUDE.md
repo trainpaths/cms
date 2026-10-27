@@ -20,7 +20,7 @@ instance owns `index.html`, `public.html`, `vite.config.ts` (`plugins: [cms()]`)
 ./admin            src/main.ts                createAdmin(): Pinia, API base URL, session restore, router, mount #app
 ./public/client    src/public/entry-client.ts hydratePublic(): hydrate #__STATE__ or render the fallback shell
 ./public/server    src/public/entry-server.ts render(state) for the SSR bundle (instance: src/entry-server.ts)
-./editor           src/editor.ts              block authoring, edit side (defineBlock, useBlockAttribute, useAttributeFallback, InlineToolbar,
+./editor           src/editor.ts              block authoring, edit side (defineBlock, useBlockAttribute, useBlockText, InlineToolbar,
                                               ToolbarDropdown, SettingsSection, BlockList, Media*, useEditorStore, types)
 ./site             src/site.ts                public side for views/templates/overrides, no editor code (ViewBlockList,
                                               PageContent, useMediaImage, site config/menu stores, site config helpers

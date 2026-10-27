@@ -60,7 +60,7 @@ DefaultCode / IsPrefix / Resolve`, language codes reserved as slugs.
 Phase 3: `Block.translations` + `Page.Translations/PublishedTranslations`, `PageService.Localize` / `LiveTitle`,
 `GetPublishedByIdsAsync(ids, codes)`, `PublicCache` per code, `?lang=` on public menus/site-config; frontend
 `translatable` attributes, `store.editLang` / `pageTranslations` / `updateBlockTranslation` / `setPageText`,
-`useBlockAttribute` per language + `useAttributeFallback`, `usePageText`, `core/translatable.ts` (`textFields`: the
+`useBlockAttribute` per language + `useBlockText` (was `useAttributeFallback`), `usePageText`, `core/translatable.ts` (`textFields`: the
 list Phase 4 sends to DeepL), `core/localize.ts`, `EditLanguageSelect.vue`, page export v2.
 Phase 4: `POST /api/translate` (`TranslateController`, `ITranslator` → `DeepLTranslator`, `TranslationOptions` from
 `DEEPL_API_KEY`), `InstanceConfig.machineTranslation`, editor `useMachineTranslation` + `store.applyTranslations`.

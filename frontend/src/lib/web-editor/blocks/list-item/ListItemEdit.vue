@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import type { BlockInstance } from '../../core/types'
 import { useEditorStore } from '../../../../stores/editor'
 import { useSelection } from '../../composables/useSelection'
-import { useAttributeFallback, useBlockAttribute } from '../../composables/useBlockAttribute'
+import { useBlockText } from '../../composables/useBlockAttribute'
 
 const props = defineProps<{ block: BlockInstance }>()
 const store = useEditorStore()
@@ -11,8 +11,7 @@ const { isSelected } = useSelection()
 
 const selected = computed(() => isSelected(props.block.id))
 
-const text = useBlockAttribute(() => props.block, 'text', '')
-const original = useAttributeFallback(() => props.block, 'text')
+const { value: text, original } = useBlockText(() => props.block, 'text')
 
 const context = computed(() => store.getBlockContext(props.block.id))
 const parentBlock = computed(() => {
