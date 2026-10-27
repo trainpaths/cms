@@ -13,7 +13,6 @@ const selected = computed(() => isSelected(props.block.id))
 const label = useBlockAttribute(() => props.block, 'label', '')
 const url = useBlockAttribute(() => props.block, 'url', '')
 const originalLabel = useAttributeFallback(() => props.block, 'label')
-const originalUrl = useAttributeFallback(() => props.block, 'url')
 const colorClass = computed(() => (props.block.attributes.textColor ? '' : 'text-primary'))
 </script>
 
@@ -28,7 +27,7 @@ const colorClass = computed(() => (props.block.attributes.textColor ? '' : 'text
 				v-model="url"
 				type="url"
 				class="toolbar-input w-160"
-				:placeholder="originalUrl || 'https://...'"
+				placeholder="https://..."
 			/>
 		</InlineToolbar>
 

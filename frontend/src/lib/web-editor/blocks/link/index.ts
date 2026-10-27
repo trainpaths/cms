@@ -9,7 +9,7 @@ export default defineBlock(meta, {
 	icon: LinkIcon,
 	attributes: {
 		label: { type: 'string', default: '', translatable: true },
-		url: { type: 'string', default: '', translatable: true },
+		url: { type: 'string', default: '' },
 		textColor: { type: 'string', default: '' },
 	},
 	edit: LinkEdit,

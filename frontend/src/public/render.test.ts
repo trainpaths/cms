@@ -13,7 +13,7 @@ import { usePublicPageStore } from './store'
 import { createPinia } from 'pinia'
 import { createMemoryHistory } from 'vue-router'
 import type { BlockInstance } from '../lib/web-editor'
-import { localeBase, localePath, stripLocale } from './locale'
+import { localeBase, localeHref, localePath, stripLocale } from './locale'
 import { safeRedirect } from './redirect'
 
 const block = (
@@ -337,6 +337,20 @@ describe('languages (localized site: en-US default + de-CH, fr-CH, it-CH)', () =
 		expect(stripLocale('/en/about')).toEqual({ code: 'en', path: '/en/about' })
 		expect(stripLocale('/es/about')).toEqual({ code: 'en', path: '/es/about' })
 		expect(stripLocale('/')).toEqual({ code: 'en', path: '/' })
+	})
+
+	it('localeHref prefixes site paths only', () => {
+		expect(localeHref('/about?x=1#y', 'de')).toBe('/de/about?x=1#y')
+		expect(localeHref('/', 'fr')).toBe('/fr')
+		expect(localeHref('/about', 'en')).toBe('/about')
+		for (const url of ['https://x.test/a', '//x.test/a', 'mailto:a@b.c', '#top', '/admin/pages', '/api/x', '/fr/about', '/en/about'])
+			expect(localeHref(url, 'de')).toBe(url)
+	})
+
+	it('link blocks follow the page language', async () => {
+		const page = { ...state().page!, blocks: [block('link', { label: 'Contact', url: '/contact' })] }
+		expect((await render(state({ lang: 'de', page }))).html).toContain('href="/de/contact"')
+		expect((await render(state({ page }))).html).toContain('href="/contact"')
 	})
 
 	it('safeRedirect strips a language prefix', () => {
