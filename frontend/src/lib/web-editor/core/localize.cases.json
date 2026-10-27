@@ -1,0 +1,107 @@
+{
+	"$comment": "Cases for localizeBlocks/localizeText (core/localize.test.ts) AND PageService.Localize (api-backend PageServiceTests): both must give the same result. The API copies this file into its test output (Tests.csproj).",
+	"cases": [
+		{
+			"name": "overlay, empty string falls back, non-string primitive overlays, nested, translations stripped",
+			"code": "de",
+			"defaultCode": "en",
+			"page": {
+				"title": "About",
+				"metaTitle": "Meta",
+				"metaDescription": "Desc",
+				"translations": { "de": { "title": "Über uns", "metaTitle": "", "metaDescription": "Beschreibung" } }
+			},
+			"blocks": [
+				{
+					"id": "p",
+					"name": "paragraph",
+					"attributes": { "text": "Hello", "alignment": "left" },
+					"translations": { "de": { "text": "Hallo" }, "fr": { "text": "Bonjour" } },
+					"innerBlocks": []
+				},
+				{
+					"id": "g",
+					"name": "group",
+					"attributes": {},
+					"innerBlocks": [
+						{
+							"id": "h",
+							"name": "heading",
+							"attributes": { "text": "Title", "level": 2, "open": false },
+							"translations": { "de": { "text": "", "level": 3, "open": true } },
+							"innerBlocks": []
+						}
+					]
+				}
+			],
+			"expected": {
+				"title": "Über uns",
+				"metaTitle": "Meta",
+				"metaDescription": "Beschreibung",
+				"blocks": [
+					{ "id": "p", "name": "paragraph", "attributes": { "text": "Hallo", "alignment": "left" }, "innerBlocks": [] },
+					{
+						"id": "g",
+						"name": "group",
+						"attributes": {},
+						"innerBlocks": [
+							{ "id": "h", "name": "heading", "attributes": { "text": "Title", "level": 3, "open": true }, "innerBlocks": [] }
+						]
+					}
+				]
+			}
+		},
+		{
+			"name": "the default language only strips translations",
+			"code": "en",
+			"defaultCode": "en",
+			"page": {
+				"title": "About",
+				"metaTitle": "",
+				"metaDescription": "",
+				"translations": { "en": { "title": "Ignored", "metaTitle": "", "metaDescription": "" } }
+			},
+			"blocks": [
+				{
+					"id": "p",
+					"name": "paragraph",
+					"attributes": { "text": "Hello" },
+					"translations": { "en": { "text": "Ignored" }, "de": { "text": "Hallo" } },
+					"innerBlocks": []
+				}
+			],
+			"expected": {
+				"title": "About",
+				"metaTitle": "",
+				"metaDescription": "",
+				"blocks": [{ "id": "p", "name": "paragraph", "attributes": { "text": "Hello" }, "innerBlocks": [] }]
+			}
+		},
+		{
+			"name": "a language without translations falls back everywhere",
+			"code": "it",
+			"defaultCode": "en",
+			"page": {
+				"title": "About",
+				"metaTitle": "Meta",
+				"metaDescription": "",
+				"translations": { "de": { "title": "Über uns", "metaTitle": "", "metaDescription": "" } }
+			},
+			"blocks": [
+				{
+					"id": "p",
+					"name": "paragraph",
+					"attributes": { "text": "Hello" },
+					"translations": { "de": { "text": "Hallo" } },
+					"innerBlocks": []
+				}
+			],
+			"expected": {
+				"title": "About",
+				"metaTitle": "Meta",
+				"metaDescription": "",
+				"blocks": [{ "id": "p", "name": "paragraph", "attributes": { "text": "Hello" }, "innerBlocks": [] }]
+			}
+		}
+	]
+}

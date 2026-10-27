@@ -32,7 +32,8 @@ core/translatable.ts  isTranslatable(blockName, key) (`translatable: true` in th
                     translations, missingIn?) = translatable fields with a default value (page title/meta first), only
                     the untranslated ones of a language with `missingIn` (DeepL pre-fill), missingCounts (the same per language in one
                     walk: store.missingTranslations), pruneTranslations (drops non-translatable keys; what a save sends)
-core/localize.ts    localizeBlocks / localizeText: mirror of the API's PageService.Localize (admin preview)
+core/localize.ts    localizeBlocks / localizeText: mirror of the API's PageService.Localize (admin preview); both are
+                    tested against the same cases, `core/localize.cases.json` (Tests.csproj links it)
 core/serializer.ts  serialize/parse helpers (unused by the store, kept for import/export)
 blocks/<name>/      block.json (name, title, category, description, supports, parent?) + index.ts (`export default defineBlock(meta, {icon,
                     attributes, edit, settings?})`) + <Name>Edit/View/Icon.vue [+ <Name>Settings.vue]. Picked up

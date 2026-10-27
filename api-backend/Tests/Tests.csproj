@@ -32,4 +32,9 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- shared with the frontend's core/localize.test.ts: preview and public site localize alike -->
+    <None Include="../../frontend/src/lib/web-editor/core/localize.cases.json" Link="Fixtures/localize.cases.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

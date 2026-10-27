@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using api_backend.Models.Dto;
 using api_backend.Models.Pages;
 using api_backend.Services.Cms;
@@ -128,6 +129,43 @@ public class PageServiceTests
 		// source untouched (cached live pages are shared)
 		paragraph.Translations.Should().NotBeNull();
 		paragraph.Attributes["text"].GetString().Should().Be("Hello");
+	}
+
+	private sealed record LocalizeText(string Title, string MetaTitle, string MetaDescription,
+		Dictionary<string, PageTextTranslation>? Translations);
+
+	private sealed record LocalizeExpected(string Title, string MetaTitle, string MetaDescription, JsonElement Blocks);
+
+	private sealed record LocalizeCase(string Name, string Code, string DefaultCode, LocalizeText Page, List<Block> Blocks,
+		LocalizeExpected Expected);
+
+	private static readonly JsonSerializerOptions WebJson = new(JsonSerializerDefaults.Web);
+
+	public static TheoryData<string> LocalizeCaseNames() =>
+		[.. LoadLocalizeCases().Select(c => c.Name)];
+
+	private static List<LocalizeCase> LoadLocalizeCases()
+	{
+		var json = JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "localize.cases.json")));
+		return json.RootElement.GetProperty("cases").Deserialize<List<LocalizeCase>>(WebJson)!;
+	}
+
+	/// <summary>Same cases as the frontend's <c>core/localize.test.ts</c> (admin preview mirror).</summary>
+	[Theory]
+	[MemberData(nameof(LocalizeCaseNames))]
+	public void Localize_SharedCases(string name)
+	{
+		var c = LoadLocalizeCases().Single(x => x.Name == name);
+		var page = new PageService.LivePage(Guid.NewGuid(), "about", c.Page.Title, c.Page.MetaTitle, c.Page.MetaDescription,
+			c.Blocks, c.Page.Translations ?? [], null);
+
+		var result = PageService.Localize(page, c.Code, c.DefaultCode);
+
+		(result.Title, result.MetaTitle, result.MetaDescription).Should()
+			.Be((c.Expected.Title, c.Expected.MetaTitle, c.Expected.MetaDescription));
+		var actual = JsonSerializer.SerializeToNode(result.Blocks, WebJson);
+		JsonNode.DeepEquals(actual, JsonSerializer.SerializeToNode(c.Expected.Blocks, WebJson))
+			.Should().BeTrue($"{actual!.ToJsonString()} should equal {c.Expected.Blocks.GetRawText()}");
 	}
 
 	[Theory]
