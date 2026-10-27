@@ -49,7 +49,7 @@
 		"@trainpaths/nb-ui": "github:trainpaths/nb-ui#v1.2.0",
 		"pinia": "^4.1.0",
 		"tailwindcss": "^4.3.3",
-		"vite": "^8.3.4",
+		"vite": "^8.3.5",
 		"vue": "^3.5.44",
 		"vue-router": "^5.4.0"
 	},
@@ -67,8 +67,8 @@
 		"pinia": "^4.1.0",
 		"tailwindcss": "^4.3.3",
 		"typescript": "~6.0.3",
-		"vite": "^8.3.4",
-		"vitest": "^5.0.4",
+		"vite": "^8.3.5",
+		"vitest": "^5.0.5",
 		"vue": "^3.5.44",
 		"vue-router": "^5.4.0",
 		"vue-tsc": "^3.3.13"
