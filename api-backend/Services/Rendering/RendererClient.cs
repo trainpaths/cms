@@ -8,8 +8,10 @@ namespace api_backend.Services.Rendering;
 /// <summary>
 /// What one public page renders from; mirrors <c>PublicState</c> in <c>frontend/src/public/state.ts</c>.
 /// <see cref="Page"/> null = a customer screen (<see cref="PublicScreens"/> slug) or the not-found page.
+/// <see cref="Lang"/> = language code the page renders in (URL prefix unless the default).
 /// </summary>
-public record RenderState(string Slug, PublicPage? Page, PublicMenu? Menu, SiteConfigResponse? Config, string BaseUrl);
+public record RenderState(string Slug, PublicPage? Page, PublicMenu? Menu, SiteConfigResponse? Config, string BaseUrl,
+	string Lang);
 
 public record RenderResult(string Html, string Version);
 

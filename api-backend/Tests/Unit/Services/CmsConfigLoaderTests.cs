@@ -64,6 +64,14 @@ public class CmsConfigLoaderTests
 		cms.Site.Lang.Default.Should().Be("en-US");
 		cms.Site.Lang.IsLocalized.Should().BeTrue();
 		cms.Site.Lang.Tags.Select(CmsSiteLang.CodeOf).Should().Equal("en", "de", "fr", "it");
+		cms.Site.Lang.Codes.Should().Equal("en", "de", "fr", "it");
+		cms.Site.Lang.DefaultCode.Should().Be("en");
+		cms.Site.Lang.IsPrefix("de").Should().BeTrue();
+		cms.Site.Lang.IsPrefix("en").Should().BeFalse();
+		cms.Site.Lang.IsPrefix("es").Should().BeFalse();
+		cms.Site.Lang.Resolve("fr").Should().Be("fr");
+		cms.Site.Lang.Resolve("es").Should().Be("en");
+		cms.Site.Lang.Resolve(null).Should().Be("en");
 	}
 
 	[Fact]

@@ -24,6 +24,7 @@ public sealed class FakeRenderer : IRendererClient
 {
 	public volatile string Version = "v1";
 	public ConcurrentQueue<string> Rendered { get; } = new();
+	public ConcurrentQueue<RenderState> States { get; } = new();
 
 	/// <summary>While set, every render waits for it: tests look at what is served before the re-render.</summary>
 	public volatile TaskCompletionSource? Hold;
@@ -37,20 +38,21 @@ public sealed class FakeRenderer : IRendererClient
 		if (Hold is { } hold)
 			await hold.Task.WaitAsync(ct);
 		Rendered.Enqueue(state.Slug);
+		States.Enqueue(state);
 		var firm = state.Config?.Fields.GetValueOrDefault(CoreSiteConfig.FirmName);
 		var html = state.Page is null
 			? PublicScreens.Contains(state.Slug)
 				? $"<html><script type=\"application/json\" id=\"__STATE__\">{{}}</script>screen:{state.Slug}" +
-				  $"|menu:{state.Menu?.Items.Count}|{Version}</html>"
-				: $"<html>not-found|{Version}</html>"
+				  $"|menu:{state.Menu?.Items.Count}|lang:{state.Lang}|{Version}</html>"
+				: $"<html>not-found|lang:{state.Lang}|{Version}</html>"
 			: $"<html><script type=\"application/json\" id=\"__STATE__\">{{}}</script>{state.Page.Title}" +
 			  $"|blocks:{state.Page.Blocks.Count}|menu:{state.Menu?.Items.Count}|firm:{firm}" +
-			  $"|alt:{string.Join(',', state.Page.Media.Select(m => m.Alt))}|{Version}</html>";
+			  $"|alt:{string.Join(',', state.Page.Media.Select(m => m.Alt))}|lang:{state.Lang}|{Version}</html>";
 		return new RenderResult(html, Version);
 	}
 }
 
-public class RenderingTests(ApiFactory factory) : IClassFixture<ApiFactory>
+public partial class RenderingTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
 	private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
@@ -64,16 +66,16 @@ public class RenderingTests(ApiFactory factory) : IClassFixture<ApiFactory>
 		}
 	}
 
-	private async Task<Site> StartAsync(bool publicAuth = true)
+	private async Task<Site> StartAsync(bool publicAuth = true, CmsConfig? cms = null)
 	{
 		var renderer = new FakeRenderer();
 		var app = factory.WithWebHostBuilder(b =>
 		{
-			if (!publicAuth)
+			if (!publicAuth || cms is not null)
 				b.ConfigureTestServices(s =>
 				{
 					s.RemoveAll<CmsConfig>();
-					s.AddSingleton(ApiFactory.Cms with { PublicAuth = false });
+					s.AddSingleton((cms ?? ApiFactory.Cms) with { PublicAuth = publicAuth });
 				});
 			b.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>
 			{

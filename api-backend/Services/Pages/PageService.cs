@@ -121,7 +121,10 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		.Select(p => new LivePage(p.Id, p.Slug, p.PublishedTitle!, p.PublishedMetaTitle, p.PublishedMetaDescription,
 			p.PublishedBlocks!, p.PublishedAt));
 
-	public async Task<PublicPage?> GetPublishedBySlugAsync(string slug, CancellationToken ct)
+	/// <param name="lang">
+	/// language code (unknown/null → default). Page content isn't translated yet: every language reads the same page.
+	/// </param>
+	public async Task<PublicPage?> GetPublishedBySlugAsync(string slug, string? lang, CancellationToken ct)
 	{
 		var normalized = slug.ToLowerInvariant();
 		var page = await Live(db.Pages.AsNoTracking().Where(p => p.Slug == normalized)).FirstOrDefaultAsync(ct);
@@ -164,7 +167,7 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		else
 		{
 			slug = req.Slug.Trim().ToLowerInvariant();
-			if (ValidateSlug(slug) is { } slugError)
+			if (SlugError(slug) is { } slugError)
 				return PageResult<PageDetail>.Fail(PageError.Invalid, slugError);
 			if (await db.Pages.AnyAsync(p => p.Slug == slug, ct))
 				return PageResult<PageDetail>.Fail(PageError.SlugTaken, $"Slug '{slug}' is already in use.");
@@ -270,7 +273,7 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		var slug = req.Slug?.Trim().ToLowerInvariant();
 		if (slug is not null)
 		{
-			if (ValidateSlug(slug) is { } slugError)
+			if (SlugError(slug) is { } slugError)
 				return PageResult<PageUpdate>.Fail(PageError.Invalid, slugError);
 			if (slug != page.Slug && config is { IsLocked: true })
 				return PageResult<PageUpdate>.Fail(PageError.Invalid, "This page's slug is fixed by the site configuration.");
@@ -455,6 +458,15 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 	}
 
 	/// <summary>
+	/// <see cref="ValidateSlug"/> + the site's language codes on a localized site (URL prefixes: <c>/de</c> is the
+	/// German home). <see cref="CmsConfigLoader"/> keeps codes and configured page slugs apart.
+	/// </summary>
+	private string? SlugError(string slug) =>
+		ValidateSlug(slug) ?? (IsLanguageCode(slug) ? $"Slug '{slug}' is reserved." : null);
+
+	private bool IsLanguageCode(string slug) => cms.Site.Lang.IsLocalized && cms.Site.Lang.Codes.Contains(slug);
+
+	/// <summary>
 	/// Returns an error message for the first invalid block, or null when the tree is valid.
 	/// Also normalizes explicit JSON nulls for <c>attributes</c>/<c>innerBlocks</c> to empty collections.
 	/// </summary>
@@ -508,7 +520,7 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 	private async Task<string> UniqueSlugFromAsync(string title, CancellationToken ct)
 	{
 		var baseSlug = Slugify(title);
-		if (ReservedSlugs.Contains(baseSlug))
+		if (ReservedSlugs.Contains(baseSlug) || IsLanguageCode(baseSlug))
 			baseSlug += "-page";
 
 		var taken = await db.Pages

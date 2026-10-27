@@ -11,12 +11,15 @@ public sealed class RenderStatus
 	/// <summary>Version the renderer reports now; stored HTML of another version references missing assets.</summary>
 	public volatile string? CurrentVersion;
 
-	/// <summary>Not-found page (rendered with the current menu/footer); kept in memory, re-rendered with everything.</summary>
-	public volatile string? NotFoundHtml;
+	/// <summary>
+	/// Not-found page per language code (rendered with the current menu/footer); kept in memory, re-rendered with
+	/// everything. Replaced as a whole.
+	/// </summary>
+	public volatile IReadOnlyDictionary<string, string>? NotFoundHtml;
 
 	/// <summary>
-	/// Customer screens by <see cref="PublicScreens"/> path, like <see cref="NotFoundHtml"/> (empty with public auth
-	/// off). Replaced as a whole.
+	/// Customer screens by language and <see cref="PublicScreens"/> path (<see cref="RenderedScreens.Key"/>), like
+	/// <see cref="NotFoundHtml"/> (empty with public auth off). Replaced as a whole.
 	/// </summary>
 	public volatile RenderedScreens? Screens;
 
@@ -56,7 +59,11 @@ public sealed class RenderStatus
 }
 
 /// <summary>
-/// Screen HTML of one full render; <see cref="RenderedAt"/> = its start (refresh marker check), <see cref="Version"/> =
-/// the renderer build (served only while current).
+/// Screen HTML of one full render by <see cref="Key"/>; <see cref="RenderedAt"/> = its start (refresh marker check),
+/// <see cref="Version"/> = the renderer build (served only while current).
 /// </summary>
-public sealed record RenderedScreens(IReadOnlyDictionary<string, string> Html, DateTimeOffset RenderedAt, string Version);
+public sealed record RenderedScreens(IReadOnlyDictionary<string, string> Html, DateTimeOffset RenderedAt, string Version)
+{
+	/// <summary><c>de:user/profile</c></summary>
+	public static string Key(string code, string path) => $"{code}:{path}";
+}

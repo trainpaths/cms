@@ -9,7 +9,7 @@ namespace api_backend.Services.Pages;
 /// Seeds the pages of the instance config (<see cref="CmsConfig.Pages"/>), published. A fresh install (empty pages
 /// table) gets all of them, so pages the owner deletes stay deleted; locked/template pages are re-created on every
 /// start when missing (the site's code relies on them). <c>Bootstrap:SeedPages=false</c> turns the fresh-install
-/// seed off (tests).
+/// seed off (tests). Also warns about pages a newly configured language code made unreachable.
 /// </summary>
 public static class PageSeeder
 {
@@ -23,6 +23,11 @@ public static class PageSeeder
 		var seedAll = sp.GetRequiredService<IConfiguration>().GetValue("Bootstrap:SeedPages", true)
 			&& !await db.Pages.AnyAsync(ct);
 		var existing = seedAll ? [] : (await db.Pages.Select(p => p.Slug).ToListAsync(ct)).ToHashSet();
+		var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(PageSeeder));
+		// /de is the German home now; renaming is left to the owner
+		if (cms.Site.Lang.IsLocalized && existing.Intersect(cms.Site.Lang.Codes).ToList() is { Count: > 0 } shadowed)
+			logger.LogWarning("Page slug(s) {Slugs} equal a language code and are unreachable; rename them.",
+				string.Join(", ", shadowed));
 		var missing = cms.Pages.Where(p => seedAll || (p.IsLocked && !existing.Contains(p.Slug))).ToList();
 		if (missing.Count == 0) return;
 
@@ -41,7 +46,6 @@ public static class PageSeeder
 		}));
 		await db.SaveChangesAsync(ct);
 
-		sp.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(PageSeeder))
-			.LogInformation("Seeded pages: {Slugs}.", string.Join(", ", missing.Select(p => p.Slug)));
+		logger.LogInformation("Seeded pages: {Slugs}.", string.Join(", ", missing.Select(p => p.Slug)));
 	}
 }

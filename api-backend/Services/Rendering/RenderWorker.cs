@@ -17,7 +17,7 @@ namespace api_backend.Services.Rendering;
 /// so nothing renders at visitor request time. Driven by <see cref="RenderQueue"/> (content changes) and a
 /// periodic check that re-renders everything when the renderer's version changed (frontend deploy) or a
 /// published page has no current HTML (renderer was down, fresh install). Full renders also produce the in-memory
-/// not-found page and customer screens.
+/// not-found page and customer screens. Everything renders once per configured language.
 /// </summary>
 public sealed class RenderWorker(
 	RenderQueue queue,
@@ -112,9 +112,12 @@ public sealed class RenderWorker(
 
 		using var scope = scopeFactory.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+		var codes = cms.Site.Lang.Codes;
+		// a language added to the config counts as missing HTML
 		var stale = await db.Pages.AnyAsync(
 			p => p.Status == PageStatus.Published
-				 && !db.RenderedPages.Any(r => r.PageId == p.Id && r.RendererVersion == version), ct);
+				 && db.RenderedPages.Count(r => r.PageId == p.Id && r.RendererVersion == version && codes.Contains(r.Lang))
+				 < codes.Count, ct);
 
 		if (changed || stale || status.NotFoundHtml is null || status.Screens is null)
 		{
@@ -132,6 +135,8 @@ public sealed class RenderWorker(
 		using var scope = scopeFactory.CreateScope();
 		var services = scope.ServiceProvider;
 		var db = services.GetRequiredService<AppDbContext>();
+		var codes = cms.Site.Lang.Codes;
+		var defaultCode = cms.Site.Lang.DefaultCode;
 
 		// a single page widens to all when it left the public site, is new there, or changed its live title/slug (menus +
 		// footer links on every page show those). Safety net: the controllers queue Refresh() for those already (it
@@ -140,7 +145,8 @@ public sealed class RenderWorker(
 		{
 			var pages = await db.Pages.AsNoTracking()
 				.Where(p => ids.Contains(p.Id))
-				.LeftJoin(db.RenderedPages, p => p.Id, r => r.PageId, (p, r) => new
+				// default language only: the title it was rendered with is the default one
+				.LeftJoin(db.RenderedPages.Where(r => r.Lang == defaultCode), p => p.Id, r => r.PageId, (p, r) => new
 				{
 					p.Status,
 					Title = p.PublishedTitle,
@@ -166,22 +172,27 @@ public sealed class RenderWorker(
 			? await db.Pages.AsNoTracking().Where(p => p.Status == PageStatus.Published).Select(p => p.Id).ToListAsync(ct)
 			: ids.ToList();
 
-		// per chunk: pages + media refs in two queries, existing row ids in one, one commit (one POST per page: Node
-		// renders one at a time anyway). Existing rows are updated without reading them (Apply sets every column),
-		// so the old HTML never leaves the DB. A page is fresh once its chunk commits.
+		// per chunk: pages + media refs in two queries, existing row keys in one, one commit (one POST per page and
+		// language: Node renders one at a time anyway). Existing rows are updated without reading them (Apply sets
+		// every column), so the old HTML never leaves the DB. A page is fresh once its chunk commits.
 		var count = 0;
 		foreach (var chunk in targets.Chunk(ChunkSize))
 		{
 			var published = await pageService.GetPublishedByIdsAsync(chunk, ct);
-			var existing = await db.RenderedPages.Where(r => chunk.Contains(r.PageId)).Select(r => r.PageId).ToHashSetAsync(ct);
-			var results = new List<(Guid Id, PublicPage Page, RenderResult Result)>();
+			var existing = (await db.RenderedPages.Where(r => chunk.Contains(r.PageId))
+				.Select(r => new { r.PageId, r.Lang }).ToListAsync(ct))
+				.Select(r => (r.PageId, r.Lang)).ToHashSet();
+			var results = new List<(Guid Id, string Lang, PublicPage Page, RenderResult Result)>();
 			foreach (var id in chunk)
 			{
 				// unpublished meanwhile: its queued job widens to all and cleans up
 				if (!published.TryGetValue(id, out var page)) continue;
-				var result = await renderer.RenderAsync(new RenderState(page.Slug, page, menu, config, baseUrl), ct);
-				results.Add((id, page, result));
-				Track(db, id, existing.Contains(id), page, result, startedAt);
+				foreach (var code in codes)
+				{
+					var result = await renderer.RenderAsync(new RenderState(page.Slug, page, menu, config, baseUrl, code), ct);
+					results.Add((id, code, page, result));
+					Track(db, id, code, existing.Contains((id, code)), page, result, startedAt);
+				}
 			}
 			try
 			{
@@ -191,36 +202,45 @@ public sealed class RenderWorker(
 			{
 				// a page deleted mid-render (FK): store the chunk one by one, skipping that one
 				db.ChangeTracker.Clear();
-				foreach (var (id, page, result) in results)
-					await StoreAsync(db, id, page, result, startedAt, ct);
+				foreach (var (id, code, page, result) in results)
+					await StoreAsync(db, id, code, page, result, startedAt, ct);
 			}
 			db.ChangeTracker.Clear(); // don't keep every page's HTML tracked
-			count += results.Count;
+			count += results.Count / codes.Count;
 		}
 
 		if (all)
 		{
-			await db.RenderedPages.Where(r => r.Page!.Status != PageStatus.Published).ExecuteDeleteAsync(ct);
-			var notFound = await renderer.RenderAsync(new RenderState("not-found", null, menu, config, baseUrl), ct);
+			await db.RenderedPages.Where(r => r.Page!.Status != PageStatus.Published || !codes.Contains(r.Lang))
+				.ExecuteDeleteAsync(ct);
+			var notFound = new Dictionary<string, string>();
 			var screens = new Dictionary<string, string>();
-			// never served with public auth off (PublicHtmlController): don't render them either
-			if (cms.PublicAuth)
-				foreach (var path in PublicScreens.All)
-					screens[path] = (await renderer.RenderAsync(new RenderState(path, null, menu, config, baseUrl), ct)).Html;
-			status.NotFoundHtml = notFound.Html;
-			status.Screens = new RenderedScreens(screens, startedAt, notFound.Version);
-			status.CurrentVersion = notFound.Version;
+			string? version = null;
+			foreach (var code in codes)
+			{
+				var result = await renderer.RenderAsync(new RenderState("not-found", null, menu, config, baseUrl, code), ct);
+				notFound[code] = result.Html;
+				version ??= result.Version; // default language's
+				// never served with public auth off (PublicHtmlController): don't render them either
+				if (cms.PublicAuth)
+					foreach (var path in PublicScreens.All)
+						screens[RenderedScreens.Key(code, path)] =
+							(await renderer.RenderAsync(new RenderState(path, null, menu, config, baseUrl, code), ct)).Html;
+			}
+			status.NotFoundHtml = notFound;
+			status.Screens = new RenderedScreens(screens, startedAt, version!);
+			status.CurrentVersion = version;
 		}
-		logger.LogInformation("Rendered {Count} public page(s){All} in {Milliseconds} ms.",
-			count, all ? " (all)" : "", stopwatch.ElapsedMilliseconds);
+		logger.LogInformation("Rendered {Count} public page(s){All} in {Languages} language(s) in {Milliseconds} ms.",
+			count, all ? " (all)" : "", codes.Count, stopwatch.ElapsedMilliseconds);
 	}
 
 	private static async Task StoreAsync(
-		AppDbContext db, Guid pageId, PublicPage page, RenderResult result, DateTimeOffset renderedAt,
+		AppDbContext db, Guid pageId, string code, PublicPage page, RenderResult result, DateTimeOffset renderedAt,
 		CancellationToken ct)
 	{
-		var exists = await db.RenderedPages.AnyAsync(r => r.PageId == pageId, ct);
-		Track(db, pageId, exists, page, result, renderedAt);
+		var exists = await db.RenderedPages.AnyAsync(r => r.PageId == pageId && r.Lang == code, ct);
+		Track(db, pageId, code, exists, page, result, renderedAt);
 		try
 		{
 			await db.SaveChangesAsync(ct);
@@ -234,9 +254,10 @@ public sealed class RenderWorker(
 
 	/// <summary>Insert, or a full-row update of an existing row without loading it.</summary>
 	private static void Track(
-		AppDbContext db, Guid pageId, bool exists, PublicPage page, RenderResult result, DateTimeOffset renderedAt)
+		AppDbContext db, Guid pageId, string code, bool exists, PublicPage page, RenderResult result,
+		DateTimeOffset renderedAt)
 	{
-		var row = new RenderedPage { PageId = pageId, Html = "", Title = "", Slug = "", RendererVersion = "" };
+		var row = new RenderedPage { PageId = pageId, Lang = code, Html = "", Title = "", Slug = "", RendererVersion = "" };
 		Apply(row, page, result, renderedAt);
 		if (exists) db.RenderedPages.Update(row);
 		else db.RenderedPages.Add(row);

@@ -14,10 +14,11 @@ namespace api_backend.Controllers;
 [EnableRateLimiting(RateLimitPolicies.Pages)]
 public class PublicPagesController(PageService pages) : ControllerBase
 {
+	/// <param name="lang">language code (unknown or missing → the default language)</param>
 	[HttpGet("{slug}")]
-	public async Task<ActionResult<PublicPage>> GetBySlug(string slug, CancellationToken ct)
+	public async Task<ActionResult<PublicPage>> GetBySlug(string slug, [FromQuery] string? lang, CancellationToken ct)
 	{
-		var page = await pages.GetPublishedBySlugAsync(slug, ct);
+		var page = await pages.GetPublishedBySlugAsync(slug, lang, ct);
 		return page is null ? Problem(statusCode: 404, title: "Page not found.") : Ok(page);
 	}
 }
