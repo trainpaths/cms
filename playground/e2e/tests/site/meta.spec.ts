@@ -43,7 +43,7 @@ test('meta title + description set in the editor end up in the server-rendered h
 		expect(html).toContain('<meta name="description" content="Who builds ACME.">')
 		expect(html).toContain('<meta property="og:title" content="Our team">')
 		expect(html).toContain('<meta property="og:site_name" content="ACME Meta">')
-		expect(html).toMatch(/<html[^>]* lang="en"/)
+		expect(html).toMatch(/<html[^>]* lang="en-US"/)
 
 		// reload: meta persisted
 		await page.reload()
