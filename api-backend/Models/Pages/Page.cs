@@ -56,5 +56,12 @@ public class Page
 	public Staff? UpdatedBy { get; set; }
 }
 
-/// <summary>A page's title and meta in one language; empty = untranslated (the default language's value applies).</summary>
-public record PageTextTranslation(string Title = "", string MetaTitle = "", string MetaDescription = "");
+/// <summary>
+/// A page's title and meta in one language; empty = untranslated (the default language's value applies).
+/// <see cref="Sources"/>: editor hashes of the default texts they were translated from (outdated check; never public).
+/// </summary>
+public record PageTextTranslation(string Title = "", string MetaTitle = "", string MetaDescription = "",
+	[property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] PageTextSources? Sources = null);
+
+/// <summary>Per field: hash of the default text a translation was made from; "" = none recorded.</summary>
+public record PageTextSources(string Title = "", string MetaTitle = "", string MetaDescription = "");

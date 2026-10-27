@@ -68,6 +68,9 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 	[GeneratedRegex("^[a-z]{2,3}$")]
 	private static partial Regex LangCodePattern();
 
+	/// <summary>Longest translation source hash (the editor writes 8 hex digits).</summary>
+	public const int MaxSourceHashLength = 16;
+
 	public async Task<List<PageSummary>> ListAsync(CancellationToken ct)
 	{
 		// no Blocks (up to 2 MB each): the stored BlockCount instead
@@ -468,12 +471,22 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 				return (result, $"'{code}' is not a language code.");
 			var text = new PageTextTranslation(value?.Title?.Trim() ?? "", value?.MetaTitle?.Trim() ?? "",
 				value?.MetaDescription?.Trim() ?? "");
+			if (value?.Sources is { } hashes)
+			{
+				// a source only next to a translated field
+				var sources = new PageTextSources(text.Title.Length > 0 ? hashes.Title ?? "" : "",
+					text.MetaTitle.Length > 0 ? hashes.MetaTitle ?? "" : "", text.MetaDescription.Length > 0 ? hashes.MetaDescription ?? "" : "");
+				if (new[] { sources.Title, sources.MetaTitle, sources.MetaDescription }.Any(h => h.Length > MaxSourceHashLength))
+					return (result, $"Translation sources ({code}) must be at most {MaxSourceHashLength} characters.");
+				if (sources != new PageTextSources())
+					text = text with { Sources = sources };
+			}
 			if (text.Title.Length > MaxTitleLength)
 				return (result, $"Title ({code}) must be at most {MaxTitleLength} characters.");
 			if ((MetaError(text.MetaTitle, MaxMetaTitleLength, $"Meta title ({code})")
 				?? MetaError(text.MetaDescription, MaxMetaDescriptionLength, $"Meta description ({code})")) is { } error)
 				return (result, error);
-			if (text != new PageTextTranslation())
+			if (text with { Sources = null } != new PageTextTranslation())
 				result[code] = text;
 		}
 		return (result, null);
@@ -616,6 +629,20 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 						block.Translations.Remove(code);
 					if (block.Translations.Count == 0)
 						block.Translations = null;
+				}
+				if (block.TranslationSources is not null)
+				{
+					foreach (var (code, hashes) in block.TranslationSources)
+					{
+						if (!LangCodePattern().IsMatch(code))
+							return $"Block '{block.Id}': '{code}' is not a language code.";
+						if (hashes is null || hashes.Values.Any(h => h is null || h.Length > MaxSourceHashLength))
+							return $"Block '{block.Id}': translation sources of '{code}' must be strings of at most {MaxSourceHashLength} characters.";
+					}
+					foreach (var code in block.TranslationSources.Where(t => t.Value.Count == 0).Select(t => t.Key).ToList())
+						block.TranslationSources.Remove(code);
+					if (block.TranslationSources.Count == 0)
+						block.TranslationSources = null;
 				}
 				if (Walk(block.InnerBlocks, depth + 1) is { } error)
 					return error;

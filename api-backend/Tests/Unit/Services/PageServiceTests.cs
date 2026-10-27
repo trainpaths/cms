@@ -159,6 +159,66 @@ public class PageServiceTests
 	}
 
 	[Fact]
+	public void ValidateBlocks_TranslationSources()
+	{
+		var badCode = Block("paragraph");
+		badCode.TranslationSources = new() { ["German"] = new() { ["text"] = "1a2b3c4d" } };
+		PageService.ValidateBlocks([badCode]).Should().Contain("language code");
+
+		var tooLong = Block("paragraph");
+		tooLong.TranslationSources = new() { ["de"] = new() { ["text"] = new string('a', PageService.MaxSourceHashLength + 1) } };
+		PageService.ValidateBlocks([tooLong]).Should().Contain("translation sources");
+
+		var empty = Block("paragraph");
+		empty.TranslationSources = new() { ["de"] = new() };
+		PageService.ValidateBlocks([empty]).Should().BeNull();
+		empty.TranslationSources.Should().BeNull();
+	}
+
+	[Fact]
+	public void Localize_StripsTranslationSources()
+	{
+		var paragraph = Block("paragraph", new() { ["text"] = Json("\"Hello\"") });
+		paragraph.Translations = new() { ["de"] = new() { ["text"] = Json("\"Hallo\"") } };
+		paragraph.TranslationSources = new() { ["de"] = new() { ["text"] = "1a2b3c4d" } };
+		var page = Live([paragraph], new() { ["de"] = new PageTextTranslation("Über uns", Sources: new PageTextSources("abc")) });
+
+		var de = PageService.Localize(page, "de", "en");
+		de.Blocks[0].TranslationSources.Should().BeNull();
+		de.Translations.Should().BeEmpty();
+		JsonSerializer.Serialize(de.Blocks).Should().NotContain("1a2b3c4d");
+	}
+
+	[Fact]
+	public async Task PageTranslationSources_KeptNextToTranslatedFields_CountAsChanges()
+	{
+		await using var db = TestDbContextFactory.Create();
+		var service = new PageService(db, CmsConfig.Default);
+		var created = (await service.CreateAsync(new CreatePageRequest("Page", null, null), StaffId, Ct)).Value!;
+		(await service.UpdateAsync(created.Id, new UpdatePageRequest(null, null, null,
+			Translations: new() { ["de"] = new PageTextTranslation("Seite", Sources: new PageTextSources(new string('a', 17))) }),
+			StaffId, Ct)).Detail.Should().Contain("Translation sources (de)");
+
+		await service.UpdateAsync(created.Id, new UpdatePageRequest(null, null, null,
+			Translations: new() { ["de"] = new PageTextTranslation("Seite", Sources: new PageTextSources("aaaa", "bbbb")) }),
+			StaffId, Ct);
+		await service.UpdateAsync(created.Id, new UpdatePageRequest(null, null, null, Status: PageStatus.Published), StaffId, Ct);
+		var detail = (await service.GetAsync(created.Id, Ct))!;
+		detail.Translations["de"].Sources.Should().Be(new PageTextSources("aaaa")); // no meta title translation: no source
+
+		// a source-only change is an unpublished change (the snapshot keeps them too)
+		var changed = await service.UpdateAsync(created.Id, new UpdatePageRequest(null, null, null,
+			Translations: new() { ["de"] = new PageTextTranslation("Seite", Sources: new PageTextSources("cccc")) }), StaffId, Ct);
+		changed.Value!.Page.HasUnpublishedChanges.Should().BeTrue();
+
+		// sources alone are no translation
+		(await service.UpdateAsync(created.Id, new UpdatePageRequest(null, null, null,
+			Translations: new() { ["fr"] = new PageTextTranslation(Sources: new PageTextSources("dddd")) }), StaffId, Ct))
+			.Value.Should().NotBeNull();
+		(await service.GetAsync(created.Id, Ct))!.Translations.Should().NotContainKey("fr");
+	}
+
+	[Fact]
 	public async Task Translations_Validation_Snapshot_Duplicate_Import()
 	{
 		await using var db = TestDbContextFactory.Create();
