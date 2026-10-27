@@ -160,6 +160,9 @@ so autocomplete only offers tags in use. Setting tags doesn't bump `UpdatedAt` (
 - `translations` (optional, omitted when empty): per language code (`^[a-z]{2,3}$`), primitive values like
   attributes. Empty languages are dropped on write; codes need not be configured (removing a language from the config
   and adding it back keeps its text). Public reads never contain it (`PageService.Localize`).
+- `translationSources` (optional, same shape, string values ≤ 16 chars): per translation, the editor's hash of the
+  default text it was made from (outdated check); opaque to the API, never public. Page translations carry the same in
+  `sources` (`{ title, metaTitle, metaDescription }`, "" = none).
 - The backend does **not** know block types. It validates structure only (`PageService.ValidateBlocks`):
   non-empty `id` (≤64), `name` matches `^[a-z0-9-]+$`, attribute values are string/number/boolean,
   depth ≤ 10, ≤ 2000 blocks. Explicit JSON nulls for `attributes`/`innerBlocks` are normalized to empty.
@@ -336,15 +339,21 @@ remaining phases (one PR each): `claude-context/localization/` (README first).
   page's language: `localeHref`, like router links); add/move/delete of blocks affects every language.
   Menus and footer links show the translated live title (`PageService.LiveTitle`; `PublicCache` keyed per language; a
   translated title change re-renders other pages like a rename). Editor: `store.editLang` (header select + Page tab
-  "Translations" with untranslated counts); `useBlockAttribute` reads/writes the edited language for translatable
+  "Translations" with untranslated + outdated counts); `useBlockAttribute` reads/writes the edited language for translatable
   attributes, `usePageText` for title/meta; the admin preview localizes the working copy client-side
   (`core/localize.ts`, mirror of `Localize`). Typed page title/meta translations are not in the undo history (like the title); a DeepL fill's are (its undo step
   restores them). Saves drop block translations of attributes that aren't `translatable` (`pruneTranslations`): the API
   overlays any stored key publicly, so a stale one would show there while the editor can't.
   Rejected: a block tree per language (layouts drift apart, every image change done N times).
+- **Outdated translations**: every translation the editor writes (typing, DeepL) records a hash of the default text
+  it was made from (`sourceHash`, FNV-1a, in `translationSources` / page `sources`). A translation whose recorded hash
+  differs from the current default text is *outdated*: counted next to the untranslated ones, the block gets an amber
+  ring (page fields an amber border), "Translate missing fields" includes them. Editing the translation records the
+  current hash again. Translations without a hash (written before this existed) count as up to date. The hash, not a
+  copy of the old text: it only has to tell "changed", and stays tiny in the jsonb.
 - **Machine translation** (Phase 4, optional): with `DEEPL_API_KEY` set, the editor offers "Translate missing fields"
   (and "Re-translate all", behind a confirm) for the edited language: `core/translatable.ts` `textFields` collects the
-  default-language text of every untranslated translatable field (+ title/meta), one `POST /api/translate` (staff,
+  default-language text of every untranslated or outdated translatable field (+ title/meta), one `POST /api/translate` (staff,
   ≤500 texts, ≤10 000 chars each, source = default language), results land in the working copy as one change and one
   undo step (`applyTranslations`). Nothing is saved or published by itself: the owner reviews, saves, publishes.
   `ITranslator` seam → `DeepLTranslator` (free keys `:fx` → api-free.deepl.com; batches of ≤ 50 texts and ≤ 100 KB, 3 in parallel; `EN-US`/`EN-GB`,

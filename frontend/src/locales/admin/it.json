@@ -413,6 +413,8 @@
 			"previewLanguage": "Lingua dell’anteprima",
 			"section": "Traduzioni",
 			"missing": "{n} non tradotto | {n} non tradotti",
+			"outdated": "{n} obsoleto | {n} obsoleti",
+			"fieldOutdated": "Il testo della lingua predefinita è cambiato dopo questa traduzione",
 			"complete": "Completo",
 			"backToDefault": "Torna a {language}",
 			"hint": "I testi (titolo, metadati e testi dei blocchi) si traducono per lingua; i campi vuoti mostrano la lingua predefinita.",
@@ -420,6 +422,7 @@
 		},
 		"deepl": {
 			"missing": "Traduci i campi mancanti",
+			"missingAndOutdated": "Traduci i campi mancanti e obsoleti",
 			"running": "Traduzione…",
 			"retranslate": "Ritraduci tutto",
 			"retranslateTitle": "Ritradurre tutti i campi?",

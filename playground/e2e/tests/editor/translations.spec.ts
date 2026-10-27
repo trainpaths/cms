@@ -48,3 +48,29 @@ test('a German translation is published at /de/<slug>, untranslated languages sh
 	await visitor.goto(`/${slug}`)
 	await expect(visitor.getByText('Hello world')).toBeVisible()
 })
+
+test('changing the default text marks its translation outdated until it is edited', async ({ staffPage: page }) => {
+	await createPage(page, 'Outdated page')
+	await insertBlock(page, 'Paragraph')
+	// the one paragraph on the canvas: its textarea shows the edited language's text
+	const paragraph = page.locator('main textarea').first()
+	await paragraph.fill('Hello world')
+	await paragraph.blur()
+
+	const language = page.getByTestId('edit-language')
+	await language.selectOption('de')
+	await paragraph.fill('Hallo Welt')
+	await paragraph.blur()
+	await language.selectOption('en')
+	await paragraph.fill('Hello there')
+	await paragraph.blur()
+
+	await language.selectOption('de')
+	await expect(paragraph).toHaveValue('Hallo Welt')
+	await expect(page.locator('[data-outdated]')).toHaveCount(1)
+	// the untranslated title + the outdated paragraph
+	await expect(language.locator('option[value="de"]')).toHaveText(/· 2$/)
+	await paragraph.fill('Hallo zusammen')
+	await expect(page.locator('[data-outdated]')).toHaveCount(0)
+	await expect(language.locator('option[value="de"]')).toHaveText(/· 1$/)
+})

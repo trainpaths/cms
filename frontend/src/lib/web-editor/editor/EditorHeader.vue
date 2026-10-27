@@ -29,7 +29,7 @@ const viewHref = computed(() => {
 	return translating ? `${props.previewPath}?lang=${store.editLang}` : props.previewPath
 })
 
-const { value: title, original: originalTitle } = usePageText('title')
+const { value: title, original: originalTitle, outdated: titleOutdated } = usePageText('title')
 
 // the default title is required; a translation may be empty (= untranslated)
 function handleTitleBlur() {
@@ -67,6 +67,8 @@ function handleTitleBlur() {
 			<input
 				v-model="title"
 				:placeholder="originalTitle"
+				:title="titleOutdated ? $t('editor.translations.fieldOutdated') : undefined"
+				:class="{ 'underline decoration-amber-500 decoration-wavy': titleOutdated }"
 				:aria-label="$t('editor.page.title')"
 				data-testid="page-title"
 				class="m-0 min-w-0 flex-1 truncate border-none bg-transparent text-xl font-semibold text-gray-900 outline-hidden focus:ring-1 focus:ring-primary max-sm:hidden"

@@ -30,8 +30,11 @@ core/colors.ts      block colours: `themeColors` (palette from `__CMS_THEME_COLO
                     blockColorStyle (both wrappers)
 core/translatable.ts  isTranslatable(blockName, key) (`translatable: true` in the block type), textFields(blocks, page,
                     translations, missingIn?) = translatable fields with a default value (page title/meta first), only
-                    the untranslated ones of a language with `missingIn` (DeepL pre-fill), missingCounts (the same per language in one
-                    walk: store.missingTranslations), pruneTranslations (drops non-translatable keys; what a save sends)
+                    the untranslated ones of a language with `missingIn` (+ outdated with `withOutdated`: DeepL pre-fill),
+                    sourceHash (FNV-1a of a default text, recorded per translation), blockFieldState / pageFieldState
+                    (missing | outdated | ok), blockOutdated (BlockWrapper amber ring), translationCounts ({missing,
+                    outdated} per language in one walk: store.translationStatus), pruneTranslations (drops
+                    non-translatable keys + sources without a translation; what a save sends)
 core/localize.ts    localizeBlocks / localizeText: mirror of the API's PageService.Localize (admin preview)
 core/serializer.ts  serialize/parse helpers (unused by the store, kept for import/export)
 blocks/<name>/      block.json (name, title, category, description, supports, parent?) + index.ts (`export default defineBlock(meta, {icon,
@@ -43,7 +46,7 @@ editor/Editor.vue   editor for ONE page: props pageId/publicBase/previewPath, em
                     (store.pageEditable false) → template notice instead of the BlockList
 editor/EditorHeader.vue   back (stays on phones: the only visible way out), left-sidebar toggle, title (in the edited
                     language, usePageText; saves on blur; hidden < sm → PageSettings shows it), EditLanguageSelect
-                    (localized sites, md+: store.editLang + untranslated counts), undo/redo, View/Preview link (`eye` icon, like the pages list), Save
+                    (localized sites, md+: store.editLang + untranslated/outdated counts), undo/redo, View/Preview link (`eye` icon, like the pages list), Save
                     (disabled when clean / saving), Publish ("Publish" / "Publish changes" text button md+, `globe` icon
                     button < md; rules, tooltip + confirm from usePublishState), Unpublish (bordered `globe-slash` +
                     text button, only when published, hidden < md: Page tab has it),
@@ -84,7 +87,7 @@ editor/PageSettings.vue   title (< sm only), slug (saved on blur/Enter via store
                           "Search & sharing": meta title (≤70) + description (≤200) with counters and the resulting tab
                           title (public/head documentTitle + site config firm name), saved on blur with the page
                           (store.pageMetaTitle/-Description); tags (`TagInput`, saved right away via store.updateTags,
-                          not part of undo), Translations (localized: a row per language with its untranslated count,
+                          not part of undo), Translations (localized: a row per language with its untranslated/outdated counts,
                           click = edit it), Status: "Draft" / "Published" / "Published · unpublished changes" +
                           Publish / Publish changes + Unpublish (same rules as the header: usePublishState)
 editor/ToolbarDropdown.vue  compact inline-toolbar choice (current value + menu); paragraph align, heading level
@@ -122,8 +125,8 @@ web-editor.css       @apply component classes (.input-field, .field-label, .inne
 (pageId/Title/Slug/Status/HasUnpublishedChanges), `editLang` (reset on load), `pageTranslations` (title/meta per
 code; sent with a save only when changed) + `setPageText`, `updateBlockTranslation(id, code, patch)` (history +
 autosave; '' removes a key, empty languages/`translations` are removed), `applyTranslations(code, entries)` (DeepL
-results: one undo step + one change; the step also restores page title/meta translations), `missingTranslations`
-(untranslated count per non-default code), saves send `pruneTranslations(blocks)`, `isDirty` (content ≠ last saved), `publishing`,
+results: one undo step + one change; the step also restores page title/meta translations), `translationStatus`
+({missing, outdated} per non-default code), every translation write records its source hash, saves send `pruneTranslations(blocks)`, `isDirty` (content ≠ last saved), `publishing`,
 loadPage/savePage (working copy only, skips clean)/updateSlug/publish/unpublish/closePage. Imports the lib's
 `core/types` + `api.ts`; re-exported from the barrel.
 

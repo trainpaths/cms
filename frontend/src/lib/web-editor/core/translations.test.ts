@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { localizeBlocks, localizeText } from './localize'
-import { missingCounts, pruneTranslations, textFields } from './translatable'
+import {
+	blockFieldState,
+	pruneTranslations,
+	sourceHash,
+	textFields,
+	translationCounts,
+} from './translatable'
 import { registerAllBlocks } from './blockTypes'
 import type { BlockInstance } from './types'
 import { useEditorStore } from '../../../stores/editor'
@@ -76,15 +82,39 @@ describe('textFields', () => {
 	})
 })
 
-describe('missingCounts / pruneTranslations', () => {
-	it('missingCounts matches textFields per language', () => {
+describe('translationCounts / pruneTranslations', () => {
+	it('translationCounts matches textFields per language', () => {
 		const page = { title: 'About', metaTitle: '', metaDescription: 'Desc' }
 		const translations = { de: { title: 'Über uns', metaTitle: '', metaDescription: '' } }
-		const counts = missingCounts(tree(), page, translations, ['de', 'fr'])
+		const counts = translationCounts(tree(), page, translations, ['de', 'fr'])
 		expect(counts).toEqual({
-			de: textFields(tree(), page, translations, 'de').length,
-			fr: textFields(tree(), page, translations, 'fr').length,
+			de: { missing: textFields(tree(), page, translations, 'de').length, outdated: 0 },
+			fr: { missing: textFields(tree(), page, translations, 'fr').length, outdated: 0 },
 		})
+	})
+
+	it('outdated: the recorded source hash differs from the default text now', () => {
+		const blocks = tree()
+		blocks[0]!.translationSources = { de: { text: sourceHash('Hello') } }
+		expect(blockFieldState(blocks[0]!, 'text', 'de')).toBe('ok')
+		blocks[0]!.attributes.text = 'Hello there'
+		expect(blockFieldState(blocks[0]!, 'text', 'de')).toBe('outdated')
+		expect(blockFieldState(blocks[0]!, 'text', 'fr')).toBe('missing') // empty translation
+		const page = { title: 'About', metaTitle: '', metaDescription: '' }
+		const translations = {
+			de: { title: 'Über', metaTitle: '', metaDescription: '', sources: { title: sourceHash('Old'), metaTitle: '', metaDescription: '' } },
+		}
+		expect(translationCounts(blocks, page, translations, ['de']).de).toEqual({ missing: 2, outdated: 2 })
+		// DeepL "translate missing" takes the outdated ones too
+		expect(textFields(blocks, page, translations, 'de', true).map((f) => `${f.blockId}.${f.key}`)).toEqual([
+			'null.title',
+			'h.text',
+			'c.title',
+			'l.label',
+		])
+		// no hash recorded (older translations): up to date
+		delete blocks[0]!.translationSources
+		expect(blockFieldState(blocks[0]!, 'text', 'de')).toBe('ok')
 	})
 
 	it('drops non-translatable keys, keeps unknown block types as they are', () => {
@@ -97,6 +127,13 @@ describe('missingCounts / pruneTranslations', () => {
 		expect(pruned[0]!.translations).toEqual({ de: { text: 'Hallo' }, fr: { text: '' } })
 		expect(pruned[2]!.translations).toEqual({ de: { any: 'thing' } })
 		expect(pruned[3]).not.toHaveProperty('translations')
+		const withSources = pruneTranslations([
+			{
+				...tree()[0]!,
+				translationSources: { de: { text: 'aaaaaaaa', level: 'bbbbbbbb' }, it: { text: 'cccccccc' } },
+			},
+		])[0]!
+		expect(withSources.translationSources).toEqual({ de: { text: 'aaaaaaaa' } }) // none without a translation
 		expect(blocks[0]!.translations!.de).toHaveProperty('level') // input untouched
 	})
 })
@@ -163,6 +200,27 @@ describe('editing a language', () => {
 		expect(store.findBlockById('c')!.translations!.it).toEqual({ title: 'Scheda' })
 	})
 
+	it('writing a translation records its source; changing the default text makes it outdated', () => {
+		const store = load()
+		store.pageTitle = 'About'
+		store.updateBlockTranslation('c', 'de', { title: 'Karte' })
+		expect(store.findBlockById('c')!.translationSources).toEqual({ de: { title: sourceHash('Card') } })
+		store.setPageText('de', { title: 'Über uns' })
+		expect(store.pageTranslations.de!.sources).toEqual({ title: sourceHash('About'), metaTitle: '', metaDescription: '' })
+		expect(store.translationStatus.de!.outdated).toBe(0)
+
+		store.updateBlockAttributes('c', { title: 'New card' })
+		store.pageTitle = 'About us'
+		expect(store.translationStatus.de!.outdated).toBe(2)
+		store.updateBlockTranslation('c', 'de', { title: 'Neue Karte' }) // edited by hand: current again
+		expect(store.translationStatus.de!.outdated).toBe(1)
+
+		store.updateBlockTranslation('c', 'de', { title: '' }) // cleared: no source left
+		expect(store.findBlockById('c')!.translationSources).toBeUndefined()
+		store.setPageText('de', { title: '' })
+		expect(store.pageTranslations.de).toBeUndefined()
+	})
+
 	it('undo of a block change keeps page text typed since', () => {
 		const store = load()
 		store.updateBlockAttributes('h', { level: 2 })
@@ -172,13 +230,18 @@ describe('editing a language', () => {
 		expect(store.pageTranslations.de!.title).toBe('Über uns')
 	})
 
-	it('missingTranslations: counts per non-default language', () => {
+	it('translationStatus: counts per non-default language', () => {
 		const store = load()
 		store.pageTitle = 'About'
 		const fields = (code: string) =>
 			textFields(store.blocks, { title: 'About', metaTitle: '', metaDescription: '' }, {}, code).length
-		expect(store.missingTranslations).toEqual({ de: fields('de'), fr: fields('fr'), it: fields('it') })
-		expect(store.missingTranslations.de).toBe(fields('fr') - 1) // heading translated in German
+		const missing = (code: string) => store.translationStatus[code]!.missing
+		expect({ de: missing('de'), fr: missing('fr'), it: missing('it') }).toEqual({
+			de: fields('de'),
+			fr: fields('fr'),
+			it: fields('it'),
+		})
+		expect(missing('de')).toBe(fields('fr') - 1) // heading translated in German
 	})
 
 	it('a save drops translations of attributes that are not translatable', async () => {
@@ -199,7 +262,12 @@ describe('editing a language', () => {
 		expect(title.value.value).toBe('')
 		expect(title.original.value).toBe('About')
 		title.value.value = 'Über uns'
-		expect(store.pageTranslations.de).toEqual({ title: 'Über uns', metaTitle: '', metaDescription: '' })
+		expect(store.pageTranslations.de).toEqual({
+			title: 'Über uns',
+			metaTitle: '',
+			metaDescription: '',
+			sources: { title: sourceHash('About'), metaTitle: '', metaDescription: '' },
+		})
 		expect(store.pageTitle).toBe('About')
 		title.value.value = ''
 		expect(store.pageTranslations).toEqual({})

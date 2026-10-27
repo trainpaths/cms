@@ -413,6 +413,8 @@
 			"previewLanguage": "Preview language",
 			"section": "Translations",
 			"missing": "{n} untranslated | {n} untranslated",
+			"outdated": "{n} outdated | {n} outdated",
+			"fieldOutdated": "The default text changed since this was translated",
 			"complete": "Complete",
 			"backToDefault": "Back to {language}",
 			"hint": "Text (title, meta and block text) is translated per language; empty fields show the default language.",
@@ -420,6 +422,7 @@
 		},
 		"deepl": {
 			"missing": "Translate missing fields",
+			"missingAndOutdated": "Translate missing and outdated fields",
 			"running": "Translating…",
 			"retranslate": "Re-translate all",
 			"retranslateTitle": "Re-translate all fields?",
