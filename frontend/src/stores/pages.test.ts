@@ -22,6 +22,7 @@ const detail = (): PageDetail => ({
 	editable: true,
 	metaTitle: '',
 	metaDescription: '',
+	translations: {},
 })
 
 const summary = (patch: Partial<PageSummary> = {}): PageSummary => ({

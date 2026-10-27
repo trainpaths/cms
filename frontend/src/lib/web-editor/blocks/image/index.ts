@@ -10,7 +10,7 @@ export default defineBlock(meta, {
 	attributes: {
 		// alt lives on the media object, not the block
 		mediaId: { type: 'string', default: '' },
-		caption: { type: 'string', default: '' },
+		caption: { type: 'string', default: '', translatable: true },
 		width: { type: 'number', default: 100 },
 		blockWidth: { type: 'string', default: 'default' },
 	},

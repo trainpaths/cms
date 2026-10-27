@@ -8,8 +8,8 @@ import LinkSettings from './LinkSettings.vue'
 export default defineBlock(meta, {
 	icon: LinkIcon,
 	attributes: {
-		label: { type: 'string', default: '' },
-		url: { type: 'string', default: '' },
+		label: { type: 'string', default: '', translatable: true },
+		url: { type: 'string', default: '', translatable: true },
 		textColor: { type: 'string', default: '' },
 	},
 	edit: LinkEdit,

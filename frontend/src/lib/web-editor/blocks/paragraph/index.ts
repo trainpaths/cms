@@ -8,7 +8,7 @@ import ParagraphSettings from './ParagraphSettings.vue'
 export default defineBlock(meta, {
 	icon: ParagraphIcon,
 	attributes: {
-		text: { type: 'string', default: '' },
+		text: { type: 'string', default: '', translatable: true },
 		alignment: { type: 'string', default: 'left' },
 		blockWidth: { type: 'string', default: 'default' },
 		backgroundColor: { type: 'string', default: '' },

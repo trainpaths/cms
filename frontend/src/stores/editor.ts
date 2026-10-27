@@ -2,7 +2,15 @@ import { ref, computed, watch } from 'vue'
 import { translate } from '../i18n'
 import { defineStore } from 'pinia'
 import { nanoid } from 'nanoid'
-import type { BlockInstance, BlockContext, PageDetail, PageStatus } from '../lib/web-editor/core/types'
+import type {
+	BlockInstance,
+	BlockContext,
+	PageDetail,
+	PageStatus,
+	PageTextTranslation,
+	TranslationValue,
+} from '../lib/web-editor/core/types'
+import { DEFAULT_LANGUAGE } from '../i18n/languages'
 import { getApiPagesById, putApiPagesById } from '../api/sdk.gen'
 import { ApiError, errorMessage as describe } from '../api-error'
 import { useMediaStore } from './media'
@@ -20,6 +28,10 @@ export const useEditorStore = defineStore('editor', () => {
 	const pageHasUnpublishedChanges = ref(false)
 	const pageMetaTitle = ref('')
 	const pageMetaDescription = ref('')
+	/** Title/meta per non-default language code (block text translations live on the blocks). */
+	const pageTranslations = ref<Record<string, PageTextTranslation>>({})
+	/** Language the editor edits: the default edits `attributes`/title/meta, another code its translations. */
+	const editLang = ref(DEFAULT_LANGUAGE.code)
 	// from the instance config (cms.config.json): template-rendered / fixed slug + undeletable / blocks writable
 	const pageTemplate = ref<string | null>(null)
 	const pageLocked = ref(false)
@@ -48,9 +60,17 @@ export const useEditorStore = defineStore('editor', () => {
 
 	// what a save writes, as JSON: isDirty compares it with the last saved one (undo back to it = clean)
 	function contentJson(): string {
-		return JSON.stringify([pageTitle.value, pageMetaTitle.value, pageMetaDescription.value, blocks.value])
+		return JSON.stringify([
+			pageTitle.value,
+			pageMetaTitle.value,
+			pageMetaDescription.value,
+			pageTranslations.value,
+			blocks.value,
+		])
 	}
 	const savedContent = ref('')
+	// last saved pageTranslations: sent only when changed (single-language sites never write them)
+	let savedTranslations = '{}'
 	const isDirty = computed(() => !!pageId.value && contentJson() !== savedContent.value)
 
 	function pushHistory(): void {
@@ -149,6 +169,7 @@ export const useEditorStore = defineStore('editor', () => {
 			id: nanoid(),
 			name: block.name,
 			attributes: { ...block.attributes },
+			...(block.translations && { translations: JSON.parse(JSON.stringify(block.translations)) }),
 			innerBlocks: block.innerBlocks.map(deepCloneBlock),
 		}
 	}
@@ -168,6 +189,41 @@ export const useEditorStore = defineStore('editor', () => {
 			Object.assign(block.attributes, attrs)
 			trackChange()
 		}
+	}
+
+	/**
+	 * Sets attribute translations of one block in language `code` (same history + autosave as
+	 * `updateBlockAttributes`). An empty string removes the key; a language left empty, and then `translations`
+	 * left empty, are removed too.
+	 */
+	function updateBlockTranslation(id: string, code: string, patch: Record<string, TranslationValue>): void {
+		const block = findBlockById(id)
+		if (!block) return
+		setTranslation(block, code, patch)
+		trackChange()
+	}
+
+	function setTranslation(block: BlockInstance, code: string, patch: Record<string, TranslationValue>): void {
+		const translations = { ...block.translations }
+		const values = { ...translations[code] }
+		for (const [key, value] of Object.entries(patch)) {
+			if (value === '') delete values[key]
+			else values[key] = value
+		}
+		if (Object.keys(values).length) translations[code] = values
+		else delete translations[code]
+		if (Object.keys(translations).length) block.translations = translations
+		else delete block.translations
+	}
+
+	/** Title/meta of a non-default language (working copy, saved with the page; empty = untranslated). */
+	function setPageText(code: string, patch: Partial<PageTextTranslation>): void {
+		const current = pageTranslations.value[code] ?? { title: '', metaTitle: '', metaDescription: '' }
+		const next = { ...current, ...patch }
+		const rest = { ...pageTranslations.value }
+		if (next.title || next.metaTitle || next.metaDescription) rest[code] = next
+		else delete rest[code]
+		pageTranslations.value = rest
 	}
 
 	function selectBlock(id: string | null): void {
@@ -228,6 +284,9 @@ export const useEditorStore = defineStore('editor', () => {
 		pageHasUnpublishedChanges.value = page.hasUnpublishedChanges
 		pageMetaTitle.value = page.metaTitle
 		pageMetaDescription.value = page.metaDescription
+		pageTranslations.value = page.translations
+		savedTranslations = JSON.stringify(page.translations)
+		editLang.value = DEFAULT_LANGUAGE.code
 		pageTemplate.value = page.template ?? null
 		pageLocked.value = page.locked
 		pageEditable.value = page.editable
@@ -284,6 +343,9 @@ export const useEditorStore = defineStore('editor', () => {
 		pageHasUnpublishedChanges.value = false
 		pageMetaTitle.value = ''
 		pageMetaDescription.value = ''
+		pageTranslations.value = {}
+		savedTranslations = '{}'
+		editLang.value = DEFAULT_LANGUAGE.code
 		pageTemplate.value = null
 		pageLocked.value = false
 		pageEditable.value = true
@@ -317,6 +379,7 @@ export const useEditorStore = defineStore('editor', () => {
 				saveStatus.value = 'saving'
 				changeCount.value = 0
 				const sent = contentJson()
+				const translations = JSON.stringify(pageTranslations.value)
 				try {
 					const content = {
 						title: pageTitle.value,
@@ -324,11 +387,13 @@ export const useEditorStore = defineStore('editor', () => {
 						metaDescription: pageMetaDescription.value,
 						// non-editable (template-only) pages reject block writes
 						...(pageEditable.value && { blocks: cloneBlocks(blocks.value) }),
+						...(translations !== savedTranslations && { translations: JSON.parse(translations) }),
 					}
 					const { data: page } = await putApiPagesById({ path: { id }, body: content })
 					usePagesStore().applySaved(page, content)
 					if (pageId.value === id) {
 						savedContent.value = sent
+						savedTranslations = translations
 						pageHasUnpublishedChanges.value = page.hasUnpublishedChanges
 					}
 					saveStatus.value = 'saved'
@@ -430,6 +495,8 @@ export const useEditorStore = defineStore('editor', () => {
 		pageHasUnpublishedChanges,
 		pageMetaTitle,
 		pageMetaDescription,
+		pageTranslations,
+		editLang,
 		pageTemplate,
 		pageLocked,
 		pageEditable,
@@ -458,6 +525,8 @@ export const useEditorStore = defineStore('editor', () => {
 		moveBlockToPosition,
 		duplicateBlock,
 		updateBlockAttributes,
+		updateBlockTranslation,
+		setPageText,
 		setBlocks,
 		selectBlock,
 		clearSelection,

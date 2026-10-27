@@ -7,7 +7,8 @@ import CalloutIcon from './CalloutIcon.vue'
 export default defineBlock(meta, {
 	icon: CalloutIcon,
 	attributes: {
-		text: { type: 'string', default: '' },
+		// differs per language (localized sites); tone and width are shared
+		text: { type: 'string', default: '', translatable: true },
 		tone: { type: 'string', default: 'info' },
 		blockWidth: { type: 'string', default: 'default' },
 	},

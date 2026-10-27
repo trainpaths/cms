@@ -1,6 +1,6 @@
 # Phase 3: translated page content
 
-Status: **not started**. Read `README.md` (this folder) first. Issue trainpaths/cms#45. Starts after Phase 2 merged
+Status: **implemented** (PR pending, stacked on Phase 2, see #45). Read `README.md` (this folder) first. Issue trainpaths/cms#45. Started after Phase 2
 (it relies on per-language rendering and `?lang=` on the public endpoints).
 
 ## Goal

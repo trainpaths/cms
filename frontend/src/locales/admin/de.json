@@ -407,6 +407,16 @@
 			"tags": "Tags konnten nicht gespeichert werden",
 			"publish": "Seite konnte nicht veröffentlicht werden",
 			"unpublish": "Veröffentlichung konnte nicht aufgehoben werden"
+		},
+		"translations": {
+			"editLanguage": "Bearbeitungssprache",
+			"previewLanguage": "Vorschausprache",
+			"section": "Übersetzungen",
+			"missing": "{n} nicht übersetzt | {n} nicht übersetzt",
+			"complete": "Vollständig",
+			"backToDefault": "Zurück zu {language}",
+			"hint": "Texte (Titel, Meta-Angaben und Blocktexte) werden pro Sprache übersetzt; leere Felder zeigen die Standardsprache.",
+			"canvasHint": "Sie bearbeiten {language}: Layout, Bilder und Farben gelten für alle Sprachen."
 		}
 	},
 	"blocks": {

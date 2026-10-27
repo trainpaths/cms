@@ -4,6 +4,7 @@ import {
 	InlineToolbar,
 	ToolbarDropdown,
 	useAutoResize,
+	useAttributeFallback,
 	useBlockAttribute,
 	useSelection,
 	type BlockInstance,
@@ -15,6 +16,7 @@ const props = defineProps<{ block: BlockInstance }>()
 const { isSelected } = useSelection()
 const selected = computed(() => isSelected(props.block.id))
 const text = useBlockAttribute(() => props.block, 'text', '')
+const original = useAttributeFallback(() => props.block, 'text')
 const tone = useBlockAttribute(() => props.block, 'tone', 'info')
 const textarea = ref<HTMLTextAreaElement | null>(null)
 useAutoResize(textarea, text)
@@ -40,7 +42,7 @@ useAutoResize(textarea, text)
 				ref="textarea"
 				v-model="text"
 				rows="1"
-				placeholder="Write a note..."
+				:placeholder="original || 'Write a note...'"
 				class="w-full resize-none border-none bg-transparent font-sans text-base text-gray-800 outline-hidden"
 				data-testid="callout-input"
 			/>

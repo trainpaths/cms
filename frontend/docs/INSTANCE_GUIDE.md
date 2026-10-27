@@ -102,6 +102,11 @@ src/blocks/callout/
   types). The View imports from **`@trainpaths/cms/site`** only: it is server-rendered and shipped to visitors, the
   editor barrel would drag the editor into the public bundle.
 - Write attributes only through `useBlockAttribute` (undo history and autosave depend on it).
+- Text visitors read: mark it `translatable: true` in `attributes` (`text: { type: 'string', default: '', translatable:
+  true }`). On a localized site the editor then edits it per language through the same `useBlockAttribute`; show the
+  default's text while translating with `:placeholder="original || '…'"`, `const original =
+  useAttributeFallback(() => props.block, 'text')`. Views and templates get plain, already localized `attributes` and
+  `page` (title/meta in the page's language).
 - Attribute values: string, number or boolean (the API rejects anything else). Repeating content = inner blocks
   (`allowedBlocks` + `<BlockList>` / `<ViewBlockList>`). Images: the `mediaId` attribute (one per block), rendered with
   `useMediaImage`.
@@ -180,8 +185,11 @@ goes into `<html lang>` and date/number formats (`de-CH`: 27.10.2026, 1’000), 
   `SiteFooter` shows it on a localized site; place it elsewhere in a `SiteFooter`/`SiteHeader` override or a template. `LANGUAGES`, `DEFAULT_LANGUAGE`, `IS_LOCALIZED`, `languageLabel`
   and `useLanguageSwitch()` (current language + `change(code)`) are exported too.
 - **Public site**: every page and customer screen exists once per language: `/about` (default), `/de/about`,
-  `/de` (German home), `/de/login`. Each is rendered in its language (UI strings; page content is shared until
-  translated content lands, issue trainpaths/cms#45) with `hreflang` alternates. The switch loads the same page in the
+  `/de` (German home), `/de/login`. Each is rendered in its language (UI strings + the page's translated title, meta
+  and block text; untranslated text falls back to the default language) with `hreflang` alternates.
+- **Content**: the owner picks a language in the editor header (or the Page tab's "Translations", with untranslated
+  counts) and types that language's text into the same blocks; structure, images and colours are shared. Menu labels,
+  site config values, media alt text and slugs stay single-language. The switch loads the same page in the
   chosen language and remembers it; unprefixed URLs then redirect to that language. Router links (`RouterLink`,
   `router.push`) get the prefix automatically; code that builds hrefs itself must use `localePath(path, code)`
   (`@trainpaths/cms/site`). Language codes can't be page slugs on a localized site (`/de` is the home).

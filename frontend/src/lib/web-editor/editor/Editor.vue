@@ -8,6 +8,7 @@ import { useEditorStore } from '../../../stores/editor'
 import { useKeyboardNav } from '../composables/useKeyboardNav'
 import { Loading } from '@trainpaths/nb-ui'
 import { registerAllBlocks } from '../core/blockTypes'
+import { DEFAULT_LANGUAGE, languageLabel } from '../../../i18n/languages'
 
 const props = defineProps<{
 	pageId: string
@@ -94,6 +95,14 @@ watch(
 			@back="handleBack"
 		/>
 		<EditorLayout>
+			<!-- shared tree: only text is per language -->
+			<p
+				v-if="store.pageEditable && store.editLang !== DEFAULT_LANGUAGE.code"
+				class="font-cms m-0 px-16 pt-8 text-center text-xs text-gray-500"
+				data-testid="translation-hint"
+			>
+				{{ $t('editor.translations.canvasHint', { language: languageLabel(store.editLang) }) }}
+			</p>
 			<BlockList
 				v-if="store.pageEditable"
 				:blocks="store.blocks"

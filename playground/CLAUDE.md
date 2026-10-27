@@ -20,7 +20,7 @@ src/entry-client.ts ./style.css + hydratePublic()    from @trainpaths/cms/public
 src/entry-server.ts export { render }      from @trainpaths/cms/public/server (vite build --ssr → dist-ssr/)
 vite.config.ts      plugins: [cms()], envDir '../' (repo-root .env, shared with docker compose)
 tsconfig.app.json   extends @trainpaths/cms/tsconfig.json (vue-tsc also checks the package source it imports)
-src/blocks/callout/ instance block example (Edit imports @trainpaths/cms/editor, View @trainpaths/cms/site)
+src/blocks/callout/ instance block example (Edit imports @trainpaths/cms/editor, View @trainpaths/cms/site; `text` translatable)
 src/overrides/NotFound.vue   override example: wraps the package's NotFound
 src/templates/imprint.vue    template page example: PageContent + `after` slot: firm name, contact, VAT ID, socials
 e2e/                Playwright suite (below); e2e/tests/instance/ covers the examples above
@@ -50,6 +50,7 @@ e2e/tests/instance/instance.spec.ts   callout block (SSR), NotFound override, im
 e2e/tests/backups/backups.spec.ts     serial: schedule + back up + download, restore (signs out; later pages gone), no tab without
                                       super_admin (registers an editor via the API). The restore re-renders every public page.
 e2e/tests/site/meta.spec.ts           meta title/description + firm name → rendered <head> (clears the firm name again)
+e2e/tests/editor/translations.spec.ts  German paragraph + title in the editor → /de/<slug>, /fr falls back, undo, unpublished changes
 e2e/tests/site/languages.spec.ts      footer language switch → /de/…, cms_lang redirect, German screens, per-language HTML
                                       (the only spec that sets cms_lang; its own browser context)
 ```

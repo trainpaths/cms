@@ -6,7 +6,7 @@ import ToolbarDropdown from '../../editor/ToolbarDropdown.vue'
 import AlignIcon from './AlignIcon.vue'
 import type { BlockInstance } from '../../core/types'
 import { useSelection } from '../../composables/useSelection'
-import { useBlockAttribute } from '../../composables/useBlockAttribute'
+import { useAttributeFallback, useBlockAttribute } from '../../composables/useBlockAttribute'
 import { useAutoResize } from '../../composables/useAutoResize'
 import { alignOptions, type Align } from './align'
 
@@ -18,6 +18,7 @@ const options = computed(() => alignOptions.map((o) => ({ ...o, label: t(o.label
 const selected = computed(() => isSelected(props.block.id))
 
 const text = useBlockAttribute(() => props.block, 'text', '')
+const original = useAttributeFallback(() => props.block, 'text')
 const alignment = useBlockAttribute(() => props.block, 'alignment', 'left')
 const alignClasses: Record<string, string> = { left: 'text-left', center: 'text-center', right: 'text-right' }
 // default colour only when none chosen, else inherit from wrapper's inline colour
@@ -51,7 +52,7 @@ useAutoResize(textarea, text)
 			rows="1"
 			:class="[alignClasses[alignment], colorClass]"
 			class="m-0 block w-full resize-none overflow-hidden border-none bg-transparent p-0 leading-relaxed outline-hidden placeholder:italic placeholder:text-gray-400 focus:ring-0"
-			:placeholder="$t('editor.paragraph.placeholder')"
+			:placeholder="original || $t('editor.paragraph.placeholder')"
 		/>
 	</div>
 </template>
