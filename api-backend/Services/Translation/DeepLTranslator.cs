@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
 
@@ -7,11 +8,15 @@ namespace api_backend.Services.Translation;
 
 /// <summary>
 /// DeepL API v2 (<c>POST /v2/translate</c>) as a typed HttpClient. Free keys (<c>:fx</c>) use api-free.deepl.com.
-/// Batches of 50 texts (DeepL's limit), order kept; empty texts are never sent (no characters billed).
+/// Batches of at most 50 texts (DeepL's limit) and <see cref="BatchBytes"/> of text (DeepL rejects bodies over 128 KiB),
+/// up to <see cref="Parallelism"/> at a time; order kept; empty texts are never sent (no characters billed).
 /// </summary>
 public sealed class DeepLTranslator(HttpClient http, IOptions<TranslationOptions> options) : ITranslator
 {
 	public const int BatchSize = 50;
+	/// <summary>UTF-8 text per request; leaves room for JSON escaping under DeepL's 128 KiB body limit.</summary>
+	public const int BatchBytes = 100 * 1024;
+	public const int Parallelism = 3;
 
 	private string ApiKey => options.Value.DeepL.ApiKey;
 
@@ -48,19 +53,43 @@ public sealed class DeepLTranslator(HttpClient http, IOptions<TranslationOptions
 		string targetTag, CancellationToken ct)
 	{
 		var result = texts.ToArray();
-		var pending = Enumerable.Range(0, texts.Count).Where(i => texts[i].Length > 0).ToList();
 		// DeepL has no Swiss German; Swiss spelling has no ß
 		var swiss = targetTag.Equals("de-CH", StringComparison.OrdinalIgnoreCase);
-		foreach (var batch in pending.Chunk(BatchSize))
-		{
-			var translated = await PostAsync(new Request([.. batch.Select(i => texts[i])], SourceCode(sourceTag),
-				TargetCode(targetTag)), ct);
-			if (translated.Count != batch.Length)
-				throw new TranslationException("DeepL returned an unexpected answer.");
-			for (var j = 0; j < batch.Length; j++)
-				result[batch[j]] = swiss ? translated[j].Text.Replace("ß", "ss") : translated[j].Text;
-		}
+		var (source, target) = (SourceCode(sourceTag), TargetCode(targetTag));
+		await Parallel.ForEachAsync(Batches(texts), new ParallelOptions { MaxDegreeOfParallelism = Parallelism, CancellationToken = ct },
+			async (batch, token) =>
+			{
+				var translated = await PostAsync(new Request([.. batch.Select(i => texts[i])], source, target), token);
+				if (translated.Count != batch.Count)
+					throw new TranslationException("DeepL returned an unexpected answer.");
+				for (var j = 0; j < batch.Count; j++)
+					result[batch[j]] = swiss ? translated[j].Text.Replace("ß", "ss") : translated[j].Text;
+			});
 		return result;
+	}
+
+	/// <summary>Indexes of the non-empty texts, in order, cut at <see cref="BatchSize"/> texts or <see cref="BatchBytes"/>.</summary>
+	public static List<List<int>> Batches(IReadOnlyList<string> texts)
+	{
+		var batches = new List<List<int>>();
+		var (current, bytes) = (new List<int>(), 0);
+		for (var i = 0; i < texts.Count; i++)
+		{
+			if (texts[i].Length == 0) continue;
+			var size = Encoding.UTF8.GetByteCount(texts[i]);
+			if (current.Count > 0 && (current.Count == BatchSize || bytes + size > BatchBytes))
+				(current, bytes) = (Add(current), 0);
+			current.Add(i);
+			bytes += size;
+		}
+		if (current.Count > 0) batches.Add(current);
+		return batches;
+
+		List<int> Add(List<int> full)
+		{
+			batches.Add(full);
+			return [];
+		}
 	}
 
 	private async Task<List<Translation>> PostAsync(Request body, CancellationToken ct)

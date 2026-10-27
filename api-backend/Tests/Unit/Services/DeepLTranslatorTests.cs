@@ -21,8 +21,10 @@ public class DeepLTranslatorTests
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
 		{
 			var body = JsonNode.Parse(await request.Content!.ReadAsStringAsync(ct))!.AsObject();
-			Requests.Add((request.RequestUri!, request.Headers.Authorization?.ToString()
-				?? request.Headers.GetValues("Authorization").Single(), body));
+			// batches run in parallel
+			lock (Requests)
+				Requests.Add((request.RequestUri!, request.Headers.Authorization?.ToString()
+					?? request.Headers.GetValues("Authorization").Single(), body));
 			if (Status != HttpStatusCode.OK)
 				return new HttpResponseMessage(Status);
 			var texts = body["text"]!.AsArray().Select(t => (JsonNode)new JsonObject
@@ -70,7 +72,32 @@ public class DeepLTranslatorTests
 		var result = await translator.TranslateAsync(texts, "en", "it", Ct);
 
 		result.Should().Equal(texts.Select(t => t.ToUpperInvariant()));
-		deepl.Requests.Select(r => r.Body["text"]!.AsArray().Count).Should().Equal(50, 50, 8); // 108 non-empty
+		deepl.Requests.Select(r => r.Body["text"]!.AsArray().Count).Should().BeEquivalentTo([50, 50, 8]); // 108 non-empty
+	}
+
+	[Fact]
+	public void Batches_AlsoCutBySize()
+	{
+		// 30 KB each: three fit under BatchBytes, the fourth starts a new batch
+		var texts = Enumerable.Range(0, 7).Select(_ => new string('x', 30 * 1024)).ToList();
+		DeepLTranslator.Batches(texts).Select(b => b.Count).Should().Equal(3, 3, 1);
+	}
+
+	[Fact]
+	public void Batches_OversizedTextGoesAlone()
+	{
+		var texts = new List<string> { "a", new('x', DeepLTranslator.BatchBytes + 1), "b" };
+		DeepLTranslator.Batches(texts).Should().BeEquivalentTo(new List<List<int>> { new() { 0 }, new() { 1 }, new() { 2 } },
+			o => o.WithStrictOrdering());
+	}
+
+	[Fact]
+	public async Task ParallelBatches_KeepOrder()
+	{
+		var (translator, deepl) = Create();
+		var texts = Enumerable.Range(0, 260).Select(i => $"t{i}").ToList();
+		(await translator.TranslateAsync(texts, "en", "it", Ct)).Should().Equal(texts.Select(t => t.ToUpperInvariant()));
+		deepl.Requests.Should().HaveCount(6);
 	}
 
 	[Fact]
