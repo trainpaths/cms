@@ -10,13 +10,19 @@ import type {
 	PageTextTranslation,
 	TranslationValue,
 } from '../lib/web-editor/core/types'
-import { DEFAULT_LANGUAGE } from '../i18n/languages'
+import { DEFAULT_LANGUAGE, LANGUAGES } from '../i18n/languages'
+import { missingCounts, pruneTranslations } from '../lib/web-editor/core/translatable'
 import { getApiPagesById, putApiPagesById } from '../api/sdk.gen'
 import { ApiError, errorMessage as describe } from '../api-error'
 import { useMediaStore } from './media'
 import { usePagesStore } from './pages'
 import { useTagsStore } from './tags'
 import { useIsMobile } from '../lib/web-editor/composables/useIsMobile'
+
+interface HistoryEntry {
+	blocks: BlockInstance[]
+	page?: { before: Record<string, PageTextTranslation>; after: Record<string, PageTextTranslation> }
+}
 
 export const useEditorStore = defineStore('editor', () => {
 	const blocks = ref<BlockInstance[]>([])
@@ -50,7 +56,9 @@ export const useEditorStore = defineStore('editor', () => {
 	const saveStatus = ref<'idle' | 'saving' | 'saved'>('idle')
 	const publishing = ref(false)
 	const errorMessage = ref<string | null>(null)
-	const history = ref<BlockInstance[][]>([])
+	// block snapshots; `page`: title/meta translations an entry changed (only applyTranslations: typed page text isn't
+	// in the history, so undo restores it only for the step that set it)
+	const history = ref<HistoryEntry[]>([])
 	const historyIndex = ref(-1)
 	const maxHistory = 50
 
@@ -73,17 +81,28 @@ export const useEditorStore = defineStore('editor', () => {
 	let savedTranslations = '{}'
 	const isDirty = computed(() => !!pageId.value && contentJson() !== savedContent.value)
 
-	function pushHistory(): void {
+	const otherCodes = LANGUAGES.filter((l) => l.code !== DEFAULT_LANGUAGE.code).map((l) => l.code)
+	/** Untranslated fields per non-default language code (header select + Page tab; one tree walk per change). */
+	const missingTranslations = computed(() =>
+		missingCounts(
+			blocks.value,
+			{ title: pageTitle.value, metaTitle: pageMetaTitle.value, metaDescription: pageMetaDescription.value },
+			pageTranslations.value,
+			otherCodes,
+		),
+	)
+
+	function pushHistory(page?: HistoryEntry['page']): void {
 		history.value = history.value.slice(0, historyIndex.value + 1)
-		history.value.push(cloneBlocks(blocks.value))
+		history.value.push({ blocks: cloneBlocks(blocks.value), ...(page && { page }) })
 		if (history.value.length > maxHistory) {
 			history.value.shift()
 		}
 		historyIndex.value = history.value.length - 1
 	}
 
-	function trackChange(): void {
-		pushHistory()
+	function trackChange(page?: HistoryEntry['page']): void {
+		pushHistory(page)
 		changeCount.value++
 		if (changeCount.value >= autosaveThreshold.value && pageId.value) {
 			void savePage()
@@ -95,14 +114,18 @@ export const useEditorStore = defineStore('editor', () => {
 
 	function undo(): void {
 		if (!canUndo.value) return
+		const undone = history.value[historyIndex.value]!
 		historyIndex.value--
-		blocks.value = cloneBlocks(history.value[historyIndex.value])
+		blocks.value = cloneBlocks(history.value[historyIndex.value]!.blocks)
+		if (undone.page) pageTranslations.value = JSON.parse(JSON.stringify(undone.page.before))
 	}
 
 	function redo(): void {
 		if (!canRedo.value) return
 		historyIndex.value++
-		blocks.value = cloneBlocks(history.value[historyIndex.value])
+		const redone = history.value[historyIndex.value]!
+		blocks.value = cloneBlocks(redone.blocks)
+		if (redone.page) pageTranslations.value = JSON.parse(JSON.stringify(redone.page.after))
 	}
 
 	function findBlockRecursive(
@@ -218,7 +241,7 @@ export const useEditorStore = defineStore('editor', () => {
 
 	/**
 	 * Machine-translated text into language `code` as **one** undo step and one change: block attributes by
-	 * (blockId, key), page title/meta (`blockId` null; like typing them, not in the undo history).
+	 * (blockId, key), page title/meta (`blockId` null; restored by undo/redo of this step only).
 	 */
 	function applyTranslations(code: string, entries: { blockId: string | null; key: string; text: string }[]): void {
 		const page: Partial<PageTextTranslation> = {}
@@ -229,8 +252,9 @@ export const useEditorStore = defineStore('editor', () => {
 				if (block) setTranslation(block, code, { [key]: text })
 			}
 		}
+		const before = pageTranslations.value
 		if (Object.keys(page).length) setPageText(code, page)
-		trackChange()
+		trackChange(before === pageTranslations.value ? undefined : { before, after: pageTranslations.value })
 	}
 
 	/** Title/meta of a non-default language (working copy, saved with the page; empty = untranslated). */
@@ -312,7 +336,7 @@ export const useEditorStore = defineStore('editor', () => {
 		selectedBlockId.value = null
 		changeCount.value = 0
 		saveStatus.value = 'idle'
-		history.value = [cloneBlocks(page.blocks)]
+		history.value = [{ blocks: cloneBlocks(page.blocks) }]
 		historyIndex.value = 0
 		savedContent.value = contentJson()
 	}
@@ -403,7 +427,8 @@ export const useEditorStore = defineStore('editor', () => {
 						metaTitle: pageMetaTitle.value,
 						metaDescription: pageMetaDescription.value,
 						// non-editable (template-only) pages reject block writes
-						...(pageEditable.value && { blocks: cloneBlocks(blocks.value) }),
+						// stale translations would still show publicly (core/translatable.ts)
+						...(pageEditable.value && { blocks: pruneTranslations(cloneBlocks(blocks.value)) }),
 						...(translations !== savedTranslations && { translations: JSON.parse(translations) }),
 					}
 					const { data: page } = await putApiPagesById({ path: { id }, body: content })
@@ -514,6 +539,7 @@ export const useEditorStore = defineStore('editor', () => {
 		pageMetaDescription,
 		pageTranslations,
 		editLang,
+		missingTranslations,
 		pageTemplate,
 		pageLocked,
 		pageEditable,
