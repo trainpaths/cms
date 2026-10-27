@@ -5,7 +5,7 @@ import InlineToolbar from '../../editor/InlineToolbar.vue'
 import ToolbarDropdown from '../../editor/ToolbarDropdown.vue'
 import type { BlockInstance } from '../../core/types'
 import { useSelection } from '../../composables/useSelection'
-import { useAttributeFallback, useBlockAttribute } from '../../composables/useBlockAttribute'
+import { useBlockAttribute, useBlockText } from '../../composables/useBlockAttribute'
 
 const props = defineProps<{ block: BlockInstance }>()
 const { t } = useI18n()
@@ -13,8 +13,7 @@ const { isSelected } = useSelection()
 
 const selected = computed(() => isSelected(props.block.id))
 
-const text = useBlockAttribute(() => props.block, 'text', '')
-const original = useAttributeFallback(() => props.block, 'text')
+const { value: text, original } = useBlockText(() => props.block, 'text')
 const level = useBlockAttribute(() => props.block, 'level', 2)
 
 const levelOptions = computed(() => [1, 2, 3, 4, 5, 6].map((n) => ({ value: n, label: t('editor.heading.level', { n }) })))

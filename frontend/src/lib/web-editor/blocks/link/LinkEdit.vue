@@ -3,16 +3,15 @@ import { computed } from 'vue'
 import InlineToolbar from '../../editor/InlineToolbar.vue'
 import type { BlockInstance } from '../../core/types'
 import { useSelection } from '../../composables/useSelection'
-import { useAttributeFallback, useBlockAttribute } from '../../composables/useBlockAttribute'
+import { useBlockAttribute, useBlockText } from '../../composables/useBlockAttribute'
 
 const props = defineProps<{ block: BlockInstance }>()
 const { isSelected } = useSelection()
 
 const selected = computed(() => isSelected(props.block.id))
 
-const label = useBlockAttribute(() => props.block, 'label', '')
+const { value: label, original: originalLabel } = useBlockText(() => props.block, 'label')
 const url = useBlockAttribute(() => props.block, 'url', '')
-const originalLabel = useAttributeFallback(() => props.block, 'label')
 const colorClass = computed(() => (props.block.attributes.textColor ? '' : 'text-primary'))
 </script>
 
