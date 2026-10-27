@@ -413,6 +413,8 @@
 			"previewLanguage": "Vorschausprache",
 			"section": "Übersetzungen",
 			"missing": "{n} nicht übersetzt | {n} nicht übersetzt",
+			"outdated": "{n} veraltet | {n} veraltet",
+			"fieldOutdated": "Der Text der Standardsprache wurde seit dieser Übersetzung geändert",
 			"complete": "Vollständig",
 			"backToDefault": "Zurück zu {language}",
 			"hint": "Texte (Titel, Meta-Angaben und Blocktexte) werden pro Sprache übersetzt; leere Felder zeigen die Standardsprache.",
@@ -420,6 +422,7 @@
 		},
 		"deepl": {
 			"missing": "Fehlende Felder übersetzen",
+			"missingAndOutdated": "Fehlende und veraltete Felder übersetzen",
 			"running": "Übersetzt…",
 			"retranslate": "Alles neu übersetzen",
 			"retranslateTitle": "Alle Felder neu übersetzen?",

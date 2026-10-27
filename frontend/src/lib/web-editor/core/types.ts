@@ -44,6 +44,8 @@ export interface BlockInstance {
 	attributes: Record<string, unknown>
 	/** Translatable attribute values per language code: `{ de: { text: 'Hallo' } }` (missing = default's). */
 	translations?: Record<string, Record<string, unknown>> | null
+	/** Per translation: hash of the default text it was made from (`core/translatable.ts` sourceHash; outdated check). */
+	translationSources?: Record<string, Record<string, string>> | null
 	innerBlocks: BlockInstance[]
 }
 

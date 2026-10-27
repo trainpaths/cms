@@ -6,14 +6,14 @@ import { errorMessage } from '../../../api-error'
 import { useEditorStore } from '../../../stores/editor'
 import { useInstanceStore } from '../../../stores/instance'
 import { DEFAULT_LANGUAGE } from '../../../i18n/languages'
-import { textFields, type PageText } from '../core/translatable'
+import { blockFieldState, pageFieldState, textFields, type PageText } from '../core/translatable'
 
 // one request at a time across the editor (header hint + Page tab)
 const running = ref(false)
 
 /**
  * DeepL pre-fill of the edited language (`store.editLang`): `translateMissing` sends the default-language text of
- * every untranslated field, `retranslateAll` (after a confirm) every field. Results land in the working copy as one
+ * every untranslated or outdated field, `retranslateAll` (after a confirm) every field. Results land in the working copy as one
  * undo step; the owner reviews, saves and publishes as usual. `available` = the site has a key and a non-default
  * language is being edited.
  */
@@ -28,13 +28,14 @@ export function useMachineTranslation() {
 		() => instance.config.machineTranslation && store.editLang !== DEFAULT_LANGUAGE.code && store.pageEditable,
 	)
 
-	// still untranslated now (the owner may have typed one while the request ran)
+	// still untranslated or outdated now (the owner may have typed one while the request ran)
 	function stillMissing(code: string, blockId: string | null, key: string): boolean {
-		const current =
-			blockId === null
-				? store.pageTranslations[code]?.[key as keyof PageText]
-				: store.findBlockById(blockId)?.translations?.[code]?.[key]
-		return current === undefined || current === ''
+		if (blockId !== null) {
+			const block = store.findBlockById(blockId)
+			return !!block && blockFieldState(block, key, code) !== 'ok'
+		}
+		const page = { title: store.pageTitle, metaTitle: store.pageMetaTitle, metaDescription: store.pageMetaDescription }
+		return pageFieldState(page, store.pageTranslations, key as keyof PageText, code) !== 'ok'
 	}
 
 	async function run(missingOnly: boolean): Promise<void> {
@@ -42,7 +43,7 @@ export function useMachineTranslation() {
 		const code = store.editLang
 		const pageId = store.pageId
 		const page = { title: store.pageTitle, metaTitle: store.pageMetaTitle, metaDescription: store.pageMetaDescription }
-		const fields = textFields(store.blocks, page, store.pageTranslations, missingOnly ? code : undefined)
+		const fields = textFields(store.blocks, page, store.pageTranslations, missingOnly ? code : undefined, true)
 		if (!fields.length) {
 			toast({ message: t('editor.deepl.nothing'), type: 'info' })
 			return

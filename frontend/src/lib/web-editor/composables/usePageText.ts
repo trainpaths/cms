@@ -1,6 +1,7 @@
 import { computed } from 'vue'
 import { useEditorStore } from '../../../stores/editor'
 import { DEFAULT_LANGUAGE } from '../../../i18n/languages'
+import { pageFieldState } from '../core/translatable'
 
 type Field = 'title' | 'metaTitle' | 'metaDescription'
 const columns = { title: 'pageTitle', metaTitle: 'pageMetaTitle', metaDescription: 'pageMetaDescription' } as const
@@ -8,6 +9,7 @@ const columns = { title: 'pageTitle', metaTitle: 'pageMetaTitle', metaDescriptio
 /**
  * Page title / meta in the editor's language: the default language edits the page's own field, another language
  * its translation (`store.pageTranslations`). `original` = the default's value while translating (placeholder), else ''.
+ * `outdated` = translating and the default's value changed since the translation was written.
  */
 export function usePageText(field: Field) {
 	const store = useEditorStore()
@@ -20,5 +22,15 @@ export function usePageText(field: Field) {
 		},
 	})
 	const original = computed(() => (translating.value ? store[columns[field]] : ''))
-	return { value, original, translating }
+	const outdated = computed(
+		() =>
+			translating.value &&
+			pageFieldState(
+				{ title: store.pageTitle, metaTitle: store.pageMetaTitle, metaDescription: store.pageMetaDescription },
+				store.pageTranslations,
+				field,
+				store.editLang,
+			) === 'outdated',
+	)
+	return { value, original, translating, outdated }
 }

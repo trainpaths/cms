@@ -11,13 +11,15 @@ import type {
 	TranslationValue,
 } from '../lib/web-editor/core/types'
 import { DEFAULT_LANGUAGE, LANGUAGES } from '../i18n/languages'
-import { missingCounts, pruneTranslations } from '../lib/web-editor/core/translatable'
+import { pruneTranslations, sourceHash, translationCounts } from '../lib/web-editor/core/translatable'
 import { getApiPagesById, putApiPagesById } from '../api/sdk.gen'
 import { ApiError, errorMessage as describe } from '../api-error'
 import { useMediaStore } from './media'
 import { usePagesStore } from './pages'
 import { useTagsStore } from './tags'
 import { useIsMobile } from '../lib/web-editor/composables/useIsMobile'
+
+type PageField = 'title' | 'metaTitle' | 'metaDescription'
 
 interface HistoryEntry {
 	blocks: BlockInstance[]
@@ -82,9 +84,9 @@ export const useEditorStore = defineStore('editor', () => {
 	const isDirty = computed(() => !!pageId.value && contentJson() !== savedContent.value)
 
 	const otherCodes = LANGUAGES.filter((l) => l.code !== DEFAULT_LANGUAGE.code).map((l) => l.code)
-	/** Untranslated fields per non-default language code (header select + Page tab; one tree walk per change). */
-	const missingTranslations = computed(() =>
-		missingCounts(
+	/** Missing + outdated fields per non-default language code (header select + Page tab; one tree walk per change). */
+	const translationStatus = computed(() =>
+		translationCounts(
 			blocks.value,
 			{ title: pageTitle.value, metaTitle: pageMetaTitle.value, metaDescription: pageMetaDescription.value },
 			pageTranslations.value,
@@ -193,6 +195,7 @@ export const useEditorStore = defineStore('editor', () => {
 			name: block.name,
 			attributes: { ...block.attributes },
 			...(block.translations && { translations: JSON.parse(JSON.stringify(block.translations)) }),
+			...(block.translationSources && { translationSources: JSON.parse(JSON.stringify(block.translationSources)) }),
 			innerBlocks: block.innerBlocks.map(deepCloneBlock),
 		}
 	}
@@ -228,15 +231,30 @@ export const useEditorStore = defineStore('editor', () => {
 
 	function setTranslation(block: BlockInstance, code: string, patch: Record<string, TranslationValue>): void {
 		const translations = { ...block.translations }
+		const sources = { ...block.translationSources }
 		const values = { ...translations[code] }
+		const hashes = { ...sources[code] }
 		for (const [key, value] of Object.entries(patch)) {
-			if (value === '') delete values[key]
-			else values[key] = value
+			if (value === '') {
+				delete values[key]
+				delete hashes[key]
+			} else {
+				values[key] = value
+				// what it was translated from: the outdated check
+				hashes[key] = sourceHash(String(block.attributes[key] ?? ''))
+			}
 		}
-		if (Object.keys(values).length) translations[code] = values
-		else delete translations[code]
+		setOrDelete(translations, code, values)
+		setOrDelete(sources, code, hashes)
 		if (Object.keys(translations).length) block.translations = translations
 		else delete block.translations
+		if (Object.keys(sources).length) block.translationSources = sources
+		else delete block.translationSources
+	}
+
+	function setOrDelete<T extends object>(map: Record<string, T>, code: string, value: T): void {
+		if (Object.keys(value).length) map[code] = value
+		else delete map[code]
 	}
 
 	/**
@@ -244,9 +262,9 @@ export const useEditorStore = defineStore('editor', () => {
 	 * (blockId, key), page title/meta (`blockId` null; restored by undo/redo of this step only).
 	 */
 	function applyTranslations(code: string, entries: { blockId: string | null; key: string; text: string }[]): void {
-		const page: Partial<PageTextTranslation> = {}
+		const page: Partial<Pick<PageTextTranslation, PageField>> = {}
 		for (const { blockId, key, text } of entries) {
-			if (blockId === null) page[key as keyof PageTextTranslation] = text
+			if (blockId === null) page[key as PageField] = text
 			else {
 				const block = findBlockById(blockId)
 				if (block) setTranslation(block, code, { [key]: text })
@@ -258,11 +276,16 @@ export const useEditorStore = defineStore('editor', () => {
 	}
 
 	/** Title/meta of a non-default language (working copy, saved with the page; empty = untranslated). */
-	function setPageText(code: string, patch: Partial<PageTextTranslation>): void {
+	function setPageText(code: string, patch: Partial<Pick<PageTextTranslation, PageField>>): void {
 		const current = pageTranslations.value[code] ?? { title: '', metaTitle: '', metaDescription: '' }
-		const next = { ...current, ...patch }
+		const { sources: currentSources, ...text } = { ...current, ...patch }
+		const defaults = { title: pageTitle.value, metaTitle: pageMetaTitle.value, metaDescription: pageMetaDescription.value }
+		const sources = { title: '', metaTitle: '', metaDescription: '', ...currentSources }
+		// what each written field was translated from (outdated check); none next to an empty one
+		for (const key of Object.keys(patch) as PageField[]) sources[key] = text[key] ? sourceHash(defaults[key]) : ''
 		const rest = { ...pageTranslations.value }
-		if (next.title || next.metaTitle || next.metaDescription) rest[code] = next
+		if (text.title || text.metaTitle || text.metaDescription)
+			rest[code] = sources.title || sources.metaTitle || sources.metaDescription ? { ...text, sources } : text
 		else delete rest[code]
 		pageTranslations.value = rest
 	}
@@ -539,7 +562,7 @@ export const useEditorStore = defineStore('editor', () => {
 		pageMetaDescription,
 		pageTranslations,
 		editLang,
-		missingTranslations,
+		translationStatus,
 		pageTemplate,
 		pageLocked,
 		pageEditable,

@@ -105,7 +105,9 @@ src/blocks/callout/
 - Text visitors read: mark it `translatable: true` in `attributes` (`text: { type: 'string', default: '', translatable:
   true }`) and edit it with `const { value: text, original } = useBlockText(() => props.block, 'text')`: on a localized
   site `text` is the edited language's value, `original` the default's while translating (`:placeholder="original ||
-  '…'"`). Stored translations of attributes that aren't `translatable` are dropped on the next save. Views and
+  '…'"`). Stored translations of attributes that aren't `translatable` are dropped on the next save. The editor
+  flags a translation outdated when the default text changes afterwards (amber ring on the block); nothing to do in
+  your block. Views and
   templates get plain, already localized `attributes` and
   `page` (title/meta in the page's language).
 - Attribute values: string, number or boolean (the API rejects anything else). Repeating content = inner blocks

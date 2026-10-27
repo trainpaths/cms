@@ -35,9 +35,19 @@ const translationRows = computed(() =>
 	LANGUAGES.filter(({ code }) => code !== DEFAULT_LANGUAGE.code).map(({ code }) => ({
 		code,
 		name: languageLabel(code),
-		missing: store.missingTranslations[code] ?? 0,
+		...(store.translationStatus[code] ?? { missing: 0, outdated: 0 }),
 	})),
 )
+const editedStatus = computed(() => store.translationStatus[store.editLang])
+
+// "2 untranslated · 1 outdated" / "Complete"
+function rowStatus(row: { missing: number; outdated: number }): string {
+	const parts = [
+		...(row.missing ? [t('editor.translations.missing', row.missing)] : []),
+		...(row.outdated ? [t('editor.translations.outdated', row.outdated)] : []),
+	]
+	return parts.length ? parts.join(' · ') : t('editor.translations.complete')
+}
 
 // what the public page's browser tab will show (firm name from the site config)
 const tabTitle = computed(() =>
@@ -92,6 +102,8 @@ async function commitSlug() {
 				<input
 					v-model="title.value.value"
 					:placeholder="title.original.value"
+					:class="{ 'border-amber-500!': title.outdated.value }"
+					:title="title.outdated.value ? $t('editor.translations.fieldOutdated') : undefined"
 					data-testid="page-title-mobile"
 					class="input-field mt-4"
 					@blur="store.pageTitle.trim() && store.savePage()"
@@ -132,6 +144,8 @@ async function commitSlug() {
 				<input
 					v-model="metaTitle.value.value"
 					:placeholder="metaTitle.original.value"
+					:class="{ 'border-amber-500!': metaTitle.outdated.value }"
+					:title="metaTitle.outdated.value ? $t('editor.translations.fieldOutdated') : undefined"
 					:maxlength="META_TITLE_MAX"
 					data-testid="page-meta-title"
 					class="input-field mt-4"
@@ -153,6 +167,8 @@ async function commitSlug() {
 				<textarea
 					v-model="metaDescription.value.value"
 					:placeholder="metaDescription.original.value"
+					:class="{ 'border-amber-500!': metaDescription.outdated.value }"
+					:title="metaDescription.outdated.value ? $t('editor.translations.fieldOutdated') : undefined"
 					:maxlength="META_DESCRIPTION_MAX"
 					rows="3"
 					data-testid="page-meta-description"
@@ -187,8 +203,8 @@ async function commitSlug() {
 						<span>{{ row.name }}</span>
 						<span
 							class="text-xs"
-							:class="row.missing ? 'text-amber-700' : 'text-green-700'"
-							>{{ row.missing ? $t('editor.translations.missing', row.missing) : $t('editor.translations.complete') }}</span
+							:class="row.missing || row.outdated ? 'text-amber-700' : 'text-green-700'"
+							>{{ rowStatus(row) }}</span
 						>
 					</button>
 				</li>
@@ -203,7 +219,13 @@ async function commitSlug() {
 					data-testid="deepl-missing"
 					@click="deepl.translateMissing()"
 				>
-					{{ deepl.running.value ? $t('editor.deepl.running') : $t('editor.deepl.missing') }}
+					{{
+						deepl.running.value
+							? $t('editor.deepl.running')
+							: editedStatus?.outdated
+								? $t('editor.deepl.missingAndOutdated')
+								: $t('editor.deepl.missing')
+					}}
 				</button>
 				<button
 					class="cursor-pointer rounded border border-gray-300 bg-white px-12 py-4 text-xs text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
