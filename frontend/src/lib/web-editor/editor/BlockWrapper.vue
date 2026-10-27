@@ -4,6 +4,8 @@ import { ref, computed } from 'vue'
 import { Icon } from '@trainpaths/nb-ui'
 import type { BlockInstance } from '../core/types'
 import { getBlockType } from '../core/blockRegistry'
+import { blockOutdated } from '../core/translatable'
+import { DEFAULT_LANGUAGE } from '../../../i18n/languages'
 import { blockColorStyle } from '../core/colors'
 import { useEditorStore } from '../../../stores/editor'
 import { useSelection } from '../composables/useSelection'
@@ -68,9 +70,15 @@ const toolbarClass = computed(() => {
 })
 
 // ring = box-shadow: chrome without layout; the wrapper adds no spacing, blocks pad themselves
+// translating, and the default text changed since a translation of this block was made
+const outdated = computed(
+	() => store.editLang !== DEFAULT_LANGUAGE.code && blockOutdated(props.block, store.editLang),
+)
+
 const borderClass = computed(() => {
 	if (selected.value) return 'ring-2 ring-cms-primary shadow-md'
 	if (isHovered.value && !hasSelectedDescendant.value) return 'ring-1 ring-gray-300'
+	if (outdated.value) return 'ring-1 ring-amber-500'
 	return ''
 })
 
@@ -179,6 +187,8 @@ function onDragStart(e: DragEvent) {
 			class="rounded-lg transition-all duration-150"
 			:class="borderClass"
 			:style="blockStyles"
+			:title="outdated ? $t('editor.translations.fieldOutdated') : undefined"
+			:data-outdated="outdated || undefined"
 		>
 			<component
 				:is="blockType.edit"

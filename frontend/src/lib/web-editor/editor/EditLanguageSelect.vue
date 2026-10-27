@@ -6,16 +6,18 @@ import { IS_LOCALIZED, LANGUAGES, languageLabel } from '../../../i18n/languages'
 
 /**
  * Which language the editor edits (localized sites only): the default edits the page itself, another language the
- * translations of its text (title, meta, translatable block attributes). Shows each language's untranslated count.
+ * translations of its text (title, meta, translatable block attributes). Shows each language's count of untranslated
+ * + outdated fields.
  * md+ only: no room in the phone header (the Page tab's Translations section switches there).
  */
 const store = useEditorStore()
 
 const options = computed(() =>
 	LANGUAGES.map(({ code }) => {
-		const count = store.missingTranslations[code] ?? 0
+		const status = store.translationStatus[code]
+		const count = status ? status.missing + status.outdated : 0
 		const name = languageLabel(code)
-		// "Deutsch · 3": untranslated fields (the Page tab spells it out)
+		// "Deutsch · 3": fields to do (the Page tab spells it out)
 		return { value: code, label: count ? `${name} · ${count}` : name }
 	}),
 )

@@ -7,7 +7,11 @@ import type { BlockInstance, PageTextTranslation } from './web-editor/core/types
  * so images resolve on the same site and are reported missing elsewhere.
  */
 export const PAGE_EXPORT_FORMAT = 'cms-page'
-/** 2: + `translations` (title/meta per language; block translations ride inside `blocks` in both). 1 still imports. */
+/**
+ * 2: + `translations` (title/meta per language; block translations ride inside `blocks` in both). 1 still imports.
+ * Translation source hashes (`translationSources`, `translations[code].sources`) need no new version: an API that
+ * doesn't know them ignores them.
+ */
 export const PAGE_EXPORT_VERSION = 2
 
 export interface PageExportContent {
