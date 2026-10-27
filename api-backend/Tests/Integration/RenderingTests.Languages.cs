@@ -27,6 +27,9 @@ public partial class RenderingTests
 		return await site.Client.SendAsync(request, Ct);
 	}
 
+	private static async Task<string> BodyAsync(Site site, string path) =>
+		await (await GetAsync(site, path)).Content.ReadAsStringAsync(Ct);
+
 	[Fact]
 	public async Task Localized_RendersEveryPageInEveryLanguage_AndServesEachLanguagesRow()
 	{
@@ -36,8 +39,8 @@ public partial class RenderingTests
 		var german = await WaitForAsync(site, $"/api/public/html/de/{slug}",
 			(r, body) => r.StatusCode == HttpStatusCode.OK && body.Contains("Multi"));
 		(await german.Content.ReadAsStringAsync(Ct)).Should().Contain("|lang:de|");
-		(await GetAsync(site, $"/api/public/html/{slug}").Result.Content.ReadAsStringAsync(Ct)).Should().Contain("|lang:en|");
-		(await GetAsync(site, $"/api/public/html/fr/{slug}").Result.Content.ReadAsStringAsync(Ct)).Should().Contain("|lang:fr|");
+		(await BodyAsync(site, $"/api/public/html/{slug}")).Should().Contain("|lang:en|");
+		(await BodyAsync(site, $"/api/public/html/fr/{slug}")).Should().Contain("|lang:fr|");
 
 		site.Renderer.States.Where(s => s.Slug == slug).Select(s => s.Lang).Should().Contain(["en", "de", "fr", "it"]);
 		using var scope = site.App.Services.CreateScope();
@@ -53,13 +56,13 @@ public partial class RenderingTests
 
 		await WaitForAsync(site, "/api/public/html/de/login", (r, body) => r.StatusCode == HttpStatusCode.OK
 			&& body.Contains("screen:login|") && body.Contains("|lang:de|"));
-		(await GetAsync(site, "/api/public/html/fr/user/profile").Result.Content.ReadAsStringAsync(Ct))
+		(await BodyAsync(site, "/api/public/html/fr/user/profile"))
 			.Should().Contain("screen:user/profile|").And.Contain("|lang:fr|");
 
 		var unknown = await GetAsync(site, "/api/public/html/it/does-not-exist");
 		unknown.StatusCode.Should().Be(HttpStatusCode.NotFound);
 		(await unknown.Content.ReadAsStringAsync(Ct)).Should().Contain("not-found|lang:it|");
-		(await GetAsync(site, "/api/public/html/does-not-exist").Result.Content.ReadAsStringAsync(Ct))
+		(await BodyAsync(site, "/api/public/html/does-not-exist"))
 			.Should().Contain("not-found|lang:en|");
 	}
 
