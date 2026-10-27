@@ -56,8 +56,11 @@ export function createCmsI18n(lang: Language) {
 export type CmsI18n = ReturnType<typeof createCmsI18n>
 
 /** Adds the admin strings of `code` (+ English, the fallback) to `i18n`; once per language. */
-const loaded = new Set<string>()
+const loadedOf = new WeakMap<CmsI18n, Set<string>>()
 export async function loadAdminMessages(i18n: CmsI18n, code: string): Promise<void> {
+	// per instance: a second app (tests) starts without them
+	const loaded = loadedOf.get(i18n) ?? new Set<string>()
+	loadedOf.set(i18n, loaded)
 	await Promise.all(
 		[SOURCE_LANG, code]
 			.filter((c) => !loaded.has(c))
