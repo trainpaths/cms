@@ -15,7 +15,8 @@ public class CmsConfigLoaderTests
 		var cms = CmsConfigLoader.Parse("{}");
 
 		cms.PublicAuth.Should().BeFalse();
-		cms.Site.Lang.Should().Be("en");
+		cms.Site.Lang.Default.Should().Be("en");
+		cms.Site.Lang.IsLocalized.Should().BeFalse();
 		cms.Blocks.Exclude.Should().BeEmpty();
 		cms.Theme.Colors.Should().BeEmpty();
 		cms.Pages.Select(p => p.Slug).Should().Equal(DefaultPages.HomeSlug, DefaultPages.PrivacySlug, DefaultPages.LegalSlug);
@@ -42,7 +43,8 @@ public class CmsConfigLoaderTests
 			""");
 
 		cms.PublicAuth.Should().BeTrue();
-		cms.Site.Lang.Should().Be("de-AT");
+		cms.Site.Lang.Default.Should().Be("de-AT");
+		cms.Site.Lang.Localization.Should().BeEmpty();
 		cms.Blocks.Exclude.Should().Equal("list", "list-item");
 		cms.Theme.Colors.Should().Equal(new Dictionary<string, string> { ["primary"] = "#0f766e", ["light-gray"] = "oklch(0.97 0 0 / 80%)" });
 		var imprint = cms.Page("imprint")!;
@@ -52,6 +54,23 @@ public class CmsConfigLoaderTests
 		cms.Page("about")!.IsLocked.Should().BeFalse();
 		cms.Page("about")!.Blocks.Single().Attributes["level"].GetInt32().Should().Be(2);
 		cms.Page("missing").Should().BeNull();
+	}
+
+	[Fact]
+	public void Parse_SiteLangObject_ReadsDefaultAndLocalization_CodesAreThePrimarySubtags()
+	{
+		var cms = CmsConfigLoader.Parse("""{ "site": { "lang": { "default": "en-US", "localization": ["de-CH", "fr-CH", "it-CH"] } } }""");
+
+		cms.Site.Lang.Default.Should().Be("en-US");
+		cms.Site.Lang.IsLocalized.Should().BeTrue();
+		cms.Site.Lang.Tags.Select(CmsSiteLang.CodeOf).Should().Equal("en", "de", "fr", "it");
+	}
+
+	[Fact]
+	public void Parse_SiteLangObject_UnknownKeyFails()
+	{
+		FluentActions.Invoking(() => CmsConfigLoader.Parse("""{ "site": { "lang": { "default": "en", "languages": ["de"] } } }"""))
+			.Should().Throw<InvalidOperationException>().WithMessage("*languages*");
 	}
 
 	[Fact]
@@ -100,6 +119,10 @@ public class CmsConfigLoaderTests
 	[InlineData("""{ "pages": [{ "slug": "a", "title": "A", "blocks": [{ "id": "", "name": "x" }] }] }""", "*pages[0] (a)*")]
 	[InlineData("""{ "blocks": { "exclude": ["List"] } }""", "*blocks.exclude*")]
 	[InlineData("""{ "site": { "lang": "German" } }""", "*site.lang*")]
+	[InlineData("""{ "site": { "lang": { "default": "en-US", "localization": ["Deutsch"] } } }""", "*'Deutsch' is not a language tag*")]
+	[InlineData("""{ "site": { "lang": { "default": "en-US", "localization": ["en-GB"] } } }""", "*same language code 'en'*")]
+	[InlineData("""{ "site": { "lang": { "default": "en", "localization": ["fr"] } }, "pages": [{ "slug": "fr", "title": "F" }] }""", "*language code 'fr'*")]
+	[InlineData("""{ "site": { "lang": 5 } }""", "*site.lang*")]
 	[InlineData("""{ "theme": { "colors": { "Brand": "#000" } } }""", "*kebab-case*")]
 	[InlineData("""{ "theme": { "colors": { "brand": "red" } } }""", "*theme.colors.brand*")]
 	[InlineData("""{ "theme": { "colors": { "brand": "#000;} body{x:y" } } }""", "*not a colour*")]

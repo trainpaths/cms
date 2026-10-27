@@ -2,7 +2,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import { nanoid } from 'nanoid'
-import { Button, FormField, Input, Loading, UnsavedChangesDialog, useToast, useUnsavedChanges } from '@trainpaths/nb-ui'
+import { Button, FormField, Input, Loading, useToast, useUnsavedChanges } from '@trainpaths/nb-ui'
+import { useI18n } from 'vue-i18n'
+import UnsavedDialog from '../../components/UnsavedDialog.vue'
+import { useConfigLabels } from '../../i18n/siteConfigLabels'
 import { getApiSiteConfig, putApiSiteConfig } from '../../api/sdk.gen'
 import {
 	CONFIG_MAX_ENTRIES,
@@ -17,7 +20,7 @@ import {
 import { emptyAddress } from '../../lib/siteConfig'
 import ConfigImageField from '../../components/ConfigImageField.vue'
 import ConfigEntryRow from '../../components/config/ConfigEntryRow.vue'
-import { INPUT_TYPES, VALUE_PLACEHOLDERS } from '../../components/config/fieldInput'
+import { INPUT_TYPES, valuePlaceholder } from '../../components/config/fieldInput'
 import { useInstanceStore } from '../../stores/instance'
 import { useSiteConfigStore } from '../../stores/siteConfig'
 
@@ -26,6 +29,8 @@ import { useSiteConfigStore } from '../../stores/siteConfig'
  * name...) and groups of entries (contact, socials...) the owner fills, adds, removes and reorders.
  */
 const toast = useToast()
+const { t } = useI18n()
+const labels = useConfigLabels()
 const siteConfig = useSiteConfigStore()
 const schema = computed(() => useInstanceStore().config.siteConfig)
 
@@ -92,7 +97,7 @@ const dirty = computed(() => loaded.value && snapshot() !== saved.value)
 /** Problems the API would reject anyway; shown inline, block saving. */
 const fieldErrors = computed(() =>
 	Object.fromEntries(
-		schema.value.fields.map((f) => [f.key, f.required && !fields.value[f.key]?.trim() ? 'Required.' : '']),
+		schema.value.fields.map((f) => [f.key, f.required && !fields.value[f.key]?.trim() ? t('admin.config.required') : '']),
 	),
 )
 const entryErrors = computed(() =>
@@ -101,8 +106,8 @@ const entryErrors = computed(() =>
 			const seen = new Set<string>()
 			const errors = (groups.value[group.key] ?? []).map((entry) => {
 				const key = entry.key.trim().toLowerCase()
-				if (!key) return 'Name is required.'
-				if (seen.has(key)) return 'Name is used twice.'
+				if (!key) return t('admin.config.nameRequired')
+				if (seen.has(key)) return t('admin.config.nameTwice')
 				seen.add(key)
 				return ''
 			})
@@ -159,10 +164,10 @@ async function save(): Promise<boolean> {
 		})
 		apply(config)
 		siteConfig.set(config)
-		toast.toast({ message: 'Configuration saved', type: 'success' })
+		toast.toast({ message: t('admin.config.saved'), type: 'success' })
 		return true
 	} catch (err: unknown) {
-		errorMessage.value = describe(err, 'Failed to save configuration')
+		errorMessage.value = describe(err, t('admin.config.saveFailed'))
 		return false
 	} finally {
 		saving.value = false
@@ -176,7 +181,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 <template>
 	<div class="mx-auto max-w-5xl px-16 py-24 font-sans">
 		<div class="mb-4 flex items-center justify-between gap-12">
-			<h1 class="m-0 text-2xl text-gray-900">Configuration</h1>
+			<h1 class="m-0 text-2xl text-gray-900">{{ $t('admin.nav.configuration') }}</h1>
 			<div
 				v-if="loaded"
 				class="flex items-center gap-12"
@@ -184,7 +189,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 				<span
 					v-if="dirty"
 					class="text-xs text-gray-500"
-					>Unsaved changes</span
+					>{{ $t('admin.unsavedChanges') }}</span
 				>
 				<Button
 					:loading="saving"
@@ -192,11 +197,11 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 					data-testid="config-save"
 					@click="save"
 				>
-					Save
+					{{ $t('common.save') }}
 				</Button>
 			</div>
 		</div>
-		<p class="mb-16 text-xs text-gray-500">Information about your website, used on its public pages.</p>
+		<p class="mb-16 text-xs text-gray-500">{{ $t('admin.config.intro') }}</p>
 
 		<div
 			v-if="errorMessage"
@@ -207,7 +212,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 			<button
 				type="button"
 				class="cursor-pointer border-none bg-transparent text-red-400 hover:text-red-600"
-				aria-label="Dismiss"
+				:aria-label="$t('admin.dismiss')"
 				@click="errorMessage = null"
 			>
 				&#10005;
@@ -218,11 +223,11 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 			v-if="loadFailed"
 			class="text-sm text-red-600"
 		>
-			Failed to load configuration.
+			{{ $t('admin.config.loadFailed') }}
 		</p>
 		<Loading
 			v-else-if="!loaded"
-			label="Loading configuration…"
+			:label="$t('admin.config.loading')"
 		/>
 
 		<div
@@ -237,7 +242,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 				<FormField
 					v-for="field in schema.fields"
 					:key="field.key"
-					:label="field.label"
+					:label="labels.field(field.key, field.label)"
 					:required="field.required"
 					:error="fieldErrors[field.key] || undefined"
 				>
@@ -245,7 +250,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 						v-model="fields[field.key]"
 						:type="field.type === 'address' ? 'text' : INPUT_TYPES[field.type]"
 						:maxlength="CONFIG_VALUE_MAX"
-						:placeholder="field.type === 'address' ? '' : VALUE_PLACEHOLDERS[field.type]"
+						:placeholder="field.type === 'address' ? '' : valuePlaceholder(field.type, t)"
 						:data-testid="`config-field-${field.key}`"
 					/>
 				</FormField>
@@ -257,12 +262,12 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 				class="rounded-lg border border-gray-200 bg-white p-16 shadow-xs"
 				:data-testid="`config-group-${group.key}`"
 			>
-				<h2 class="m-0 mb-12 text-base font-semibold text-gray-900">{{ group.label }}</h2>
+				<h2 class="m-0 mb-12 text-base font-semibold text-gray-900">{{ labels.group(group.key, group.label) }}</h2>
 				<p
 					v-if="!entriesOf(group).length"
 					class="m-0 mb-12 text-sm text-gray-400"
 				>
-					No entries yet.
+					{{ $t('admin.config.noEntries') }}
 				</p>
 				<ul class="m-0 flex list-none flex-col gap-12 p-0">
 					<!-- the row edits the entry object in place (it's this list's element), no update event needed -->
@@ -270,6 +275,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 						v-for="(entry, index) in entriesOf(group)"
 						:key="entry.id"
 						:model-value="entry"
+						:group="group.key"
 						:preset="presetOf(group, entry.key)"
 						:required="group.required.includes(entry.key)"
 						:error="entryErrors[group.key]?.[index] ?? ''"
@@ -289,7 +295,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 						:data-testid="`config-add-${preset.key}`"
 						@click="addPreset(group, preset)"
 					>
-						+ {{ preset.label }}
+						+ {{ labels.entry(group.key, preset.key, preset.label) }}
 					</button>
 					<button
 						v-if="group.allowCustom"
@@ -299,7 +305,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 						data-testid="config-add-custom"
 						@click="addCustom(group)"
 					>
-						+ Custom entry
+						{{ $t('admin.config.addCustom') }}
 					</button>
 				</div>
 			</section>
@@ -307,29 +313,29 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 			<div class="grid grid-cols-1 gap-16 md:grid-cols-3">
 				<ConfigImageField
 					v-model="logo"
-					title="Logo"
-					hint="Shown in the footer and navigation of the website. PNG/WebP work best."
+					:title="$t('admin.config.logo')"
+					:hint="$t('admin.config.logoHint')"
 					test-id="config-logo"
 					@error="errorMessage = $event"
 				/>
 				<ConfigImageField
 					v-model="icon"
-					title="Icon"
-					hint="Browser tab icon of the website. Square PNG."
+					:title="$t('admin.config.icon')"
+					:hint="$t('admin.config.iconHint')"
 					test-id="config-icon"
 					@error="errorMessage = $event"
 				/>
 				<ConfigImageField
 					v-model="shareImage"
-					title="Share image"
-					hint="Link previews (WhatsApp, Slack...) of pages without an image of their own. 1200×630 works best."
+					:title="$t('admin.config.shareImage')"
+					:hint="$t('admin.config.shareImageHint')"
 					test-id="config-share-image"
 					@error="errorMessage = $event"
 				/>
 			</div>
 		</div>
 	</div>
-	<UnsavedChangesDialog
+	<UnsavedDialog
 		v-if="unsaved.prompting.value"
 		:saving="saving"
 		:can-save="valid"

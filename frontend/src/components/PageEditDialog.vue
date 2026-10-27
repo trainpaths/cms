@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { Alert, Button, FormField, Input, Modal, Switch, TagInput } from '@trainpaths/nb-ui'
+import { useI18n } from 'vue-i18n'
 import { putApiPagesById } from '../api/sdk.gen'
 import type { UpdatePageRequest } from '../api/types.gen'
 import { TAG_MAX_LENGTH, TAGS_PER_PAGE, errorMessage, normalizeTag, type PageSummary } from '../lib/web-editor'
@@ -15,6 +16,7 @@ const props = defineProps<{ page: PageSummary }>()
 const emit = defineEmits<{ close: [] }>()
 
 const pages = usePagesStore()
+const { t } = useI18n()
 const tagsStore = useTagsStore()
 const slug = ref(props.page.slug)
 const published = ref(props.page.status === 'published')
@@ -27,7 +29,7 @@ const normalizedSlug = computed(() => slug.value.trim().toLowerCase())
 const slugError = computed(() =>
 	/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalizedSlug.value) && normalizedSlug.value.length <= 100
 		? null
-		: 'Lowercase letters, digits and single hyphens (max. 100).',
+		: t('admin.pages.slugRule'),
 )
 const changed = computed(
 	() =>
@@ -54,7 +56,7 @@ async function save() {
 		if (tagsChanged) tagsStore.refresh()
 		emit('close')
 	} catch (err: unknown) {
-		error.value = errorMessage(err, 'Failed to save page')
+		error.value = errorMessage(err, t('admin.pages.saveFailed'))
 	} finally {
 		saving.value = false
 	}
@@ -76,9 +78,9 @@ async function save() {
 			@submit.prevent="save"
 		>
 			<FormField
-				label="Slug"
+				:label="$t('admin.pages.slug')"
 				:error="slugError ?? undefined"
-				:hint="page.locked ? 'Fixed by the site configuration' : undefined"
+				:hint="page.locked ? $t('admin.pages.lockedSlug') : undefined"
 			>
 				<Input
 					v-model="slug"
@@ -92,13 +94,13 @@ async function save() {
 			</FormField>
 			<Switch
 				v-model="published"
-				label="Published"
-				:description="published ? `Live at /${normalizedSlug}` : 'Draft: only staff can see it'"
+				:label="$t('admin.status.published')"
+				:description="published ? $t('admin.pages.liveAt', { slug: normalizedSlug }) : $t('admin.pages.draftHint')"
 				data-testid="page-edit-published"
 			/>
 			<!-- not FormField: TagInput doesn't take its label id -->
 			<div class="flex flex-col gap-4">
-				<span class="text-sm font-medium text-black">Tags</span>
+				<span class="text-sm font-medium text-black">{{ $t('admin.pages.tags') }}</span>
 				<TagInput
 					v-model="tags"
 					:suggestions="tagsStore.names"
@@ -106,6 +108,7 @@ async function save() {
 					:max="TAGS_PER_PAGE"
 					:max-length="TAG_MAX_LENGTH"
 					:normalize="normalizeTag"
+					:label="$t('admin.pages.tags')"
 				/>
 			</div>
 			<Alert
@@ -121,7 +124,7 @@ async function save() {
 				:disabled="saving"
 				@click="emit('close')"
 			>
-				Cancel
+				{{ $t('common.cancel') }}
 			</Button>
 			<Button
 				type="submit"
@@ -130,7 +133,7 @@ async function save() {
 				:disabled="!!slugError"
 				data-testid="page-edit-save"
 			>
-				Save
+				{{ $t('common.save') }}
 			</Button>
 		</template>
 	</Modal>

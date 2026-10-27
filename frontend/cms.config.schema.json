@@ -19,10 +19,33 @@
 			"additionalProperties": false,
 			"properties": {
 				"lang": {
-					"description": "<html lang> of the site (BCP 47 tag, e.g. de, en-GB). Set at frontend build time by the cms() Vite plugin: rebuild after changing it.",
-					"type": "string",
-					"pattern": "^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$",
-					"default": "en"
+					"description": "Languages of the site (BCP 47 tags). A tag (\"de-CH\") = one language; { \"default\", \"localization\" } = a multilingual site: admin and built-in site texts in every listed language, a language switch (LanguageDropdown). A language's code is its primary subtag (de-CH → de) and must be unique. Applied at frontend build time by the cms() Vite plugin (<html lang>, UI languages): rebuild after changing it.",
+					"default": "en",
+					"oneOf": [
+						{
+							"$ref": "#/$defs/langTag"
+						},
+						{
+							"type": "object",
+							"additionalProperties": false,
+							"properties": {
+								"default": {
+									"description": "Language of the unprefixed site and the fallback for missing translations.",
+									"$ref": "#/$defs/langTag",
+									"default": "en"
+								},
+								"localization": {
+									"description": "Further languages; empty = a single-language site.",
+									"type": "array",
+									"items": {
+										"$ref": "#/$defs/langTag"
+									},
+									"uniqueItems": true,
+									"default": []
+								}
+							}
+						}
+					]
 				}
 			}
 		},
@@ -85,6 +108,10 @@
 		}
 	},
 	"$defs": {
+		"langTag": {
+			"type": "string",
+			"pattern": "^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$"
+		},
 		"name": {
 			"type": "string",
 			"pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"

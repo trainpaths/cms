@@ -6,8 +6,10 @@ import { useInstanceStore } from '../../../stores/instance'
 import type { BlockCategory, BlockType } from '../core/types'
 import { useBlockDrag } from '../composables/useBlockDrag'
 import { scrollBlockIntoView } from './scrollBlockIntoView'
+import { useBlockLabels } from '../../../i18n/siteConfigLabels'
 
 const store = useEditorStore()
+const blockLabels = useBlockLabels()
 const { startDrag, endDrag } = useBlockDrag()
 const searchQuery = ref('')
 
@@ -30,10 +32,11 @@ const allBlocks = computed(() => getRegisteredBlockTypes().filter((bt) => instan
 function filteredBlocks(categoryId: BlockCategory): BlockType[] {
 	return allBlocks.value.filter((block) => {
 		const matchesCategory = block.category === categoryId
+		const query = searchQuery.value.toLowerCase()
 		const matchesSearch =
-			!searchQuery.value ||
-			block.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-			block.description?.toLowerCase().includes(searchQuery.value.toLowerCase())
+			!query ||
+			blockLabels.title(block).toLowerCase().includes(query) ||
+			blockLabels.description(block).toLowerCase().includes(query)
 		const isTopLevel = !block.parent?.length
 		return matchesCategory && matchesSearch && isTopLevel
 	})
@@ -79,7 +82,8 @@ function onDragStart(e: DragEvent, name: string) {
 			<input
 				v-model="searchQuery"
 				type="text"
-				placeholder="Search blocks..."
+				:placeholder="$t('editor.searchBlocks')"
+				:aria-label="$t('editor.searchBlocks')"
 				class="w-full rounded border border-gray-300 px-12 py-8 text-sm focus:border-primary focus:outline-hidden focus:ring-1 focus:ring-primary"
 			/>
 		</div>
@@ -95,7 +99,7 @@ function onDragStart(e: DragEvent, name: string) {
 					@click="toggleCategory(category)"
 				>
 					<span class="text-xs font-semibold uppercase tracking-wide text-gray-500">
-						{{ category }}
+						{{ $t(`editor.categories.${category}`) }}
 					</span>
 					<span class="text-gray-400">{{ expanded[category] ? '−' : '+' }}</span>
 				</button>
@@ -109,7 +113,7 @@ function onDragStart(e: DragEvent, name: string) {
 						:key="block.name"
 						class="flex w-full cursor-grab items-center gap-12 rounded-md border-none bg-transparent px-12 py-8 text-left hover:bg-gray-100 active:cursor-grabbing"
 						draggable="true"
-						:title="`Click or drag to add ${block.title}`"
+						:title="$t('editor.insertHint', { title: blockLabels.title(block) })"
 						data-testid="inserter-block"
 						@click="insertBlock(block.name)"
 						@dragstart="onDragStart($event, block.name)"
@@ -122,12 +126,12 @@ function onDragStart(e: DragEvent, name: string) {
 							/>
 						</span>
 						<div class="min-w-0 flex-1">
-							<div class="text-sm font-medium text-gray-700">{{ block.title }}</div>
+							<div class="text-sm font-medium text-gray-700">{{ blockLabels.title(block) }}</div>
 							<div
 								v-if="block.description"
 								class="truncate text-xs text-gray-400"
 							>
-								{{ block.description }}
+								{{ blockLabels.description(block) }}
 							</div>
 						</div>
 					</button>
@@ -135,7 +139,7 @@ function onDragStart(e: DragEvent, name: string) {
 						v-if="filteredBlocks(category).length === 0"
 						class="px-12 py-8 text-xs text-gray-400"
 					>
-						No blocks found
+						{{ $t('editor.noBlocksFound') }}
 					</p>
 				</div>
 			</div>

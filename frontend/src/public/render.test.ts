@@ -3,7 +3,7 @@ import { render } from './entry-server'
 import { description, documentTitle } from './head'
 import type { PublicState } from './state'
 import { splice } from '../../server/template'
-import { setHtmlLang, siteLang } from '../../server/site-lang'
+import { setHtmlLang, siteLang, siteLanguages } from '../../server/site-lang'
 import { injectThemeStyle, themeColors, themeStyle } from '../../server/theme'
 import { SCREEN_SLUGS } from '../../server/screens'
 import { SCREENS } from './screens'
@@ -156,7 +156,7 @@ describe('customer screens', () => {
 	it('hydrate as not-found when the server sent the not-found page for a screen path (public auth off)', async () => {
 		const pinia = createPinia()
 		usePublicPageStore(pinia).set('not-found', null)
-		const router = createPublicRouter(createMemoryHistory(), pinia)
+		const router = createPublicRouter(createMemoryHistory(), pinia, (key) => key)
 		await router.push('/login?x=1')
 		expect(router.currentRoute.value.name).toBe('external')
 		expect(router.currentRoute.value.fullPath).toBe('/login?x=1')
@@ -165,7 +165,7 @@ describe('customer screens', () => {
 	it('hydrate as the screen the server rendered', async () => {
 		const pinia = createPinia()
 		usePublicPageStore(pinia).set('user/profile', null)
-		const router = createPublicRouter(createMemoryHistory(), pinia)
+		const router = createPublicRouter(createMemoryHistory(), pinia, (key) => key)
 		await router.push('/user/profile')
 		expect(router.currentRoute.value.name).toBe('user-profile')
 	})
@@ -224,6 +224,23 @@ describe('site lang (build time)', () => {
 
 	it('rejects a value that is not a language tag', () => {
 		expect(() => siteLang('{ "site": { "lang": "German" } }')).toThrow(/site.lang 'German'/)
+	})
+
+	it('reads the localized form: default first, then the localization', () => {
+		const json = '{ "site": { "lang": { "default": "en-US", "localization": ["de-CH", "fr-CH"] } } }'
+		expect(siteLanguages(json)).toEqual(['en-US', 'de-CH', 'fr-CH'])
+		expect(siteLang(json)).toBe('en-US')
+		expect(siteLanguages('{ "site": { "lang": "de-CH" } }')).toEqual(['de-CH'])
+		expect(siteLanguages('{ "site": { "lang": { "localization": ["de"] } } }')).toEqual(['en', 'de'])
+	})
+
+	it('rejects a second language with the same code, unknown keys and bad tags', () => {
+		const lang = (value: string) => `{ "site": { "lang": ${value} } }`
+		expect(() => siteLanguages(lang('{ "default": "en-US", "localization": ["en-GB"] }'))).toThrow(/code 'en'/)
+		expect(() => siteLanguages(lang('{ "default": "en", "languages": ["de"] }'))).toThrow(/unknown key 'languages'/)
+		expect(() => siteLanguages(lang('{ "default": "en", "localization": ["Deutsch"] }'))).toThrow(/'Deutsch'/)
+		expect(() => siteLanguages(lang('{ "default": "en", "localization": "de" }'))).toThrow(/list/)
+		expect(() => siteLanguages(lang('5'))).toThrow(/language tag or/)
 	})
 
 	it('replaces the template lang in any quoting, keeps other attributes', () => {

@@ -89,7 +89,7 @@ const btn =
 				<span
 					draggable="true"
 					class="cursor-grab select-none px-4 text-gray-500 hover:text-gray-900"
-					title="Drag to move"
+					:title="$t('admin.menus.dragToMove')"
 					aria-hidden="true"
 					data-testid="menu-item-grip"
 					@dragstart="start($event, { kind: 'move', id: item.id }, row)"
@@ -103,8 +103,8 @@ const btn =
 					class="input-field mt-0 min-w-0 flex-1"
 					:class="{ 'border-red-400': error && !item.label.trim() }"
 					:maxlength="MENU_LABEL_MAX"
-					:placeholder="page?.title ?? 'Label'"
-					aria-label="Label"
+					:placeholder="page?.title ?? $t('admin.menus.label')"
+					:aria-label="$t('admin.menus.label')"
 					data-testid="menu-item-label"
 					@input="set({ label: ($event.target as HTMLInputElement).value })"
 				/>
@@ -116,28 +116,28 @@ const btn =
 					class="input-field mt-0 min-w-0 flex-1"
 					:class="{ 'border-red-400': error && item.url }"
 					:maxlength="MENU_URL_MAX"
-					placeholder="Link (optional)"
-					aria-label="Link"
+					:placeholder="$t('admin.menus.linkPlaceholder')"
+					:aria-label="$t('admin.menus.link')"
 					data-testid="menu-item-link"
 					@input="setLink(($event.target as HTMLInputElement).value)"
 				/>
 				<span
 					v-if="page && page.status !== 'published'"
 					class="shrink-0 rounded-full bg-yellow-100 px-6 py-1 text-[11px] text-yellow-800"
-					title="Draft pages are left out of the public menu"
-					>Draft</span
+					:title="$t('admin.menus.draftHint')"
+					>{{ $t('admin.status.draft') }}</span
 				>
 				<span
 					v-if="item.pageId && !page"
 					class="shrink-0 rounded-full bg-red-100 px-6 py-1 text-[11px] text-red-700"
-					>Page deleted</span
+					>{{ $t('admin.menus.pageDeleted') }}</span
 				>
 				<div class="flex shrink-0 items-center">
 					<button
 						type="button"
 						:class="btn"
 						:disabled="index === 0"
-						aria-label="Move up"
+						:aria-label="$t('admin.moveUp')"
 						@click="moveBy(ctx.root.value, item.id, -1)"
 					>
 						&#8593;
@@ -146,7 +146,7 @@ const btn =
 						type="button"
 						:class="btn"
 						:disabled="index === siblings - 1"
-						aria-label="Move down"
+						:aria-label="$t('admin.moveDown')"
 						@click="moveBy(ctx.root.value, item.id, 1)"
 					>
 						&#8595;
@@ -155,7 +155,7 @@ const btn =
 						type="button"
 						:class="btn"
 						:disabled="depth === 1"
-						aria-label="Outdent"
+						:aria-label="$t('admin.menus.outdent')"
 						data-testid="menu-item-outdent"
 						@click="outdent(ctx.root.value, item.id)"
 					>
@@ -165,7 +165,7 @@ const btn =
 						type="button"
 						:class="btn"
 						:disabled="!canIndent"
-						aria-label="Indent into previous item"
+						:aria-label="$t('admin.menus.indent')"
 						data-testid="menu-item-indent"
 						@click="indent(ctx.root.value, item.id, MENU_MAX_DEPTH)"
 					>
@@ -174,7 +174,7 @@ const btn =
 					<button
 						type="button"
 						:class="[btn, 'hover:bg-red-50 hover:text-red-600']"
-						:aria-label="item.children.length ? 'Remove item and its children' : 'Remove item'"
+						:aria-label="item.children.length ? $t('admin.menus.removeTree') : $t('admin.menus.remove')"
 						data-testid="menu-item-remove"
 						@click="remove(ctx.root.value, item.id)"
 					>

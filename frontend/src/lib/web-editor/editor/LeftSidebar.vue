@@ -8,8 +8,8 @@ import { useEditorStore } from '../../../stores/editor'
 const store = useEditorStore()
 
 const tabs = [
-	{ id: 'blocks', label: 'Blocks' },
-	{ id: 'outline', label: 'Outline' },
+	{ id: 'blocks', label: 'editor.tabs.blocks' },
+	{ id: 'outline', label: 'editor.tabs.outline' },
 ] as const
 </script>
 

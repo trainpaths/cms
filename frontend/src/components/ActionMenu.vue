@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref, useId, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Button, Icon, type IconName } from '@trainpaths/nb-ui'
 
 export interface ActionItem {
@@ -17,10 +18,12 @@ export interface ActionItem {
  * "…" button with a small menu below it. Same look and keyboard handling as nb-ui's `Dropdown`, plus a per-item
  * `title` (why an item is disabled) and `data-testid`, which `Dropdown` items don't take.
  */
-withDefaults(defineProps<{ items: ActionItem[]; label?: string; testId?: string }>(), {
-	label: 'Actions',
+const props = withDefaults(defineProps<{ items: ActionItem[]; label?: string; testId?: string }>(), {
+	label: undefined,
 	testId: undefined,
 })
+const { t } = useI18n()
+const label = computed(() => props.label ?? t('admin.actions'))
 
 const open = ref(false)
 const root = ref<HTMLElement | null>(null)

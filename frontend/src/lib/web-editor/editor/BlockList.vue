@@ -93,7 +93,7 @@ function onDrop(e: DragEvent) {
 			:data-testid="dropIndex === 0 ? 'drop-indicator' : undefined"
 		>
 			<span class="text-4xl text-gray-300">+</span>
-			<p class="m-0 text-sm text-gray-400">Start adding blocks from the sidebar</p>
+			<p class="m-0 text-sm text-gray-400">{{ $t('editor.emptyPage') }}</p>
 		</div>
 		<template v-else>
 			<!-- slots always take 10px (gap between blocks): active 4px line + 3px each side, grows from 0, no layout shift -->

@@ -19,8 +19,8 @@ const swatches = computed(() => Object.entries(props.colors).map(([key, value]) 
 			type="button"
 			class="h-24 w-24 cursor-pointer rounded border border-gray-300 bg-white"
 			:class="model === '' ? 'ring-2 ring-primary ring-offset-1' : ''"
-			title="None"
-			aria-label="None"
+			:title="$t('editor.colorNone')"
+			:aria-label="$t('editor.colorNone')"
 			:aria-pressed="model === ''"
 			@click="model = ''"
 		>
@@ -43,7 +43,7 @@ const swatches = computed(() => Object.entries(props.colors).map(([key, value]) 
 			v-if="!swatches.length"
 			class="m-0 w-full text-xs text-gray-400"
 		>
-			No theme colours set up for this site.
+			{{ $t('editor.noColors') }}
 		</p>
 	</div>
 </template>

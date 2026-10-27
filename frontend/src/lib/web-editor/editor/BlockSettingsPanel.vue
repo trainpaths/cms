@@ -8,13 +8,16 @@ import { getBlockType } from '../core/blockRegistry'
 import { paletteFor } from '../core/colors'
 import { useEditorStore } from '../../../stores/editor'
 import { useSelection } from '../composables/useSelection'
+import { useBlockLabels } from '../../../i18n/siteConfigLabels'
 
 const store = useEditorStore()
 const { selectedBlock } = useSelection()
 
+const blockLabels = useBlockLabels()
+// message keys (SidebarTabs translates)
 const tabs = [
-	{ id: 'block', label: 'Block' },
-	{ id: 'page', label: 'Page' },
+	{ id: 'block', label: 'editor.tabs.block' },
+	{ id: 'page', label: 'editor.tabs.page' },
 ] as const
 
 const blockType = computed(() => {
@@ -50,9 +53,9 @@ const textColor = computed({
 })
 
 const widthOptions = [
-	{ value: 'default', label: 'Default' },
-	{ value: 'wide', label: 'Wide' },
-	{ value: 'full', label: 'Full' },
+	{ value: 'default', label: 'editor.width.default' },
+	{ value: 'wide', label: 'editor.width.wide' },
+	{ value: 'full', label: 'editor.width.full' },
 ]
 </script>
 
@@ -81,7 +84,7 @@ const widthOptions = [
 						class="h-full w-full"
 					/>
 				</span>
-				<span class="text-sm font-medium text-gray-700">{{ blockType.title }}</span>
+				<span class="text-sm font-medium text-gray-700">{{ blockLabels.title(blockType) }}</span>
 			</div>
 
 			<component
@@ -92,7 +95,7 @@ const widthOptions = [
 
 			<SettingsSection
 				v-if="blockType.supports?.width"
-				title="Width"
+				:title="$t('editor.width.title')"
 			>
 				<div class="flex rounded-md border border-gray-200">
 					<button
@@ -106,14 +109,14 @@ const widthOptions = [
 						"
 						@click="blockWidth = opt.value"
 					>
-						{{ opt.label }}
+						{{ $t(opt.label) }}
 					</button>
 				</div>
 			</SettingsSection>
 
 			<SettingsSection
 				v-if="blockType.supports?.backgroundColor"
-				title="Background Color"
+				:title="$t('editor.backgroundColor')"
 			>
 				<ColorPicker
 					v-model="backgroundColor"
@@ -123,7 +126,7 @@ const widthOptions = [
 
 			<SettingsSection
 				v-if="blockType.supports?.textColor"
-				title="Text Color"
+				:title="$t('editor.textColor')"
 			>
 				<ColorPicker
 					v-model="textColor"
@@ -140,7 +143,7 @@ const widthOptions = [
 				"
 				class="text-center text-sm text-gray-400"
 			>
-				No settings available for this block
+				{{ $t('editor.noSettings') }}
 			</p>
 		</div>
 
@@ -148,7 +151,7 @@ const widthOptions = [
 			v-else
 			class="m-0 p-16 text-center text-sm text-gray-400"
 		>
-			No block selected
+			{{ $t('editor.noSelection') }}
 		</p>
 	</div>
 </template>

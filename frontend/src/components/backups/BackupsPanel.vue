@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { DEFAULT_LANGUAGE, useFormat, useLanguageSwitch } from '../../i18n'
 import {
 	Alert,
 	Badge,
@@ -29,12 +31,17 @@ import type { BackupInfo, BackupInterval, BackupKind, BackupSettingsResponse } f
 import { errorMessage } from '../../api-error'
 import { saveBlob } from '../../lib/download'
 import { formatBytes, uploadBackup } from '../../lib/backupUpload'
-import { backupIntervals, weekdayNames } from '../../lib/backupSchedule'
+import { backupIntervals, weekdayName } from '../../lib/backupSchedule'
 import { useAuthStore } from '../../stores/auth'
 
 /** Full site backups (super admins): schedule, storage info, back up now, upload, download, restore, delete. */
 
 const router = useRouter()
+const { t } = useI18n()
+const format = useFormat()
+const languageSwitch = useLanguageSwitch()
+const tag = computed(() => languageSwitch?.current.value.tag ?? DEFAULT_LANGUAGE.tag)
+const intervals = computed(() => backupIntervals(t))
 const auth = useAuthStore()
 const { confirm } = useConfirm()
 const { toast } = useToast()
@@ -53,12 +60,12 @@ const uploadInput = ref<HTMLInputElement | null>(null)
 
 // 1-28: every month has the day
 const monthDays = Array.from({ length: 28 }, (_, i) => ({ value: i + 1, label: `${i + 1}.` }))
-const weekdays = weekdayNames.map((label, value) => ({ value, label }))
+const weekdays = computed(() => Array.from({ length: 7 }, (_, value) => ({ value, label: weekdayName(value, tag.value) })))
 const kindLabels: Record<BackupKind, string> = {
-	auto: 'Automatic',
-	manual: 'Manual',
-	'pre-restore': 'Before restore',
-	upload: 'Uploaded',
+	auto: 'admin.backups.kinds.auto',
+	manual: 'admin.backups.kinds.manual',
+	'pre-restore': 'admin.backups.kinds.preRestore',
+	upload: 'admin.backups.kinds.upload',
 }
 const kindColors: Record<BackupKind, string> = {
 	auto: 'accent',
@@ -87,7 +94,7 @@ const localTime = computed(() => {
 	if (h === undefined || m === undefined || Number.isNaN(h) || Number.isNaN(m)) return ''
 	const d = new Date()
 	d.setUTCHours(h, m, 0, 0)
-	return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+	return format.time(d, { hour: '2-digit', minute: '2-digit' })
 })
 
 onMounted(load)
@@ -100,7 +107,7 @@ async function load() {
 		applySettings(s.data)
 		backups.value = list.data
 	} catch (err: unknown) {
-		error.value = errorMessage(err, 'Failed to load backups')
+		error.value = errorMessage(err, t('admin.backups.loadFailed'))
 	} finally {
 		loading.value = false
 	}
@@ -126,9 +133,9 @@ async function saveSettings() {
 	try {
 		const { data } = await putApiBackupsSettings({ body: { ...form.value, retention: Number(form.value.retention) } })
 		applySettings(data)
-		toast({ message: 'Backup schedule saved', type: 'success' })
+		toast({ message: t('admin.backups.scheduleSaved'), type: 'success' })
 	} catch (err: unknown) {
-		error.value = errorMessage(err, 'Failed to save the schedule')
+		error.value = errorMessage(err, t('admin.backups.scheduleFailed'))
 	} finally {
 		saving.value = false
 	}
@@ -139,9 +146,9 @@ async function createNow() {
 	try {
 		const { data } = await postApiBackups()
 		backups.value = [data, ...backups.value]
-		toast({ message: `Backup ${data.name} created`, type: 'success' })
+		toast({ message: t('admin.backups.created', { name: data.name }), type: 'success' })
 	} catch (err: unknown) {
-		error.value = errorMessage(err, 'Backup failed')
+		error.value = errorMessage(err, t('admin.backups.createFailed'))
 	} finally {
 		creating.value = false
 	}
@@ -153,16 +160,16 @@ async function handleUpload(event: Event) {
 	input.value = ''
 	if (!file) return
 	if (settings.value && file.size > settings.value.maxUploadBytes) {
-		error.value = `The file is larger than ${formatBytes(settings.value.maxUploadBytes)}.`
+		error.value = t('admin.backups.tooLarge', { size: formatBytes(settings.value.maxUploadBytes, tag.value) })
 		return
 	}
 	uploadProgress.value = 0
 	try {
 		const info = await uploadBackup(file, (p) => (uploadProgress.value = p))
 		await refreshList()
-		toast({ message: `Uploaded as ${info.name}. Restore it from the list.`, type: 'success' })
+		toast({ message: t('admin.backups.uploaded', { name: info.name }), type: 'success' })
 	} catch (err: unknown) {
-		error.value = errorMessage(err, 'Upload failed')
+		error.value = errorMessage(err, t('admin.backups.uploadFailed'))
 	} finally {
 		uploadProgress.value = null
 	}
@@ -173,15 +180,16 @@ async function download(item: BackupInfo) {
 		const { data } = await getApiBackupsByName({ path: { name: item.name }, parseAs: 'blob' })
 		saveBlob(data as Blob, item.name)
 	} catch (err: unknown) {
-		error.value = errorMessage(err, 'Download failed')
+		error.value = errorMessage(err, t('admin.backups.downloadFailed'))
 	}
 }
 
 async function remove(item: BackupInfo) {
 	const ok = await confirm({
-		title: `Delete ${item.name}?`,
-		message: 'The archive is removed from the backup folder. This cannot be undone.',
-		confirmText: 'Delete',
+		title: t('admin.backups.deleteTitle', { name: item.name }),
+		message: t('admin.backups.deleteHint'),
+		confirmText: t('common.delete'),
+		cancelText: t('common.cancel'),
 		danger: true,
 	})
 	if (!ok) return
@@ -189,18 +197,16 @@ async function remove(item: BackupInfo) {
 		await deleteApiBackupsByName({ path: { name: item.name } })
 		backups.value = backups.value.filter((b) => b.name !== item.name)
 	} catch (err: unknown) {
-		error.value = errorMessage(err, 'Failed to delete the backup')
+		error.value = errorMessage(err, t('admin.backups.deleteFailed'))
 	}
 }
 
 async function restore(item: BackupInfo) {
 	const ok = await confirm({
-		title: `Restore ${item.name}?`,
-		message:
-			`Everything is replaced with the state of ${formatDate(item.createdAt)}: pages, media, menus, ` +
-			'configuration and staff accounts. Everyone is signed out. A backup of the current state is made first, ' +
-			'so this can be undone by restoring that one.',
-		confirmText: 'Restore',
+		title: t('admin.backups.restoreTitle', { name: item.name }),
+		message: t('admin.backups.restoreHint', { date: formatDate(item.createdAt) }),
+		confirmText: t('admin.backups.restore'),
+		cancelText: t('common.cancel'),
 		danger: true,
 	})
 	if (!ok) return
@@ -208,21 +214,21 @@ async function restore(item: BackupInfo) {
 	try {
 		const { data } = await postApiBackupsByNameRestore({ path: { name: item.name } })
 		toast({
-			message: `Backup restored (previous state saved as ${data.preRestoreBackup}). Sign in again.`,
+			message: t('admin.backups.restored', { name: data.preRestoreBackup }),
 			type: 'success',
 			duration: 10000,
 		})
 		await auth.logout()
 		await router.push({ name: 'admin-login' })
 	} catch (err: unknown) {
-		error.value = errorMessage(err, 'Restore failed')
+		error.value = errorMessage(err, t('admin.backups.restoreFailed'))
 		restoring.value = null
 		await refreshList().catch(() => {})
 	}
 }
 
 function formatDate(iso: string | null | undefined): string {
-	return iso ? new Date(iso).toLocaleString() : '—'
+	return iso ? format.dateTime(iso) : '—'
 }
 </script>
 
@@ -240,7 +246,7 @@ function formatDate(iso: string | null | undefined): string {
 
 		<Loading
 			v-if="loading && !settings"
-			label="Loading backups..."
+			:label="$t('admin.backups.loading')"
 		/>
 
 		<template v-else-if="settings">
@@ -248,26 +254,26 @@ function formatDate(iso: string | null | undefined): string {
 				v-if="restoring"
 				type="warning"
 			>
-				Restoring {{ restoring }}. The site is unavailable until it finishes; don't close this page.
+				{{ $t('admin.backups.restoring', { name: restoring }) }}
 			</Alert>
 
-			<Card title="Automatic backups">
+			<Card :title="$t('admin.backups.automatic')">
 				<form
 					class="grid gap-12 sm:grid-cols-2"
 					data-testid="backup-settings"
 					@submit.prevent="saveSettings"
 				>
-					<FormField label="Interval">
+					<FormField :label="$t('admin.backups.interval')">
 						<Select
 							v-model="form.interval"
-							:options="backupIntervals"
+							:options="intervals"
 							data-testid="backup-interval"
 						/>
 					</FormField>
 					<FormField
 						v-if="form.interval === 'weekly' || form.interval === 'biweekly'"
-						label="Day (UTC)"
-						:hint="form.interval === 'biweekly' ? 'Starts on the first one after saving' : undefined"
+						:label="$t('admin.backups.weekday')"
+						:hint="form.interval === 'biweekly' ? $t('admin.backups.biweeklyHint') : undefined"
 					>
 						<Select
 							v-model="form.weekday"
@@ -277,7 +283,7 @@ function formatDate(iso: string | null | undefined): string {
 					</FormField>
 					<FormField
 						v-if="form.interval === 'monthly'"
-						label="Day of the month (UTC)"
+						:label="$t('admin.backups.dayOfMonth')"
 					>
 						<Select
 							v-model="form.dayOfMonth"
@@ -287,8 +293,8 @@ function formatDate(iso: string | null | undefined): string {
 					</FormField>
 					<FormField
 						v-if="form.interval !== 'off'"
-						label="Time (UTC)"
-						:hint="localTime ? `${localTime} your time` : undefined"
+						:label="$t('admin.backups.time')"
+						:hint="localTime ? $t('admin.backups.localTime', { time: localTime }) : undefined"
 					>
 						<input
 							v-model="form.timeOfDay"
@@ -300,8 +306,8 @@ function formatDate(iso: string | null | undefined): string {
 					</FormField>
 					<FormField
 						v-if="form.interval !== 'off'"
-						label="Keep automatic backups"
-						hint="Older automatic backups are deleted; manual and uploaded ones are kept."
+						:label="$t('admin.backups.retention')"
+						:hint="$t('admin.backups.retentionHint')"
 					>
 						<Input
 							v-model.number="form.retention"
@@ -319,19 +325,19 @@ function formatDate(iso: string | null | undefined): string {
 							:loading="saving"
 							data-testid="backup-settings-save"
 						>
-							Save schedule
+							{{ $t('admin.backups.saveSchedule') }}
 						</Button>
 					</div>
 				</form>
 				<dl class="mt-16 mb-0 grid grid-cols-[auto_1fr] gap-x-16 gap-y-4 text-sm">
-					<dt class="text-black/60">Next run</dt>
+					<dt class="text-black/60">{{ $t('admin.backups.nextRun') }}</dt>
 					<dd
 						class="m-0"
 						data-testid="backup-next-run"
 					>
-						{{ settings.nextRunAt ? formatDate(settings.nextRunAt) : 'Off' }}
+						{{ settings.nextRunAt ? formatDate(settings.nextRunAt) : $t('admin.backups.intervals.off') }}
 					</dd>
-					<dt class="text-black/60">Last run</dt>
+					<dt class="text-black/60">{{ $t('admin.backups.lastRun') }}</dt>
 					<dd class="m-0">{{ formatDate(settings.lastRunAt) }}</dd>
 				</dl>
 				<Alert
@@ -339,13 +345,13 @@ function formatDate(iso: string | null | undefined): string {
 					type="error"
 					class="mt-12"
 				>
-					Last automatic backup failed: {{ settings.lastError }}
+					{{ $t('admin.backups.lastFailed', { error: settings.lastError }) }}
 				</Alert>
 			</Card>
 
-			<Card title="Storage">
+			<Card :title="$t('admin.backups.storage')">
 				<dl class="m-0 grid grid-cols-[auto_1fr] gap-x-16 gap-y-4 text-sm">
-					<dt class="text-black/60">Folder</dt>
+					<dt class="text-black/60">{{ $t('admin.backups.folder') }}</dt>
 					<dd
 						class="m-0"
 						data-testid="backup-location"
@@ -355,21 +361,19 @@ function formatDate(iso: string | null | undefined): string {
 							class="font-mono break-all"
 							>{{ settings.hostPath }}</span
 						>
-						<template v-else>Developer has not set backup folder</template>
+						<template v-else>{{ $t('admin.backups.noFolder') }}</template>
 					</dd>
 					<template v-if="settings.freeBytes != null">
-						<dt class="text-black/60">Free space</dt>
-						<dd class="m-0">{{ formatBytes(settings.freeBytes) }}</dd>
+						<dt class="text-black/60">{{ $t('admin.backups.freeSpace') }}</dt>
+						<dd class="m-0">{{ formatBytes(settings.freeBytes, tag) }}</dd>
 					</template>
 				</dl>
 				<p class="mt-12 mb-0 text-xs text-black/60">
-					The folder is set by the server's Docker setup and can't be changed here. Copy archives off the server
-					(download them, or sync the folder) to keep them safe from a disk failure. Backups are deleted after
-					{{ settings.maxAgeYears }} years.
+					{{ $t('admin.backups.storageHint', { years: settings.maxAgeYears }) }}
 				</p>
 			</Card>
 
-			<Card title="Backups">
+			<Card :title="$t('admin.backups.tab')">
 				<div class="mb-12 flex flex-wrap gap-8">
 					<Button
 						bg="primary"
@@ -378,17 +382,17 @@ function formatDate(iso: string | null | undefined): string {
 						data-testid="backup-create"
 						@click="createNow"
 					>
-						Back up now
+						{{ $t('admin.backups.now') }}
 					</Button>
 					<Button
 						variant="outline"
 						text="primary"
 						:disabled="busy"
-						title="Add a backup archive (.tar.gz) from another server or an earlier download"
+						:title="$t('admin.backups.uploadHint')"
 						data-testid="backup-upload"
 						@click="uploadInput?.click()"
 					>
-						Upload backup
+						{{ $t('admin.backups.upload') }}
 					</Button>
 					<input
 						ref="uploadInput"
@@ -402,14 +406,14 @@ function formatDate(iso: string | null | undefined): string {
 				<ProgressBar
 					v-if="uploadProgress !== null"
 					:value="Math.round(uploadProgress * 100)"
-					label="Uploading backup"
+					:label="$t('admin.backups.uploading')"
 					class="mb-12"
 				/>
 
 				<EmptyState
 					v-if="!backups.length"
-					title="No backups yet"
-					description="Back up now, or turn on automatic backups above."
+					:title="$t('admin.backups.empty')"
+					:description="$t('admin.backups.emptyHint')"
 				/>
 				<ul
 					v-else
@@ -428,13 +432,13 @@ function formatDate(iso: string | null | undefined): string {
 									size="sm"
 									:color="kindColors[item.kind]"
 									data-testid="backup-kind"
-									>{{ kindLabels[item.kind] }}</Badge
+									>{{ $t(kindLabels[item.kind]) }}</Badge
 								>
 							</div>
 							<div class="mt-2 truncate text-xs text-black/60">
 								<span class="font-mono">{{ item.name }}</span>
-								· {{ formatBytes(item.size) }}
-								<template v-if="item.mediaCount != null"> · {{ item.mediaCount }} media files</template>
+								· {{ formatBytes(item.size, tag) }}
+								<template v-if="item.mediaCount != null"> · {{ $t('admin.backups.mediaFiles', item.mediaCount) }}</template>
 								<template v-if="item.cmsVersion"> · CMS {{ item.cmsVersion }}</template>
 							</div>
 							<div
@@ -454,14 +458,14 @@ function formatDate(iso: string | null | undefined): string {
 								data-testid="backup-restore"
 								@click="restore(item)"
 							>
-								Restore
+								{{ $t('admin.backups.restore') }}
 							</Button>
 							<Button
 								variant="ghost"
 								text="secondary"
 								square
-								title="Download"
-								:aria-label="`Download ${item.name}`"
+								:title="$t('admin.backups.download')"
+								:aria-label="$t('admin.backups.downloadName', { name: item.name })"
 								data-testid="backup-download"
 								@click="download(item)"
 							>
@@ -471,9 +475,9 @@ function formatDate(iso: string | null | undefined): string {
 								variant="ghost"
 								text="danger"
 								square
-								title="Delete"
+								:title="$t('common.delete')"
 								:disabled="busy"
-								:aria-label="`Delete ${item.name}`"
+								:aria-label="$t('admin.backups.deleteName', { name: item.name })"
 								data-testid="backup-delete"
 								@click="remove(item)"
 							>

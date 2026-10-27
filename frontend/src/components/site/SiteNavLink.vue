@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, type RouteLocationRaw } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import type { PublicMenuItem } from '../../lib/web-editor'
 import { useAuthStore } from '../../stores/auth'
 
@@ -11,13 +12,14 @@ import { useAuthStore } from '../../stores/auth'
 const props = defineProps<{ item: PublicMenuItem }>()
 
 const route = useRoute()
+const { t } = useI18n()
 const authStore = useAuthStore()
 // client-only (auth_type hint, then the live session): stored HTML is the same for every visitor
 const mounted = ref(false)
 onMounted(() => (mounted.value = true))
 const account = computed(() => mounted.value && props.item.url === '/login' && authStore.authType === 'customer')
 
-const label = computed(() => (account.value ? 'Account' : props.item.label))
+const label = computed(() => (account.value ? t('site.account') : props.item.label))
 const to = computed<RouteLocationRaw | null>(() => {
 	const { slug, url } = props.item
 	if (account.value) return '/user/profile'

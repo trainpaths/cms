@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, onBeforeUnmount, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { useFormat } from '../../i18n'
 import { Alert, Badge, Button, EmptyState, Icon, Input, Loading, useConfirm, useToast } from '@trainpaths/nb-ui'
 import {
 	deleteApiPagesById,
@@ -20,6 +22,8 @@ import { saveJson } from '../../lib/download'
 import ActionMenu, { type ActionItem } from '../../components/ActionMenu.vue'
 
 const router = useRouter()
+const { t } = useI18n()
+const format = useFormat()
 
 // cached list renders at once; load() refreshes it in the background
 const pages = usePagesStore()
@@ -39,7 +43,7 @@ onMounted(async () => {
 	try {
 		await pages.load()
 	} catch {
-		errorMessage.value = 'Failed to load pages'
+		errorMessage.value = t('admin.pages.loadFailed')
 	}
 })
 
@@ -51,7 +55,7 @@ async function handleCreatePage() {
 		pages.add(page)
 		await router.push({ name: 'admin-page-editor', params: { id: page.id } })
 	} catch (err: unknown) {
-		errorMessage.value = describe(err, 'Failed to create page')
+		errorMessage.value = describe(err, t('admin.pages.createFailed'))
 	}
 }
 
@@ -74,9 +78,9 @@ async function handleImportFile(event: Event) {
 		const { data } = await postApiPagesImport({ body })
 		const missing = data.missingMediaIds.length
 		toast({
-			message:
-				`Imported as draft /${data.page.slug}` +
-				(missing ? `; ${missing} image${missing === 1 ? '' : 's'} not found in the media library` : ''),
+			message: missing
+				? t('admin.pages.importedMissing', { slug: data.page.slug, count: missing }, missing)
+				: t('admin.pages.imported', { slug: data.page.slug }),
 			type: missing ? 'warning' : 'success',
 		})
 		// leave first: updating the caches re-renders the whole list (slow with thousands of pages)
@@ -84,7 +88,7 @@ async function handleImportFile(event: Event) {
 		pages.add(data.page)
 		tagsStore.refresh()
 	} catch (err: unknown) {
-		errorMessage.value = err instanceof PageExportError ? err.message : describe(err, 'Failed to import page')
+		errorMessage.value = err instanceof PageExportError ? t(err.key) : describe(err, t('admin.pages.importFailed'))
 	} finally {
 		importing.value = false
 	}
@@ -97,7 +101,7 @@ async function handleExportPage(page: PageSummary) {
 		pages.remember(data)
 		saveJson(toPageExport(data), pageExportFileName(data.slug))
 	} catch (err: unknown) {
-		errorMessage.value = describe(err, 'Failed to export page')
+		errorMessage.value = describe(err, t('admin.pages.exportFailed'))
 	}
 }
 
@@ -107,9 +111,9 @@ async function handleDuplicatePage(page: PageSummary) {
 		const { data } = await postApiPagesByIdDuplicate({ path: { id: page.id } })
 		pages.add(data)
 		tagsStore.refresh()
-		toast({ message: `Duplicated as draft /${data.slug}`, type: 'success' })
+		toast({ message: t('admin.pages.duplicated', { slug: data.slug }), type: 'success' })
 	} catch (err: unknown) {
-		errorMessage.value = describe(err, 'Failed to duplicate page')
+		errorMessage.value = describe(err, t('admin.pages.duplicateFailed'))
 	}
 }
 
@@ -126,15 +130,15 @@ onBeforeUnmount(hoverEnd)
 
 function rowActions(page: PageSummary): ActionItem[] {
 	return [
-		{ label: 'Edit', icon: 'edit', testId: 'page-edit', onSelect: () => (editing.value = page) },
-		{ label: 'Duplicate', icon: 'duplicate', testId: 'page-duplicate', onSelect: () => handleDuplicatePage(page) },
-		{ label: 'Export', icon: 'download', testId: 'page-export', onSelect: () => handleExportPage(page) },
+		{ label: t('common.edit'), icon: 'edit', testId: 'page-edit', onSelect: () => (editing.value = page) },
+		{ label: t('admin.pages.duplicate'), icon: 'duplicate', testId: 'page-duplicate', onSelect: () => handleDuplicatePage(page) },
+		{ label: t('admin.pages.export'), icon: 'download', testId: 'page-export', onSelect: () => handleExportPage(page) },
 		{
-			label: 'Delete',
+			label: t('common.delete'),
 			icon: 'trash',
 			danger: true,
 			disabled: page.locked,
-			title: page.locked ? "Part of the site configuration, can't be deleted" : undefined,
+			title: page.locked ? t('admin.pages.lockedDelete') : undefined,
 			testId: 'page-delete',
 			onSelect: () => handleDeletePage(page),
 		},
@@ -143,9 +147,10 @@ function rowActions(page: PageSummary): ActionItem[] {
 
 async function handleDeletePage(page: PageSummary) {
 	const ok = await confirm({
-		title: `Delete "${page.title}"?`,
-		message: 'This cannot be undone.',
-		confirmText: 'Delete',
+		title: t('admin.pages.deleteTitle', { title: page.title }),
+		message: t('common.cannotUndo'),
+		confirmText: t('common.delete'),
+		cancelText: t('common.cancel'),
 		danger: true,
 	})
 	if (!ok) return
@@ -154,7 +159,7 @@ async function handleDeletePage(page: PageSummary) {
 		pages.forget(page.id)
 		tagsStore.refresh()
 	} catch {
-		errorMessage.value = 'Failed to delete page'
+		errorMessage.value = t('admin.pages.deleteFailed')
 	}
 }
 </script>
@@ -175,15 +180,15 @@ async function handleDeletePage(page: PageSummary) {
 	</div>
 
 	<div class="mx-auto max-w-3xl px-16 py-24 font-sans">
-		<h1 class="m-0 text-2xl text-gray-900">Pages</h1>
+		<h1 class="m-0 text-2xl text-gray-900">{{ $t('admin.nav.pages') }}</h1>
 		<div>
 			<div class="mb-12 flex items-center justify-between">
-				<h2 class="mb-0 text-lg">All pages</h2>
+				<h2 class="mb-0 text-lg">{{ $t('admin.pages.all') }}</h2>
 				<Button
 					bg="primary"
 					@click="showNewPageInput = true"
 				>
-					+ New Page
+					{{ $t('admin.pages.new') }}
 				</Button>
 			</div>
 			<div
@@ -195,14 +200,14 @@ async function handleDeletePage(page: PageSummary) {
 					text="primary"
 					border="primary"
 					class="gap-6"
-					title="Create a draft page from an exported page file (.json)"
-					aria-label="Import page"
+					:title="$t('admin.pages.importHint')"
+					:aria-label="$t('admin.pages.importLabel')"
 					:loading="importing"
 					data-testid="page-import"
 					@click="importInput?.click()"
 				>
 					<Icon name="upload" />
-					<span class="hidden sm:inline">Import</span>
+					<span class="hidden sm:inline">{{ $t('admin.pages.import') }}</span>
 				</Button>
 				<input
 					ref="importInput"
@@ -215,8 +220,8 @@ async function handleDeletePage(page: PageSummary) {
 				<Input
 					v-model="newPageTitle"
 					class="flex-1"
-					placeholder="Page title..."
-					aria-label="Page title"
+					:placeholder="$t('admin.pages.titlePlaceholder')"
+					:aria-label="$t('admin.pages.titleLabel')"
 					@keydown.enter="handleCreatePage"
 					@keydown.escape="showNewPageInput = false"
 				/>
@@ -225,13 +230,13 @@ async function handleDeletePage(page: PageSummary) {
 					:disabled="!newPageTitle.trim()"
 					@click="handleCreatePage"
 				>
-					Create
+					{{ $t('admin.pages.create') }}
 				</Button>
 				<Button
 					variant="ghost"
 					square
-					title="Cancel"
-					aria-label="Cancel"
+					:title="$t('common.cancel')"
+					:aria-label="$t('common.cancel')"
 					data-testid="page-new-cancel"
 					@click="showNewPageInput = false"
 				>
@@ -249,34 +254,34 @@ async function handleDeletePage(page: PageSummary) {
 			/>
 			<Loading
 				v-if="!pages.loaded && !errorMessage"
-				label="Loading pages…"
+				:label="$t('admin.pages.loading')"
 			/>
 			<EmptyState
 				v-else-if="pages.loaded && !pages.items.length"
-				title="No pages yet."
-				description="Create the first page of your website."
+				:title="$t('admin.pages.empty')"
+				:description="$t('admin.pages.emptyHint')"
 			>
 				<template #action>
 					<Button
 						bg="primary"
 						@click="showNewPageInput = true"
 					>
-						+ New Page
+						{{ $t('admin.pages.new') }}
 					</Button>
 				</template>
 			</EmptyState>
 			<EmptyState
 				v-else-if="filtering && !filtered.length"
 				icon="search"
-				title="No pages match."
-				description="Try another search or filter."
+				:title="$t('admin.pages.noMatch')"
+				:description="$t('admin.pages.noMatchHint')"
 			>
 				<template #action>
 					<Button
 						variant="outline"
 						@click="reset"
 					>
-						Clear filters
+						{{ $t('admin.pages.clearFilters') }}
 					</Button>
 				</template>
 			</EmptyState>
@@ -300,12 +305,12 @@ async function handleDeletePage(page: PageSummary) {
 						:color="page.status === 'published' ? 'success' : 'secondary'"
 						class="ml-8 align-middle"
 					>
-						{{ page.status === 'published' ? 'Published' : 'Draft' }}
+						{{ page.status === 'published' ? $t('admin.status.published') : $t('admin.status.draft') }}
 					</Badge>
 					<span class="mt-2 block text-xs text-gray-400">
-						/{{ page.slug }} &middot; {{ page.blockCount }} blocks
+						/{{ page.slug }} &middot; {{ $t('admin.pages.blocks', page.blockCount) }}
 						<template v-if="page.updatedAt">
-							&middot; updated {{ new Date(page.updatedAt).toLocaleDateString() }}
+							&middot; {{ $t('admin.pages.updated', { date: format.date(page.updatedAt) }) }}
 						</template>
 					</span>
 					<span
@@ -328,8 +333,8 @@ async function handleDeletePage(page: PageSummary) {
 					square
 					:href="viewHref(page)"
 					target="_blank"
-					:title="page.status === 'published' ? 'View page' : 'Preview draft'"
-					:aria-label="page.status === 'published' ? 'View page' : 'Preview draft'"
+					:title="page.status === 'published' ? $t('admin.pages.view') : $t('admin.pages.previewDraft')"
+					:aria-label="page.status === 'published' ? $t('admin.pages.view') : $t('admin.pages.previewDraft')"
 					data-testid="page-view"
 				>
 					<Icon name="eye" />

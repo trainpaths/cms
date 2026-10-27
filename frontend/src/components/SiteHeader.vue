@@ -40,26 +40,26 @@ function onKeydown(e: KeyboardEvent) {
 			<RouterLink
 				:to="{ name: 'home' }"
 				class="flex shrink-0 items-center py-8"
-				aria-label="Home"
+				:aria-label="$t('site.home')"
 			>
 				<img
 					v-if="logo"
 					:src="logo.url"
-					:alt="logo.alt || 'Logo'"
+					:alt="logo.alt || $t('site.logo')"
 					class="max-h-40 max-w-160 object-contain"
 					data-testid="site-header-logo"
 				/>
 				<span
 					v-else
 					class="text-base font-semibold text-gray-900"
-					>Home</span
+					>{{ $t('site.home') }}</span
 				>
 			</RouterLink>
 
 			<nav
 				v-if="items.length"
 				class="hidden md:block"
-				aria-label="Main"
+				:aria-label="$t('site.mainNav')"
 				data-testid="site-nav"
 				@keydown="onKeydown"
 			>
@@ -80,7 +80,7 @@ function onKeydown(e: KeyboardEvent) {
 								v-if="item.children.length"
 								type="button"
 								class="-ml-8 cursor-pointer rounded-md border-none bg-transparent px-6 py-8 text-xs text-gray-500 hover:text-gray-900"
-								:aria-label="`${item.label} submenu`"
+								:aria-label="$t('site.submenu', { label: item.label })"
 								aria-haspopup="true"
 								data-testid="site-nav-toggle"
 							>
@@ -104,7 +104,7 @@ function onKeydown(e: KeyboardEvent) {
 				class="flex size-40 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-gray-600 hover:bg-gray-100 md:hidden"
 				:aria-expanded="open"
 				aria-controls="site-nav-mobile"
-				:aria-label="open ? 'Close menu' : 'Open menu'"
+				:aria-label="open ? $t('site.closeMenu') : $t('site.openMenu')"
 				data-testid="site-nav-burger"
 				@click="open = !open"
 			>
@@ -116,7 +116,7 @@ function onKeydown(e: KeyboardEvent) {
 			v-if="open"
 			id="site-nav-mobile"
 			class="absolute inset-x-0 top-full max-h-[calc(100vh-64px)] overflow-y-auto border-b border-gray-200 bg-white px-16 py-12 shadow-lg md:hidden"
-			aria-label="Main"
+			:aria-label="$t('site.mainNav')"
 			data-testid="site-nav-mobile"
 		>
 			<SiteNavTree :items="items" />

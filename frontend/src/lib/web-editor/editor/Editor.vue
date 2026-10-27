@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { I18nT } from 'vue-i18n'
 import { watch, onMounted, onUnmounted } from 'vue'
 import BlockList from './BlockList.vue'
 import EditorHeader from './EditorHeader.vue'
@@ -69,6 +70,7 @@ watch(
 			<span>{{ store.errorMessage }}</span>
 			<button
 				class="cursor-pointer border-none bg-transparent text-red-400 hover:text-red-600"
+				:aria-label="$t('admin.dismiss')"
 				@click="store.dismissError()"
 			>
 				&#10005;
@@ -78,7 +80,7 @@ watch(
 
 	<Loading
 		v-if="store.loading && !store.pageId"
-		label="Loading page…"
+		:label="$t('editor.loading')"
 		fullscreen
 	/>
 
@@ -102,8 +104,14 @@ watch(
 				class="font-cms m-auto max-w-400 rounded-lg border border-dashed border-gray-300 p-24 text-center text-sm text-gray-500"
 				data-testid="template-page-notice"
 			>
-				The content of this page comes from the site's template
-				<code class="text-gray-700">{{ store.pageTemplate }}</code>. You can still change its title and settings.
+				<I18nT
+					keypath="editor.templateNotice"
+					scope="global"
+				>
+					<template #template>
+						<code class="text-gray-700">{{ store.pageTemplate }}</code>
+					</template>
+				</I18nT>
 			</div>
 		</EditorLayout>
 	</div>

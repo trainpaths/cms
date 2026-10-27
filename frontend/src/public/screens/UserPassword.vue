@@ -16,6 +16,9 @@ const ready = useCustomerSession()
 			back-to="/user/profile"
 			@changed="router.push({ name: 'login' })"
 		/>
-		<Loading v-else />
+		<Loading
+			v-else
+			:label="$t('common.loading')"
+		/>
 	</div>
 </template>

@@ -1,0 +1,125 @@
+{
+	"common": {
+		"save": "Save",
+		"saving": "Saving...",
+		"cancel": "Cancel",
+		"edit": "Edit",
+		"delete": "Delete",
+		"close": "Close",
+		"loading": "Loading…",
+		"email": "Email",
+		"password": "Password",
+		"none": "—",
+		"language": "Language",
+		"logOut": "Log out",
+		"backToLogin": "Back to login",
+		"back": "Back",
+		"cannotUndo": "This cannot be undone."
+	},
+	"site": {
+		"home": "Home",
+		"logo": "Logo",
+		"mainNav": "Main",
+		"submenu": "{label} submenu",
+		"openMenu": "Open menu",
+		"closeMenu": "Close menu",
+		"account": "Account",
+		"legalNav": "Legal",
+		"notFound": {
+			"title": "Page not found",
+			"home": "Go to homepage"
+		},
+		"adminBar": {
+			"admin": "Admin"
+		}
+	},
+	"screens": {
+		"login": {
+			"title": "Log in",
+			"heading": "Login",
+			"submit": "Log in",
+			"submitting": "Logging in...",
+			"noAccount": "Don't have an account?",
+			"register": "Register",
+			"forgot": "Forgot password?"
+		},
+		"register": {
+			"title": "Register",
+			"heading": "Register",
+			"displayName": "Display name (optional)",
+			"submit": "Register as customer",
+			"submitting": "Registering...",
+			"haveAccount": "Already have an account?",
+			"login": "Login"
+		},
+		"forgotPassword": {
+			"title": "Reset your password",
+			"sent": "If an account exists for that email, a password reset link has been sent. Check your inbox.",
+			"submit": "Send reset link",
+			"submitting": "Sending...",
+			"remembered": "Remembered it?"
+		},
+		"resetPassword": {
+			"title": "Choose a new password",
+			"missingToken": "This reset link is missing its token.",
+			"invalidLink": "This reset link is invalid or incomplete. Request a new one from {link}.",
+			"invalidLinkLink": "forgot password",
+			"done": "Password reset successfully. Redirecting to login...",
+			"submit": "Reset password",
+			"submitting": "Resetting..."
+		},
+		"verifyEmail": {
+			"title": "Email verification",
+			"pending": "Verifying your email...",
+			"done": "Your email address has been confirmed. You can now log in.",
+			"continue": "Continue to login",
+			"invalid": "This verification link is invalid or has expired.",
+			"resent": "If an account exists for that email and isn't confirmed yet, a new verification link has been sent.",
+			"resendEmail": "Email to resend verification to",
+			"submit": "Resend verification",
+			"submitting": "Sending..."
+		},
+		"profile": {
+			"title": "Profile"
+		},
+		"password": {
+			"title": "Change password"
+		}
+	},
+	"account": {
+		"loading": "Loading user info...",
+		"loadFailed": "Could not load user info.",
+		"updated": "Profile updated successfully",
+		"displayName": "Display Name",
+		"type": "Type",
+		"userType": "User Type",
+		"roles": "Roles",
+		"organization": "Organization",
+		"changePassword": "Change Password",
+		"backToProfile": "Back to Profile",
+		"currentPassword": "Current password",
+		"newPassword": "New password (min 8 characters)",
+		"confirmPassword": "Confirm new password",
+		"mismatch": "Passwords do not match",
+		"tooShort": "New password must be at least 8 characters",
+		"changed": "Password changed successfully. Please log in again.",
+		"submit": "Change Password",
+		"submitting": "Changing...",
+		"logout": "Logout"
+	},
+	"siteConfig": {
+		"fields": {
+			"firmName": "Firm name"
+		},
+		"groups": {
+			"contact": "Contact"
+		},
+		"entries": {
+			"contact": {
+				"address": "Address",
+				"phone": "Phone",
+				"email": "Email"
+			}
+		}
+	}
+}

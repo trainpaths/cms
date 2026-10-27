@@ -33,14 +33,14 @@ const marker = computed(() => (isOrdered.value ? `${itemIndex.value}.` : '\u2022
 			class="mt-2 flex-1 rounded border border-transparent px-8 py-4 text-gray-700"
 			:class="{ 'text-gray-400 italic': !text }"
 		>
-			{{ text || 'Click to add item...' }}
+			{{ text || $t('editor.listItem.empty') }}
 		</span>
 		<input
 			v-else
 			v-model="text"
 			type="text"
 			class="input-field flex-1"
-			placeholder="List item text..."
+			:placeholder="$t('editor.listItem.placeholder')"
 		/>
 	</div>
 </template>

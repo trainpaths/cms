@@ -24,7 +24,9 @@ instance owns `index.html`, `public.html`, `vite.config.ts` (`plugins: [cms()]`)
                                               ToolbarDropdown, SettingsSection, BlockList, Media*, useEditorStore, types)
 ./site             src/site.ts                public side for views/templates/overrides, no editor code (ViewBlockList,
                                               PageContent, useMediaImage, site config/menu stores, site config helpers
-                                              from lib/siteConfig.ts + SiteConfigEntry, TemplateProps, types)
+                                              from lib/siteConfig.ts + SiteConfigEntry, LanguageDropdown + LANGUAGES,
+                                              DEFAULT_LANGUAGE, IS_LOCALIZED, languageLabel, useLanguageSwitch,
+                                              TemplateProps, types)
 ./style.css        src/style.css              the CMS stylesheet (Tailwind + nb-ui theme + editor CSS + cms-* tokens)
 ./cms.config.schema.json                      JSON schema of the instance config (`"$schema"` in cms.config.json)
 ./vite             vite-plugin.js (+ .d.ts)   cms(): see below
@@ -40,7 +42,9 @@ vue + tailwind + `nbUi({ dir: 'src/overrides/ui' })` + dev SSR (`server/dev-ssr.
 `public.html` of the app root; `ssr.noExternal` (build: all, dev: this package + nb-ui); `/api` proxy to
 `VITE_API_BASE_URL` (app's envDir) or `cms({ apiTarget })`; `resolve.dedupe` vue/router/pinia; package `public/`
 files (CMS favicon) served/emitted unless the app's publicDir has them; `transformIndexHtml` sets `<html lang>` of both
-HTML files from `cms.config.json` `site.lang` (`server/site-lang.js`, read per transform so dev picks up edits);
+HTML files to the default language of `cms.config.json` `site.lang` (`server/site-lang.js`, read per transform so dev
+picks up edits), all language tags → `define` `__CMS_LANGUAGES__` (`src/i18n/languages.ts`; dev server restarts when they
+change) + vue-i18n's esm-bundler flags;
 `theme.colors` (`server/theme.js`) → `<style data-cms-theme>` with `--color-<key>` on `:root .site-theme` in both HTML
 files (outranks the instance's `.site-theme` rules) + `define` `__CMS_THEME_COLORS__` (editor palette,
 `lib/web-editor/core/colors.ts`); the dev server restarts when the palette changes (watches cms.config.json).
@@ -59,10 +63,43 @@ files (outranks the instance's `.site-theme` rules) + `define` `__CMS_THEME_COLO
   new tokens in `@theme`. Editor chrome inside the canvas uses `ring-cms-primary` / `bg-cms-primary` / `font-cms`
   (`--color-cms-primary`/`--font-cms` resolve at :root, before the `.site-theme` override) to keep the admin look.
 - Tailwind: `src/style.css` `@source`s the package (`.`, minus `api/`); the app root is auto-scanned.
+- `src/locales/<code>.json` — UI strings deep-merged over the package's (`src/i18n/index.ts`, root-relative glob):
+  reword package strings, add the instance's own, or a language the package doesn't ship. See Localization below.
 - Instance config (`cms.config.json`): only the API reads it at runtime (`site.lang`: `cms()` sets `<html lang>` of
-  index.html + public.html at build time, `server/site-lang.js`, invalid tag fails the build); the admin loads `/api/public/instance`
+  index.html + public.html + the language list at build time, `server/site-lang.js`, invalid config fails the build); the admin loads `/api/public/instance`
   (`stores/instance.ts`, in `createAdmin()`): `excludedBlocks` (`isOffered(name)`, used by `Inserter.vue` / `BlockInserterSidebar.vue`). Locked/template/editable page flags
   come with `PageSummary`/`PageDetail` (slug + delete disabled, non-editable → notice instead of the canvas).
+
+## Localization (`src/i18n/`, `src/locales/`; why: ARCHITECTURE.md → Localization)
+```
+i18n/languages.ts   LANGUAGES [{code, tag}] (default first, from __CMS_LANGUAGES__; ['en'] without), DEFAULT_LANGUAGE,
+                    IS_LOCALIZED, codeOf, languageOf(code) (configured or default), languageLabel(code) (endonym via
+                    Intl.DisplayNames, capitalized), LANG_COOKIE 'cms_lang', langFromCookie, rememberLanguage (1 year,
+                    SameSite=Lax, not HttpOnly). No vue-i18n: shared plain data
+i18n/index.ts       createCmsI18n(lang): vue-i18n (legacy false), public messages of every language (eager), fallback en;
+                    loadAdminMessages(i18n, code) (lazy admin chunk + en, once per code); messages are deep-copied per
+                    instance (vue-i18n broke on shared JSON module objects); LANGUAGE_SWITCH inject key +
+                    useLanguageSwitch() ({current, languages, change}); useFormat() (date/dateTime/time/number in the
+                    current tag); translate()/setStoreTranslate (stores: createAdmin registers the admin i18n)
+i18n/siteConfigLabels.ts  useConfiguredLabel(key, fallback) (message if it exists and its English text still equals
+                    the configured label), useConfigLabels (siteConfig.fields/groups/entries), useBlockLabels
+                    (blocks.<name>.title/description)
+locales/public/<code>.json   common.*, site.*, screens.*, account.*, siteConfig.* (public app + admin)
+locales/admin/<code>.json    admin.*, editor.*, blocks.* (admin only); en/de/fr/it, same keys (i18n.test.ts checks)
+components/LanguageDropdown.vue  nb-ui Dropdown of useLanguageSwitch().languages (nothing when < 2); trigger only during
+                    SSR/hydration (Popover isn't SSR-safe); admin: AppNav (sidebar head + mobile bar), AdminLogin
+components/UnsavedDialog.vue     translated copy of nb-ui's UnsavedChangesDialog (Menus, Configuration)
+```
+- Admin (`createAdmin`): language = `cms_lang` cookie else default, `<html lang>` set at runtime, switch = load the
+  admin chunk, set locale + cookie (no reload). Public app (`createPublicApp`): default language until Phase 2
+  (per-language URLs); its switch lists only that language, so the dropdown renders nothing there yet.
+- Writing UI text: `$t('key')` in templates, `const { t } = useI18n()` in setup, `<I18nT keypath scope="global">`
+  for sentences with links/markup, `t(key, n)` with `'{n} one | {n} many'` plurals. Add the key to all four
+  `locales/*/<code>.json` (Vitest fails otherwise); German is Swiss: "ss", never "ß". Keep English wording stable:
+  e2e selects by text. `@`, `|`, `{`, `}` are message syntax (`{'@'}`). Dates/numbers via `useFormat()`.
+- nb-ui texts without props stay English (aria "Close"); pass `label`/`cancelText`/`confirmText` where props exist
+  (`Loading`, `Dropdown`, `TagInput`, `ProgressBar`, every `confirm()`).
+- Not translated: API error messages (ProblemDetails `detail`, English), `api-error.ts`/`backupUpload.ts` client errors.
 
 ## Public site (`src/public/`, `server/`)
 ```
@@ -98,7 +135,8 @@ render.test.ts      Vitest: render output, escaping, screens (vitest.config.ts: 
 server/render-server.js  renderer service: POST /render, GET /version (hash of template + SSR bundle), /health; reads
                          dist/public.html + dist-ssr/entry-server.js from the working directory (= instance app root)
 server/template.js       splice(): fills public.html placeholders (function replacers: content may contain `$&`); types in .d.ts
-server/site-lang.js      build time, part of cms(): parseConfig (JSONC), site.lang (validated) → <html lang>
+server/site-lang.js      build time, part of cms(): parseConfig (JSONC), site.lang → language tags (validated like the
+                         API: tags, unique codes) → <html lang> (default) + __CMS_LANGUAGES__
 server/theme.js          build time, part of cms(): theme.colors (validated like the API) → themeStyle <style> + palette
 server/dev-ssr.js        part of cms(): dev server-renders published pages + customer screens via the app's
                          /src/entry-server.ts (one `/api/public/state[/{slug}]` fetch, screens also `/api/public/instance`

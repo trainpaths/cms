@@ -1,0 +1,442 @@
+{
+	"admin": {
+		"nav": {
+			"label": "Admin",
+			"dashboard": "Dashboard",
+			"pages": "Pages",
+			"menus": "Menus",
+			"media": "Media",
+			"configuration": "Configuration",
+			"user": "User"
+		},
+		"dashboard": {
+			"welcome": "Welcome, {name}!",
+			"logOut": "Log Out",
+			"goToPages": "Go to Pages",
+			"pagesHint": "Create, edit and publish the pages of your website."
+		},
+		"login": {
+			"heading": "Admin Login"
+		},
+		"preview": {
+			"label": "Preview",
+			"draft": "Preview of an unpublished draft",
+			"back": "Back to editor",
+			"notFound": "Page not found.",
+			"loading": "Loading preview…"
+		},
+		"backups": {
+			"tab": "Backups",
+			"loadFailed": "Failed to load backups",
+			"manage": "Manage backups",
+			"schedule": "Schedule",
+			"nextRun": "Next run",
+			"lastRun": "Last run",
+			"keeps": "Keeps",
+			"keepsValue": "last {n} automatic",
+			"saved": "Saved",
+			"count": "{n} backup | {n} backups",
+			"countDetail": "{auto} automatic, {size}",
+			"latest": "Latest",
+			"freeSpace": "Free space",
+			"lastFailed": "Last automatic backup failed: {error}",
+			"intervals": {
+				"off": "Off",
+				"daily": "Daily",
+				"weekly": "Weekly",
+				"biweekly": "Every 2 weeks",
+				"monthly": "Monthly"
+			},
+			"summaryWeekday": "{interval} on {day}, {time} UTC",
+			"summaryMonthDay": "{interval} on day {day}, {time} UTC",
+			"summaryDaily": "{interval}, {time} UTC",
+			"kinds": {
+				"auto": "Automatic",
+				"manual": "Manual",
+				"preRestore": "Before restore",
+				"upload": "Uploaded"
+			},
+			"scheduleSaved": "Backup schedule saved",
+			"scheduleFailed": "Failed to save the schedule",
+			"created": "Backup {name} created",
+			"createFailed": "Backup failed",
+			"tooLarge": "The file is larger than {size}.",
+			"uploaded": "Uploaded as {name}. Restore it from the list.",
+			"uploadFailed": "Upload failed",
+			"downloadFailed": "Download failed",
+			"deleteTitle": "Delete {name}?",
+			"deleteHint": "The archive is removed from the backup folder. This cannot be undone.",
+			"deleteFailed": "Failed to delete the backup",
+			"restoreTitle": "Restore {name}?",
+			"restoreHint": "Everything is replaced with the state of {date}: pages, media, menus, configuration and staff accounts. Everyone is signed out. A backup of the current state is made first, so this can be undone by restoring that one.",
+			"restore": "Restore",
+			"restored": "Backup restored (previous state saved as {name}). Sign in again.",
+			"restoreFailed": "Restore failed",
+			"loading": "Loading backups...",
+			"restoring": "Restoring {name}. The site is unavailable until it finishes; don't close this page.",
+			"automatic": "Automatic backups",
+			"interval": "Interval",
+			"weekday": "Day (UTC)",
+			"biweeklyHint": "Starts on the first one after saving",
+			"dayOfMonth": "Day of the month (UTC)",
+			"time": "Time (UTC)",
+			"localTime": "{time} your time",
+			"retention": "Keep automatic backups",
+			"retentionHint": "Older automatic backups are deleted; manual and uploaded ones are kept.",
+			"saveSchedule": "Save schedule",
+			"storage": "Storage",
+			"folder": "Folder",
+			"noFolder": "Developer has not set backup folder",
+			"storageHint": "The folder is set by the server's Docker setup and can't be changed here. Copy archives off the server (download them, or sync the folder) to keep them safe from a disk failure. Backups are deleted after {years} years.",
+			"now": "Back up now",
+			"uploadHint": "Add a backup archive (.tar.gz) from another server or an earlier download",
+			"upload": "Upload backup",
+			"uploading": "Uploading backup",
+			"empty": "No backups yet",
+			"emptyHint": "Back up now, or turn on automatic backups above.",
+			"mediaFiles": "{n} media file | {n} media files",
+			"download": "Download",
+			"downloadName": "Download {name}",
+			"deleteName": "Delete {name}"
+		},
+		"status": {
+			"published": "Published",
+			"draft": "Draft"
+		},
+		"pages": {
+			"loadFailed": "Failed to load pages",
+			"createFailed": "Failed to create page",
+			"importFailed": "Failed to import page",
+			"exportFailed": "Failed to export page",
+			"duplicateFailed": "Failed to duplicate page",
+			"deleteFailed": "Failed to delete page",
+			"saveFailed": "Failed to save page",
+			"imported": "Imported as draft /{slug}",
+			"importedMissing": "Imported as draft /{slug}; {count} image not found in the media library | Imported as draft /{slug}; {count} images not found in the media library",
+			"duplicated": "Duplicated as draft /{slug}",
+			"duplicate": "Duplicate",
+			"export": "Export",
+			"lockedDelete": "Part of the site configuration, can't be deleted",
+			"deleteTitle": "Delete \"{title}\"?",
+			"all": "All pages",
+			"new": "+ New Page",
+			"importHint": "Create a draft page from an exported page file (.json)",
+			"importLabel": "Import page",
+			"import": "Import",
+			"titlePlaceholder": "Page title...",
+			"titleLabel": "Page title",
+			"create": "Create",
+			"loading": "Loading pages…",
+			"empty": "No pages yet.",
+			"emptyHint": "Create the first page of your website.",
+			"noMatch": "No pages match.",
+			"noMatchHint": "Try another search or filter.",
+			"clearFilters": "Clear filters",
+			"blocks": "{n} block | {n} blocks",
+			"updated": "updated {date}",
+			"view": "View page",
+			"previewDraft": "Preview draft",
+			"slugRule": "Lowercase letters, digits and single hyphens (max. 100).",
+			"slug": "Slug",
+			"lockedSlug": "Fixed by the site configuration",
+			"liveAt": "Live at /{slug}",
+			"draftHint": "Draft: only staff can see it",
+			"tags": "Tags"
+		},
+		"pageExport": {
+			"invalidJson": "The file is not valid JSON.",
+			"notExport": "The file is not a page export.",
+			"newer": "The file was exported by a newer CMS version.",
+			"incomplete": "The page export is incomplete (title or blocks missing)."
+		},
+		"actions": "Actions",
+		"filters": {
+			"allTags": "All tags",
+			"allStatuses": "All statuses",
+			"notPublished": "Not published",
+			"searchPlaceholder": "Search pages…",
+			"search": "Search pages",
+			"byTag": "Filter by tag",
+			"byStatus": "Filter by status",
+			"newestFirst": "Newest updated first",
+			"oldestFirst": "Oldest updated first",
+			"sortedNewest": "Sorted by last update, newest first. Click to reverse.",
+			"sortedOldest": "Sorted by last update, oldest first. Click to reverse."
+		},
+		"dismiss": "Dismiss",
+		"unsavedChanges": "Unsaved changes",
+		"moveUp": "Move up",
+		"moveDown": "Move down",
+		"unsaved": {
+			"title": "Do you want to save the changes?",
+			"lost": "Your changes will be lost if you don’t save them.",
+			"blocked": "Fix the highlighted fields to save.",
+			"discard": "Don’t save"
+		},
+		"menus": {
+			"badUrl": "Enter a path like /about or an http(s) URL.",
+			"labelRequired": "Label is required.",
+			"saved": "Menu saved",
+			"saveFailed": "Failed to save menu",
+			"createFailed": "Failed to create menu",
+			"deleteFailed": "Failed to delete menu",
+			"deleteTitle": "Delete the menu \"{handle}\"?",
+			"intro": "Groups of links for your website. The {main} is the navigation at the top of every public page.",
+			"mainMenu": "main menu",
+			"loadFailed": "Failed to load menus.",
+			"loading": "Loading menus…",
+			"main": "Main",
+			"handlePlaceholder": "e.g. footer",
+			"newHandle": "New menu handle",
+			"savedAs": "Saved as {handle}",
+			"new": "+ New menu",
+			"handleHint": "Handle: the site code loads the menu by it, so it can't change",
+			"addItem": "+ Add item",
+			"delete": "Delete menu",
+			"dragHint": "Drag rows by the handle or pages from the list: onto a line to place it there, onto the middle of an item to nest it inside. Items without a link group their children.",
+			"publishedPages": "Published pages",
+			"noPages": "No published pages match.",
+			"pickerHint": "Drag into the menu or click +",
+			"inMenu": "Already in this menu",
+			"addPage": "Add {title} to the menu",
+			"empty": "No items yet. Add an item or drag pages here from the list.",
+			"dragToMove": "Drag to move",
+			"label": "Label",
+			"linkPlaceholder": "Link (optional)",
+			"link": "Link",
+			"draftHint": "Draft pages are left out of the public menu",
+			"pageDeleted": "Page deleted",
+			"outdent": "Outdent",
+			"indent": "Indent into previous item",
+			"removeTree": "Remove item and its children",
+			"remove": "Remove item"
+		},
+		"remove": "Remove",
+		"config": {
+			"noneSelected": "None selected",
+			"types": {
+				"text": "Text",
+				"email": "Email",
+				"phone": "Phone",
+				"link": "Link",
+				"address": "Address"
+			},
+			"placeholders": {
+				"text": "Value",
+				"phone": "+49 123 456789"
+			},
+			"address": {
+				"street": "Street and number",
+				"postalCode": "Postal code",
+				"city": "City",
+				"country": "Country"
+			},
+			"entryNamePlaceholder": "Name, e.g. Fax",
+			"entryName": "Entry name",
+			"entryType": "Entry type",
+			"entryValue": "Entry value",
+			"requiredEntry": "Required by this site",
+			"removeEntry": "Remove entry",
+			"required": "Required.",
+			"nameRequired": "Name is required.",
+			"nameTwice": "Name is used twice.",
+			"saved": "Configuration saved",
+			"saveFailed": "Failed to save configuration",
+			"intro": "Information about your website, used on its public pages.",
+			"loadFailed": "Failed to load configuration.",
+			"loading": "Loading configuration…",
+			"noEntries": "No entries yet.",
+			"addCustom": "+ Custom entry",
+			"logo": "Logo",
+			"logoHint": "Shown in the footer and navigation of the website. PNG/WebP work best.",
+			"icon": "Icon",
+			"iconHint": "Browser tab icon of the website. Square PNG.",
+			"shareImage": "Share image",
+			"shareImageHint": "Link previews (WhatsApp, Slack...) of pages without an image of their own. 1200×630 works best."
+		},
+		"media": {
+			"loadFailed": "Failed to load media",
+			"saveFailed": "Failed to save changes",
+			"deleteFailed": "Failed to delete media",
+			"deleteTitle": "Delete \"{name}\"?",
+			"deleteHint": "Pages using it will no longer show the image.",
+			"uploadNew": "+ Upload new",
+			"types": "JPEG, PNG, GIF, WebP or AVIF, up to 10 MB.",
+			"loading": "Loading media…",
+			"empty": "No media yet.",
+			"type": "Type",
+			"size": "Size",
+			"uploaded": "Uploaded",
+			"name": "Name",
+			"alt": "Alt text",
+			"altPlaceholder": "Describe the image…"
+		}
+	},
+	"editor": {
+		"publish": {
+			"publish": "Publish",
+			"changes": "Publish changes",
+			"saveFirst": "Save first",
+			"noChanges": "No changes to publish",
+			"pending": "Published · unpublished changes",
+			"title": "Publish this page?",
+			"changesTitle": "Publish changes?",
+			"message": "Visitors at /{slug} will see the saved version.",
+			"unpublishTitle": "Unpublish this page?",
+			"unpublishMessage": "Visitors at /{slug} get \"page not found\" until you publish again.",
+			"unpublish": "Unpublish"
+		},
+		"header": {
+			"leftSidebarHint": "Toggle left sidebar (blocks, outline)",
+			"leftSidebar": "Toggle left sidebar",
+			"undo": "Undo (Ctrl+Z)",
+			"redo": "Redo (Ctrl+Shift+Z)",
+			"saved": "Saved",
+			"saveHint": "Save (Ctrl+S)",
+			"noChanges": "No unsaved changes",
+			"rightSidebar": "Toggle settings sidebar"
+		},
+		"page": {
+			"section": "Page",
+			"title": "Title",
+			"slugLocked": "Fixed by the site configuration.",
+			"slugRule": "Lowercase letters, digits and hyphens.",
+			"servedAt": "Published pages are served at {path}.",
+			"seo": "Search & sharing",
+			"metaTitle": "Meta title",
+			"tab": "Tab: {title}",
+			"metaDescription": "Meta description",
+			"metaDescriptionHint": "Search results and link previews; empty = the first paragraph.",
+			"status": "Status",
+			"statusHint": "Saving never publishes: visitors see the last published version.",
+			"downloadJson": "Download JSON",
+			"exportHint": "A copy of this page. Import it on the Pages list to create a new draft."
+		},
+		"loading": "Loading page…",
+		"templateNotice": "The content of this page comes from the site's template {template}. You can still change its title and settings.",
+		"tabs": {
+			"block": "Block",
+			"page": "Page",
+			"blocks": "Blocks",
+			"outline": "Outline"
+		},
+		"width": {
+			"title": "Width",
+			"default": "Default",
+			"wide": "Wide",
+			"full": "Full"
+		},
+		"backgroundColor": "Background Color",
+		"textColor": "Text Color",
+		"noSettings": "No settings available for this block",
+		"noSelection": "No block selected",
+		"closeSidebar": "Close sidebar",
+		"colorNone": "None",
+		"noColors": "No theme colours set up for this site.",
+		"outlineEmpty": "No blocks yet.",
+		"collapse": "Collapse",
+		"expand": "Expand",
+		"emptyPage": "Start adding blocks from the sidebar",
+		"searchBlocks": "Search blocks...",
+		"categories": {
+			"text": "Text",
+			"media": "Media",
+			"containers": "Containers",
+			"embeds": "Embeds"
+		},
+		"insertHint": "Click or drag to add {title}",
+		"noBlocksFound": "No blocks found",
+		"heading": {
+			"level": "Heading {n}",
+			"levelTitle": "Heading level",
+			"placeholder": "Click to add heading...",
+			"levelSection": "Level"
+		},
+		"align": {
+			"title": "Alignment",
+			"left": "Align left",
+			"center": "Align center",
+			"right": "Align right"
+		},
+		"paragraph": {
+			"placeholder": "Click to add text..."
+		},
+		"list": {
+			"bullet": "Bullet",
+			"numbered": "Numbered",
+			"type": "List type"
+		},
+		"listItem": {
+			"empty": "Click to add item...",
+			"placeholder": "List item text..."
+		},
+		"link": {
+			"placeholder": "Click to add link...",
+			"url": "URL"
+		},
+		"image": {
+			"widthShort": "W",
+			"failed": "Image failed to load",
+			"deleted": "This image was deleted from the media library",
+			"add": "Add an image",
+			"caption": "Add caption...",
+			"widthPercent": "Width (%)",
+			"widthSlider": "Width slider"
+		},
+		"card": {
+			"addImage": "Add an image (optional)",
+			"title": "Click to add title...",
+			"description": "Add description...",
+			"content": "Content"
+		},
+		"media": {
+			"uploading": "Uploading…",
+			"replace": "Replace",
+			"choose": "Choose existing",
+			"altFailed": "Failed to save alt text",
+			"deleted": "This image was deleted from the media library.",
+			"remove": "Remove image",
+			"upload": "Upload new",
+			"pickerTitle": "Choose media",
+			"pickerEmpty": "No media yet. Upload an image to get started.",
+			"noAlt": "No alt text"
+		},
+		"errors": {
+			"load": "Failed to load page",
+			"slug": "Failed to update slug",
+			"tags": "Failed to save tags",
+			"publish": "Failed to publish page",
+			"unpublish": "Failed to unpublish page"
+		}
+	},
+	"blocks": {
+		"card": {
+			"title": "Card",
+			"description": "Group content in a card"
+		},
+		"heading": {
+			"title": "Heading",
+			"description": "Add a heading"
+		},
+		"image": {
+			"title": "Image",
+			"description": "Insert an image"
+		},
+		"link": {
+			"title": "Link",
+			"description": "Add a link"
+		},
+		"list-item": {
+			"title": "List Item",
+			"description": "Add an item to a list"
+		},
+		"list": {
+			"title": "List",
+			"description": "Create a bulleted or numbered list"
+		},
+		"paragraph": {
+			"title": "Paragraph",
+			"description": "Add a block of text"
+		}
+	}
+}

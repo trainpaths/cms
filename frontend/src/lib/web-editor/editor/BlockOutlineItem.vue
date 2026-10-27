@@ -6,10 +6,12 @@ import { getBlockType } from '../core/blockRegistry'
 import type { BlockInstance } from '../core/types'
 import { outlineKey } from './outline'
 import { scrollBlockIntoView } from './scrollBlockIntoView'
+import { useBlockLabels } from '../../../i18n/siteConfigLabels'
 
 const props = defineProps<{ block: BlockInstance }>()
 
 const store = useEditorStore()
+const blockLabels = useBlockLabels()
 const outline = inject(outlineKey)!
 
 const type = computed(() => getBlockType(props.block.name))
@@ -42,7 +44,7 @@ async function select() {
 				type="button"
 				class="flex size-20 shrink-0 cursor-pointer items-center justify-center rounded border-none bg-transparent p-0 text-gray-400 hover:text-gray-700"
 				:aria-expanded="expanded"
-				:aria-label="expanded ? 'Collapse' : 'Expand'"
+				:aria-label="expanded ? $t('editor.collapse') : $t('editor.expand')"
 				@click="outline.toggle(block.id)"
 			>
 				<Icon name="chevron" :size="12" :rotate="expanded ? 270 : 180" class="transition-transform" />
@@ -66,7 +68,7 @@ async function select() {
 						class="h-full w-full"
 					/>
 				</span>
-				<span class="shrink-0 text-sm font-medium">{{ type?.title ?? block.name }}</span>
+				<span class="shrink-0 text-sm font-medium">{{ type ? blockLabels.title(type) : block.name }}</span>
 				<span
 					v-if="snippet"
 					class="min-w-0 truncate text-xs text-gray-400"

@@ -20,8 +20,8 @@ public auth, but shouldn't own (or fork) the whole CMS. So this repo is a **fram
   names: only SiteHeader, SiteFooter, NotFound, PageContent, block Edit/View and nb-ui components count as stable
   (renames there = major version). Instance code imports `@trainpaths/cms/editor` (edit side) / `/site` (views).
 - **Instance config** `cms.config.json` (`publicAuth`, `blocks.exclude`, `pages`), validated strictly on API start.
-  The API is its only runtime reader (no frontend/backend default drift; `site.lang` is the one key the `cms()`
-  Vite plugin applies at build time); the admin reads `/api/public/instance`. Pages it
+  The API is its only runtime reader (no frontend/backend default drift; `site.lang` and `theme.colors` are the keys
+  the `cms()` Vite plugin applies at build time); the admin reads `/api/public/instance`. Pages it
   declares are seeded; their flags (template, locked, editable, footer) are **looked up by slug, not stored**: no
   migration, and dropping a page from the config just unlocks it. Locked (or template) = fixed slug, undeletable,
   re-seeded when missing. Templates render the page in the public app instead of the default layout and can read the
@@ -277,10 +277,38 @@ staff save ─► API IRenderQueue ─► RenderWorker ─POST /render─► ren
 - No renderer configured (`Renderer:BaseUrl` empty, e.g. tests) → everything falls back to the shell.
 - **Site meta** (`src/public/head.ts`): document title "{page meta title} - {firm name}", the firm name alone without
   a meta title (no firm name: meta title, then page title); description = page meta description, else the first
-  paragraph; og:site_name = firm name; og:image = first image, else the site's share image; `<html lang>` = instance
-  `site.lang`, written into index.html + public.html at build time by `cms()` (a static value: no runtime plumbing).
+  paragraph; og:site_name = firm name; og:image = first image, else the site's share image; `<html lang>` = the
+  default language of `site.lang`, written into index.html + public.html at build time by `cms()` (see Localization).
 - Dev: `pnpm dev` server-renders public pages and customer screens itself (`frontend/server/dev-ssr.js`, Vite `ssrLoadModule`), so
   hydration mismatches show up in development; the renderer container isn't needed.
+
+## Localization (issue #45)
+Sites need several languages (Swiss clients: de, fr, it + en), in the admin and on the public site.
+- **Config**: `site.lang` = a tag (one language) or `{ default, localization: [tags] }`. A language's **code** = its
+  primary subtag, unique per site: URL prefix, `cms_lang` cookie, message file, key of stored translations (survives
+  `de-CH` → `de-DE`). The **tag** goes into `<html lang>`, `hreflang` and `Intl` formats. Validated by the API
+  (`CmsConfigLoader`: tags, unique codes, codes not a reserved/configured slug) and `cms()` (`server/site-lang.js`).
+- **Languages reach the frontend at build time** (`__CMS_LANGUAGES__`, `src/i18n/languages.ts`) like the palette: the
+  public SSR needs them without a request, and `<html lang>` was build-time already. The API still reads the same file
+  (Phase 2 routing/rendering), so both read one source.
+- **UI strings**: vue-i18n (Composition API), messages per code in `src/locales/public/` (eager: both apps, the server
+  render can't wait for a chunk) and `src/locales/admin/` (lazy chunk per language), English = source + fallback;
+  the instance's `src/locales/<code>.json` is deep-merged over both. One i18n instance per app (per server render).
+  Names that come from config in English (block titles, site config labels) are translated by key unless the config
+  renamed them (`i18n/siteConfigLabels.ts`). Pinia stores translate through `translate()`, registered by `createAdmin()`.
+- **Admin language** = the `cms_lang` cookie (written by `LanguageDropdown`, not HttpOnly) else the default; switching
+  swaps the strings in place. One cookie for admin and public site ("same setting"): no DB column, no API call.
+- **Public site (planned, Phase 2)**: language prefix with the code, default unprefixed (`/about`, `/de/about`), one
+  stored HTML per page and language (`rendered_pages` key `(PageId, Lang)`), `hreflang` alternates; an unprefixed URL
+  with a `cms_lang` cookie for another language redirects. Rejected: same URL by cookie/`Accept-Language` (crawlers and
+  link previews only ever see one language) and client-side text swapping (wrong language flashes, no SEO, hydration
+  mismatches). Storage: a few KB per page and language; a full re-render takes N× longer.
+- **Content (planned, Phase 3)**: per-field translations on one shared block tree (`translations: { code: { attr } }`
+  per block, opt-in `translatable` attributes, page title/meta per language), resolved by the API for public reads;
+  layout, images and colours stay shared. Phase 4: DeepL pre-fill of missing fields (`DEEPL_API_KEY`).
+- nb-ui has no message hook: its built-in texts are English (`UnsavedChangesDialog` → our `components/UnsavedDialog.vue`;
+  aria-labels like "Close" stay English) and its `Popover` touches `document` in setup, so `LanguageDropdown` server-renders
+  only its trigger.
 
 ## Limits
 - Global request body cap is 64 KB (Kestrel). Page writes raise it to **2 MB** via

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Button, Input, Select } from '@trainpaths/nb-ui'
+import { useI18n } from 'vue-i18n'
 import type { PageSort, PageStatusFilter } from '../composables/usePageFilter'
 
 /**
@@ -14,12 +15,13 @@ const sort = defineModel<PageSort>('sort', { required: true })
 const status = defineModel<PageStatusFilter>('status')
 
 // '' = no tag filter, a real option (Select's placeholder is unselectable)
-const tagOptions = computed(() => [{ value: '', label: 'All tags' }, ...props.tags])
-const statusOptions: { value: PageStatusFilter; label: string }[] = [
-	{ value: '', label: 'All statuses' },
-	{ value: 'published', label: 'Published' },
-	{ value: 'draft', label: 'Not published' },
-]
+const { t } = useI18n()
+const tagOptions = computed(() => [{ value: '', label: t('admin.filters.allTags') }, ...props.tags])
+const statusOptions = computed<{ value: PageStatusFilter; label: string }[]>(() => [
+	{ value: '', label: t('admin.filters.allStatuses') },
+	{ value: 'published', label: t('admin.status.published') },
+	{ value: 'draft', label: t('admin.filters.notPublished') },
+])
 </script>
 
 <template>
@@ -33,8 +35,8 @@ const statusOptions: { value: PageStatusFilter; label: string }[] = [
 			type="search"
 			class="min-w-0"
 			:class="compact ? 'w-full' : 'min-w-160 flex-1'"
-			placeholder="Search pages…"
-			aria-label="Search pages"
+			:placeholder="$t('admin.filters.searchPlaceholder')"
+			:aria-label="$t('admin.filters.search')"
 			data-testid="page-filter-search"
 		/>
 		<div class="flex gap-8">
@@ -43,7 +45,7 @@ const statusOptions: { value: PageStatusFilter; label: string }[] = [
 				:options="tagOptions"
 				class="min-w-0 flex-1"
 				:class="{ 'min-w-110 sm:min-w-160': !compact }"
-				aria-label="Filter by tag"
+				:aria-label="$t('admin.filters.byTag')"
 				data-testid="page-filter-tag"
 			/>
 			<Select
@@ -52,7 +54,7 @@ const statusOptions: { value: PageStatusFilter; label: string }[] = [
 				:options="statusOptions"
 				class="min-w-0 flex-1"
 				:class="{ 'min-w-100 sm:min-w-160': !compact }"
-				aria-label="Filter by status"
+				:aria-label="$t('admin.filters.byStatus')"
 				data-testid="page-filter-status"
 			/>
 			<!-- sort by updatedAt: clock + arrow, down = newest first, up = oldest first -->
@@ -60,8 +62,8 @@ const statusOptions: { value: PageStatusFilter; label: string }[] = [
 				variant="outline"
 				square
 				class="shrink-0"
-				:title="sort === 'updated-desc' ? 'Newest updated first' : 'Oldest updated first'"
-				:aria-label="`Sorted by last update, ${sort === 'updated-desc' ? 'newest' : 'oldest'} first. Click to reverse.`"
+				:title="sort === 'updated-desc' ? $t('admin.filters.newestFirst') : $t('admin.filters.oldestFirst')"
+				:aria-label="sort === 'updated-desc' ? $t('admin.filters.sortedNewest') : $t('admin.filters.sortedOldest')"
 				:data-sort="sort"
 				data-testid="page-filter-sort"
 				@click="sort = sort === 'updated-desc' ? 'updated-asc' : 'updated-desc'"

@@ -5,10 +5,12 @@ import MediaGrid from './MediaGrid.vue'
 import MediaUploadButton from './MediaUploadButton.vue'
 import { useMediaStore } from '../../../stores/media'
 import { Loading } from '@trainpaths/nb-ui'
+import { useI18n } from 'vue-i18n'
 
 const emit = defineEmits<{ select: [item: MediaItem]; close: [] }>()
 
 const media = useMediaStore()
+const { t } = useI18n()
 const error = ref<string | null>(null)
 const dialog = ref<HTMLElement | null>(null)
 
@@ -18,7 +20,7 @@ onMounted(async () => {
 		// once per session: the store keeps the list current on upload/update/remove (Media view = explicit refresh)
 		await media.load()
 	} catch {
-		error.value = 'Failed to load media'
+		error.value = t('admin.media.loadFailed')
 	}
 })
 
@@ -45,13 +47,13 @@ function pick(item: MediaItem) {
 				ref="dialog"
 				role="dialog"
 				aria-modal="true"
-				aria-label="Choose media"
+				:aria-label="$t('editor.media.pickerTitle')"
 				tabindex="-1"
 				class="flex max-h-[80vh] w-full max-w-3xl flex-col rounded-lg bg-white shadow-xl outline-hidden"
 				data-testid="media-picker"
 			>
 				<div class="flex items-center justify-between border-b border-gray-200 px-16 py-12">
-					<h2 class="m-0 text-base font-semibold text-gray-900">Choose media</h2>
+					<h2 class="m-0 text-base font-semibold text-gray-900">{{ $t('editor.media.pickerTitle') }}</h2>
 					<div class="flex items-center gap-8">
 						<MediaUploadButton
 							@uploaded="pick"
@@ -60,7 +62,7 @@ function pick(item: MediaItem) {
 						<button
 							type="button"
 							class="cursor-pointer rounded border-none bg-transparent px-8 py-4 text-gray-400 hover:text-gray-700"
-							aria-label="Close"
+							:aria-label="$t('common.close')"
 							@click="emit('close')"
 						>
 							&#10005;
@@ -74,12 +76,15 @@ function pick(item: MediaItem) {
 					{{ error }}
 				</p>
 				<div class="scrollbar-thin overflow-y-auto p-16">
-					<Loading v-if="media.loading && !media.items.length" />
+					<Loading
+						v-if="media.loading && !media.items.length"
+						:label="$t('common.loading')"
+					/>
 					<p
 						v-else-if="!media.items.length"
 						class="text-sm text-gray-400"
 					>
-						No media yet. Upload an image to get started.
+						{{ $t('editor.media.pickerEmpty') }}
 					</p>
 					<MediaGrid
 						v-else

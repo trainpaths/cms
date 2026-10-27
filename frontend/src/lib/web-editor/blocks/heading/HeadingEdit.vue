@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import InlineToolbar from '../../editor/InlineToolbar.vue'
 import ToolbarDropdown from '../../editor/ToolbarDropdown.vue'
 import type { BlockInstance } from '../../core/types'
@@ -8,6 +9,7 @@ import { useSelection } from '../../composables/useSelection'
 
 const props = defineProps<{ block: BlockInstance }>()
 const store = useEditorStore()
+const { t } = useI18n()
 const { isSelected } = useSelection()
 
 const selected = computed(() => isSelected(props.block.id))
@@ -22,7 +24,7 @@ const level = computed({
 	set: (value: number) => store.updateBlockAttributes(props.block.id, { level: value }),
 })
 
-const levelOptions = [1, 2, 3, 4, 5, 6].map((n) => ({ value: n, label: `Heading ${n}` }))
+const levelOptions = computed(() => [1, 2, 3, 4, 5, 6].map((n) => ({ value: n, label: t('editor.heading.level', { n }) })))
 
 const headingSizes: Record<number, string> = {
 	1: 'text-4xl',
@@ -44,7 +46,7 @@ const colorClass = computed(() => (props.block.attributes.textColor ? '' : 'text
 			<ToolbarDropdown
 				v-model="level"
 				:options="levelOptions"
-				title="Heading level"
+				:title="$t('editor.heading.levelTitle')"
 			>
 				<template #default="{ value }">H{{ value }}</template>
 			</ToolbarDropdown>
@@ -55,7 +57,7 @@ const colorClass = computed(() => (props.block.attributes.textColor ? '' : 'text
 			type="text"
 			class="m-0 w-full border-none bg-transparent p-0 font-bold outline-hidden placeholder:font-normal placeholder:italic placeholder:text-gray-400 focus:ring-0"
 			:class="[headingSizes[level], colorClass]"
-			placeholder="Click to add heading..."
+			:placeholder="$t('editor.heading.placeholder')"
 		/>
 	</div>
 </template>

@@ -26,16 +26,13 @@ async function fetchState(): Promise<PublicState> {
 		(r) => r.data,
 		() => null,
 	)
-	const state = {
+	return {
 		slug,
 		page: fetched?.page ?? null,
 		menu: fetched?.menu ?? null,
 		config: fetched?.config ?? null,
 		baseUrl: location.origin,
 	}
-	// the shell's <head> is empty; same tags the server render puts there
-	document.head.insertAdjacentHTML('beforeend', headTags(state))
-	return state
 }
 
 /**
@@ -46,7 +43,9 @@ export async function hydratePublic(): Promise<void> {
 	client.setConfig({ baseUrl: '' })
 	const embedded = embeddedState()
 	const state = embedded ?? (await fetchState())
-	const { app, router, pinia } = createPublicApp(state, createWebHistory(), !!embedded)
+	const { app, router, pinia, i18n } = createPublicApp(state, createWebHistory(), !!embedded)
+	// the shell's <head> is empty; same tags the server render puts there
+	if (!embedded) document.head.insertAdjacentHTML('beforeend', headTags(state, i18n.global.t))
 	// bearer + refresh for the account screens, same ApiError as the admin. Session gone → customer login (staff
 	// calls here, the admin bar's logout, never refresh)
 	setupInterceptors(() => {

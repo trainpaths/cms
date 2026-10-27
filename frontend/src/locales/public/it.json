@@ -1,0 +1,125 @@
+{
+	"common": {
+		"save": "Salva",
+		"saving": "Salvataggio…",
+		"cancel": "Annulla",
+		"edit": "Modifica",
+		"delete": "Elimina",
+		"close": "Chiudi",
+		"loading": "Caricamento…",
+		"email": "E-mail",
+		"password": "Password",
+		"none": "—",
+		"language": "Lingua",
+		"logOut": "Esci",
+		"backToLogin": "Torna all’accesso",
+		"back": "Indietro",
+		"cannotUndo": "L’operazione non può essere annullata."
+	},
+	"site": {
+		"home": "Home",
+		"logo": "Logo",
+		"mainNav": "Navigazione principale",
+		"submenu": "Sottomenu {label}",
+		"openMenu": "Apri menu",
+		"closeMenu": "Chiudi menu",
+		"account": "Account",
+		"legalNav": "Note legali",
+		"notFound": {
+			"title": "Pagina non trovata",
+			"home": "Vai alla home page"
+		},
+		"adminBar": {
+			"admin": "Amministrazione"
+		}
+	},
+	"screens": {
+		"login": {
+			"title": "Accedi",
+			"heading": "Accesso",
+			"submit": "Accedi",
+			"submitting": "Accesso in corso…",
+			"noAccount": "Non hai ancora un account?",
+			"register": "Registrati",
+			"forgot": "Password dimenticata?"
+		},
+		"register": {
+			"title": "Registrazione",
+			"heading": "Registrazione",
+			"displayName": "Nome visualizzato (facoltativo)",
+			"submit": "Registrati come cliente",
+			"submitting": "Registrazione in corso…",
+			"haveAccount": "Hai già un account?",
+			"login": "Accedi"
+		},
+		"forgotPassword": {
+			"title": "Reimposta la password",
+			"sent": "Se esiste un account per questo indirizzo e-mail, è stato inviato un link per reimpostare la password. Controlla la tua casella di posta.",
+			"submit": "Invia link",
+			"submitting": "Invio in corso…",
+			"remembered": "Te la sei ricordata?"
+		},
+		"resetPassword": {
+			"title": "Scegli una nuova password",
+			"missingToken": "A questo link manca il token.",
+			"invalidLink": "Questo link non è valido o è incompleto. Richiedine uno nuovo da {link}.",
+			"invalidLinkLink": "password dimenticata",
+			"done": "Password reimpostata. Reindirizzamento all’accesso…",
+			"submit": "Reimposta password",
+			"submitting": "Reimpostazione in corso…"
+		},
+		"verifyEmail": {
+			"title": "Verifica dell’e-mail",
+			"pending": "Verifica del tuo indirizzo e-mail…",
+			"done": "Il tuo indirizzo e-mail è stato confermato. Ora puoi accedere.",
+			"continue": "Continua all’accesso",
+			"invalid": "Questo link di verifica non è valido o è scaduto.",
+			"resent": "Se esiste un account non ancora confermato per questo indirizzo e-mail, è stato inviato un nuovo link di verifica.",
+			"resendEmail": "E-mail a cui inviare di nuovo la verifica",
+			"submit": "Invia di nuovo la verifica",
+			"submitting": "Invio in corso…"
+		},
+		"profile": {
+			"title": "Profilo"
+		},
+		"password": {
+			"title": "Cambia password"
+		}
+	},
+	"account": {
+		"loading": "Caricamento dei dati utente…",
+		"loadFailed": "Impossibile caricare i dati utente.",
+		"updated": "Profilo aggiornato",
+		"displayName": "Nome visualizzato",
+		"type": "Tipo",
+		"userType": "Tipo di utente",
+		"roles": "Ruoli",
+		"organization": "Organizzazione",
+		"changePassword": "Cambia password",
+		"backToProfile": "Torna al profilo",
+		"currentPassword": "Password attuale",
+		"newPassword": "Nuova password (min. 8 caratteri)",
+		"confirmPassword": "Conferma la nuova password",
+		"mismatch": "Le password non coincidono",
+		"tooShort": "La nuova password deve contenere almeno 8 caratteri",
+		"changed": "Password cambiata. Accedi di nuovo.",
+		"submit": "Cambia password",
+		"submitting": "Modifica in corso…",
+		"logout": "Esci"
+	},
+	"siteConfig": {
+		"fields": {
+			"firmName": "Nome dell’azienda"
+		},
+		"groups": {
+			"contact": "Contatti"
+		},
+		"entries": {
+			"contact": {
+				"address": "Indirizzo",
+				"phone": "Telefono",
+				"email": "E-mail"
+			}
+		}
+	}
+}

@@ -57,7 +57,8 @@
 		"@tailwindcss/vite": "^4.3.3",
 		"@vitejs/plugin-vue": "^6.0.10",
 		"@vue/tsconfig": "^0.9.1",
-		"nanoid": "^6.0.2"
+		"nanoid": "^6.0.2",
+		"vue-i18n": "^11.4.16"
 	},
 	"devDependencies": {
 		"@hey-api/openapi-ts": "0.99.0",

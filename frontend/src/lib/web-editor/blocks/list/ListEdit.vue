@@ -27,9 +27,10 @@ const listType = computed({
 			<select
 				v-model="listType"
 				class="inline-toolbar-select"
+				:aria-label="$t('editor.list.type')"
 			>
-				<option value="bullet">Bullet</option>
-				<option value="numbered">Numbered</option>
+				<option value="bullet">{{ $t('editor.list.bullet') }}</option>
+				<option value="numbered">{{ $t('editor.list.numbered') }}</option>
 			</select>
 		</InlineToolbar>
 

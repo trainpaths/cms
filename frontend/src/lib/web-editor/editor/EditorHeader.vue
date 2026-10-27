@@ -35,8 +35,8 @@ function handleTitleBlur() {
 		<div class="flex min-w-0 flex-1 items-center gap-4 md:gap-8">
 			<button
 				class="header-icon-btn"
-				title="Back"
-				aria-label="Back"
+				:title="$t('common.back')"
+				:aria-label="$t('common.back')"
 				@click="emit('back')"
 			>
 				<Icon name="arrow" :size="18" />
@@ -44,8 +44,8 @@ function handleTitleBlur() {
 			<button
 				class="header-icon-btn"
 				:class="{ 'header-icon-btn--active': store.showInserterSidebar }"
-				title="Toggle left sidebar (blocks, outline)"
-				aria-label="Toggle left sidebar"
+				:title="$t('editor.header.leftSidebarHint')"
+				:aria-label="$t('editor.header.leftSidebar')"
 				:aria-pressed="store.showInserterSidebar"
 				data-testid="toggle-left-sidebar"
 				@click="store.toggleInserterSidebar()"
@@ -55,6 +55,7 @@ function handleTitleBlur() {
 			<!-- < sm: hidden, no room (title + publish live in the Page tab there) -->
 			<input
 				v-model="store.pageTitle"
+				:aria-label="$t('editor.page.title')"
 				data-testid="page-title"
 				class="m-0 min-w-0 flex-1 truncate border-none bg-transparent text-xl font-semibold text-gray-900 outline-hidden focus:ring-1 focus:ring-primary max-sm:hidden"
 				@blur="handleTitleBlur"
@@ -63,7 +64,7 @@ function handleTitleBlur() {
 		<div class="flex shrink-0 items-center gap-4 md:gap-8">
 			<button
 				class="toolbar-btn"
-				title="Undo (Ctrl+Z)"
+				:title="$t('editor.header.undo')"
 				:disabled="!store.canUndo"
 				@click="store.undo()"
 			>
@@ -71,7 +72,7 @@ function handleTitleBlur() {
 			</button>
 			<button
 				class="toolbar-btn"
-				title="Redo (Ctrl+Shift+Z)"
+				:title="$t('editor.header.redo')"
 				:disabled="!store.canRedo"
 				@click="store.redo()"
 			>
@@ -80,14 +81,14 @@ function handleTitleBlur() {
 			<span
 				v-if="store.saveStatus === 'saved'"
 				class="hidden text-sm text-green-600 md:inline"
-				>Saved</span
+				>{{ $t('editor.header.saved') }}</span
 			>
 			<RouterLink
 				v-if="viewHref"
 				:to="viewHref"
 				class="header-icon-btn no-underline"
-				:title="isPublished ? 'View page' : 'Preview draft'"
-				:aria-label="isPublished ? 'View page' : 'Preview draft'"
+				:title="isPublished ? $t('admin.pages.view') : $t('admin.pages.previewDraft')"
+				:aria-label="isPublished ? $t('admin.pages.view') : $t('admin.pages.previewDraft')"
 				target="_blank"
 			>
 				<Icon name="eye" :size="18" />
@@ -95,8 +96,14 @@ function handleTitleBlur() {
 			<button
 				class="flex size-32 shrink-0 cursor-pointer items-center justify-center rounded border-none bg-primary md:size-36 text-white hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
 				:class="{ 'animate-pulse': store.saveStatus === 'saving' }"
-				:title="store.saveStatus === 'saving' ? 'Saving...' : store.isDirty ? 'Save (Ctrl+S)' : 'No unsaved changes'"
-				aria-label="Save"
+				:title="
+					store.saveStatus === 'saving'
+						? $t('common.saving')
+						: store.isDirty
+							? $t('editor.header.saveHint')
+							: $t('editor.header.noChanges')
+				"
+				:aria-label="$t('common.save')"
 				data-testid="page-save"
 				:disabled="!store.isDirty || store.saveStatus === 'saving'"
 				@click="store.savePage()"
@@ -141,13 +148,13 @@ function handleTitleBlur() {
 					name="globe-slash"
 					:size="16"
 				/>
-				Unpublish
+				{{ $t('editor.publish.unpublish') }}
 			</button>
 			<button
 				class="header-icon-btn"
 				:class="{ 'header-icon-btn--active': store.showSettingsPanel }"
-				title="Toggle settings sidebar"
-				aria-label="Toggle settings sidebar"
+				:title="$t('editor.header.rightSidebar')"
+				:aria-label="$t('editor.header.rightSidebar')"
 				:aria-pressed="store.showSettingsPanel"
 				data-testid="toggle-right-sidebar"
 				@click="store.toggleSettingsPanel()"

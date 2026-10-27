@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { Loading, useConfirm } from '@trainpaths/nb-ui'
+import { useI18n } from 'vue-i18n'
+import { useFormat } from '../../i18n'
 import {
 	MediaGrid,
 	MediaUploadButton,
@@ -12,6 +14,8 @@ import {
 } from '../../lib/web-editor'
 
 const media = useMediaStore()
+const { t } = useI18n()
+const format = useFormat()
 
 const selectedId = ref<string | null>(null)
 const selected = computed(() => media.items.find((m) => m.id === selectedId.value) ?? null)
@@ -25,7 +29,7 @@ onMounted(async () => {
 	try {
 		await media.load(true)
 	} catch {
-		errorMessage.value = 'Failed to load media'
+		errorMessage.value = t('admin.media.loadFailed')
 	}
 })
 
@@ -58,7 +62,7 @@ async function save() {
 	try {
 		await media.update(selected.value.id, { alt: alt.value.trim(), fileName: fileName.value.trim() })
 	} catch (err: unknown) {
-		errorMessage.value = describe(err, 'Failed to save changes')
+		errorMessage.value = describe(err, t('admin.media.saveFailed'))
 	} finally {
 		saving.value = false
 	}
@@ -68,9 +72,10 @@ const { confirm } = useConfirm()
 
 async function remove(item: MediaItem) {
 	const ok = await confirm({
-		title: `Delete "${item.fileName}"?`,
-		message: 'Pages using it will no longer show the image.',
-		confirmText: 'Delete',
+		title: t('admin.media.deleteTitle', { name: item.fileName }),
+		message: t('admin.media.deleteHint'),
+		confirmText: t('common.delete'),
+		cancelText: t('common.cancel'),
 		danger: true,
 	})
 	if (!ok) return
@@ -78,14 +83,14 @@ async function remove(item: MediaItem) {
 		await media.remove(item.id)
 		selectedId.value = null
 	} catch (err: unknown) {
-		errorMessage.value = describe(err, 'Failed to delete media')
+		errorMessage.value = describe(err, t('admin.media.deleteFailed'))
 	}
 }
 
 function formatSize(bytes: number) {
 	return bytes < 1024 * 1024
-		? `${Math.max(1, Math.round(bytes / 1024))} KB`
-		: `${(bytes / 1024 / 1024).toFixed(1)} MB`
+		? `${format.number(Math.max(1, Math.round(bytes / 1024)))} KB`
+		: `${format.number(bytes / 1024 / 1024, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MB`
 }
 </script>
 
@@ -100,6 +105,7 @@ function formatSize(bytes: number) {
 			<span>{{ errorMessage }}</span>
 			<button
 				class="cursor-pointer border-none bg-transparent text-red-400 hover:text-red-600"
+				:aria-label="$t('admin.dismiss')"
 				@click="errorMessage = null"
 			>
 				&#10005;
@@ -109,25 +115,25 @@ function formatSize(bytes: number) {
 
 	<div class="mx-auto max-w-5xl px-16 py-24 font-sans">
 		<div class="mb-12 flex items-center justify-between">
-			<h1 class="m-0 text-2xl text-gray-900">Media</h1>
+			<h1 class="m-0 text-2xl text-gray-900">{{ $t('admin.nav.media') }}</h1>
 			<MediaUploadButton
-				label="+ Upload new"
+				:label="$t('admin.media.uploadNew')"
 				multiple
 				@uploaded="onUploaded"
 				@error="errorMessage = $event"
 			/>
 		</div>
-		<p class="mb-16 text-xs text-gray-500">JPEG, PNG, GIF, WebP or AVIF, up to 10 MB.</p>
+		<p class="mb-16 text-xs text-gray-500">{{ $t('admin.media.types') }}</p>
 
 		<Loading
 			v-if="!media.loaded && !errorMessage"
-			label="Loading media…"
+			:label="$t('admin.media.loading')"
 		/>
 		<p
 			v-else-if="media.loaded && !media.items.length"
 			class="text-sm text-gray-400"
 		>
-			No media yet.
+			{{ $t('admin.media.empty') }}
 		</p>
 		<MediaGrid
 			:items="media.items"
@@ -152,7 +158,7 @@ function formatSize(bytes: number) {
 				<button
 					type="button"
 					class="cursor-pointer rounded border-none bg-transparent px-4 py-2 text-gray-400 hover:text-gray-700"
-					aria-label="Close"
+					:aria-label="$t('common.close')"
 					@click="selectedId = null"
 				>
 					&#10005;
@@ -164,15 +170,15 @@ function formatSize(bytes: number) {
 				class="max-h-200 w-full rounded border border-gray-200 bg-white object-contain"
 			/>
 			<dl class="m-0 grid grid-cols-[auto_1fr] gap-x-8 gap-y-2 text-xs text-gray-600">
-				<dt class="text-gray-400">Type</dt>
+				<dt class="text-gray-400">{{ $t('admin.media.type') }}</dt>
 				<dd class="m-0">{{ selected.contentType }}</dd>
-				<dt class="text-gray-400">Size</dt>
+				<dt class="text-gray-400">{{ $t('admin.media.size') }}</dt>
 				<dd class="m-0">{{ formatSize(selected.size) }}</dd>
-				<dt class="text-gray-400">Uploaded</dt>
-				<dd class="m-0">{{ new Date(selected.createdAt).toLocaleDateString() }}</dd>
+				<dt class="text-gray-400">{{ $t('admin.media.uploaded') }}</dt>
+				<dd class="m-0">{{ format.date(selected.createdAt) }}</dd>
 			</dl>
 			<label class="flex flex-col gap-2 text-xs text-gray-500">
-				Name
+				{{ $t('admin.media.name') }}
 				<input
 					v-model="fileName"
 					type="text"
@@ -183,13 +189,13 @@ function formatSize(bytes: number) {
 				/>
 			</label>
 			<label class="flex flex-col gap-2 text-xs text-gray-500">
-				Alt text
+				{{ $t('admin.media.alt') }}
 				<input
 					v-model="alt"
 					type="text"
 					:maxlength="MEDIA_ALT_MAX"
 					class="rounded border border-gray-300 bg-white px-8 py-4 font-sans text-sm"
-					placeholder="Describe the image…"
+					:placeholder="$t('admin.media.altPlaceholder')"
 					data-testid="media-alt"
 				/>
 			</label>
@@ -200,14 +206,14 @@ function formatSize(bytes: number) {
 					data-testid="media-save"
 					@click="save"
 				>
-					{{ saving ? 'Saving…' : 'Save' }}
+					{{ saving ? $t('common.saving') : $t('common.save') }}
 				</button>
 				<button
 					class="cursor-pointer rounded border-none bg-transparent px-8 py-6 text-sm text-red-600 hover:bg-red-50"
 					data-testid="media-delete"
 					@click="remove(selected)"
 				>
-					Delete
+					{{ $t('common.delete') }}
 				</button>
 			</div>
 		</aside>

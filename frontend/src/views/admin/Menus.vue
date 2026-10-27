@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
-import { Button, Icon, Loading, UnsavedChangesDialog, useConfirm, useToast, useUnsavedChanges } from '@trainpaths/nb-ui'
+import { Button, Icon, Loading, useConfirm, useToast, useUnsavedChanges } from '@trainpaths/nb-ui'
+import { I18nT, useI18n } from 'vue-i18n'
+import UnsavedDialog from '../../components/UnsavedDialog.vue'
 import { deleteApiMenusById, getApiMenus, postApiMenus, putApiMenusById } from '../../api/sdk.gen'
 import {
 	MENU_HANDLE_MAX,
@@ -25,6 +27,7 @@ import { usePublicMenusStore } from '../../stores/menus'
 const MAIN = 'main'
 
 const toast = useToast()
+const { t } = useI18n()
 const pages = usePagesStore()
 const tagsStore = useTagsStore()
 const publicMenus = usePublicMenusStore()
@@ -62,8 +65,8 @@ const errors = computed(() => {
 	const walk = (list: MenuItem[]) =>
 		list.forEach((item) => {
 			if (item.url != null && !isMenuUrl(item.url.trim()))
-				result.set(item.id, 'Enter a path like /about or an http(s) URL.')
-			else if (!item.label.trim() && !item.pageId) result.set(item.id, 'Label is required.')
+				result.set(item.id, t('admin.menus.badUrl'))
+			else if (!item.label.trim() && !item.pageId) result.set(item.id, t('admin.menus.labelRequired'))
 			walk(item.children)
 		})
 	walk(items.value)
@@ -88,10 +91,10 @@ async function save(): Promise<boolean> {
 		apply(data)
 		menus.value[menus.value.findIndex((m) => m.id === data.id)] = data
 		publicMenus.invalidate()
-		toast.toast({ message: 'Menu saved', type: 'success' })
+		toast.toast({ message: t('admin.menus.saved'), type: 'success' })
 		return true
 	} catch (err: unknown) {
-		errorMessage.value = describe(err, 'Failed to save menu')
+		errorMessage.value = describe(err, t('admin.menus.saveFailed'))
 		return false
 	} finally {
 		saving.value = false
@@ -131,7 +134,7 @@ async function createMenu() {
 		showNewMenu.value = false
 		apply(menu)
 	} catch (err: unknown) {
-		errorMessage.value = describe(err, 'Failed to create menu')
+		errorMessage.value = describe(err, t('admin.menus.createFailed'))
 	} finally {
 		creating.value = false
 	}
@@ -143,9 +146,10 @@ async function deleteMenu() {
 	const menu = current.value
 	if (!menu || isMain.value) return
 	const ok = await confirm({
-		title: `Delete the menu "${menu.handle}"?`,
-		message: 'This cannot be undone.',
-		confirmText: 'Delete',
+		title: t('admin.menus.deleteTitle', { handle: menu.handle }),
+		message: t('common.cannotUndo'),
+		confirmText: t('common.delete'),
+		cancelText: t('common.cancel'),
 		danger: true,
 	})
 	if (!ok) return
@@ -156,7 +160,7 @@ async function deleteMenu() {
 		saved.value = ''
 		if (menus.value[0]) await select(menus.value[0].id)
 	} catch (err: unknown) {
-		errorMessage.value = describe(err, 'Failed to delete menu')
+		errorMessage.value = describe(err, t('admin.menus.deleteFailed'))
 	}
 }
 
@@ -185,7 +189,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 <template>
 	<div class="mx-auto max-w-6xl px-16 py-24 font-sans">
 		<div class="mb-4 flex items-center justify-between gap-12">
-			<h1 class="m-0 text-2xl text-gray-900">Menus</h1>
+			<h1 class="m-0 text-2xl text-gray-900">{{ $t('admin.nav.menus') }}</h1>
 			<div
 				v-if="current"
 				class="flex items-center gap-12"
@@ -193,7 +197,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 				<span
 					v-if="dirty"
 					class="text-xs text-gray-500"
-					>Unsaved changes</span
+					>{{ $t('admin.unsavedChanges') }}</span
 				>
 				<Button
 					:loading="saving"
@@ -201,14 +205,20 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 					data-testid="menu-save"
 					@click="save"
 				>
-					Save
+					{{ $t('common.save') }}
 				</Button>
 			</div>
 		</div>
-		<p class="mb-16 text-xs text-gray-500">
-			Groups of links for your website. The <strong>main menu</strong> is the navigation at the top of every
-			public page.
-		</p>
+		<I18nT
+			keypath="admin.menus.intro"
+			tag="p"
+			class="mb-16 text-xs text-gray-500"
+			scope="global"
+		>
+			<template #main>
+				<strong>{{ $t('admin.menus.mainMenu') }}</strong>
+			</template>
+		</I18nT>
 
 		<div
 			v-if="errorMessage"
@@ -219,7 +229,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 			<button
 				type="button"
 				class="cursor-pointer border-none bg-transparent text-red-400 hover:text-red-600"
-				aria-label="Dismiss"
+				:aria-label="$t('admin.dismiss')"
 				@click="errorMessage = null"
 			>
 				&#10005;
@@ -230,11 +240,11 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 			v-if="loadFailed"
 			class="text-sm text-red-600"
 		>
-			Failed to load menus.
+			{{ $t('admin.menus.loadFailed') }}
 		</p>
 		<Loading
 			v-else-if="!loaded"
-			label="Loading menus…"
+			:label="$t('admin.menus.loading')"
 		/>
 
 		<div
@@ -244,7 +254,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 			<!-- menu list -->
 			<nav
 				class="rounded-lg border border-gray-200 bg-white p-8 shadow-xs"
-				aria-label="Menus"
+				:aria-label="$t('admin.nav.menus')"
 			>
 				<ul class="m-0 flex list-none flex-col gap-2 p-0">
 					<li
@@ -266,7 +276,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 							<span
 								v-if="menu.handle === MAIN"
 								class="shrink-0 rounded-full bg-primary px-6 py-1 text-[10px] font-medium text-white"
-								>Main</span
+								>{{ $t('admin.menus.main') }}</span
 							>
 						</button>
 					</li>
@@ -281,8 +291,8 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 						class="input-field mt-0 font-mono"
 						:maxlength="MENU_HANDLE_MAX"
 						:disabled="creating"
-						placeholder="e.g. footer"
-						aria-label="New menu handle"
+						:placeholder="$t('admin.menus.handlePlaceholder')"
+						:aria-label="$t('admin.menus.newHandle')"
 						data-testid="menu-new-handle"
 						@keydown.escape="showNewMenu = false"
 					/>
@@ -290,7 +300,14 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 						v-if="newHandlePreview && newHandlePreview !== newHandle"
 						class="m-0 text-xs text-gray-500"
 					>
-						Saved as <span class="font-mono">{{ newHandlePreview }}</span>
+						<I18nT
+							keypath="admin.menus.savedAs"
+							scope="global"
+						>
+							<template #handle>
+								<span class="font-mono">{{ newHandlePreview }}</span>
+							</template>
+						</I18nT>
 					</p>
 					<div class="flex gap-6">
 						<Button
@@ -299,7 +316,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 							:disabled="!newHandlePreview"
 							:loading="creating"
 							data-testid="menu-new-create"
-							>Create</Button
+							>{{ $t('admin.pages.create') }}</Button
 						>
 						<Button
 							size="sm"
@@ -308,7 +325,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 							text="primary"
 							:disabled="creating"
 							@click="showNewMenu = false"
-							>Cancel</Button
+							>{{ $t('common.cancel') }}</Button
 						>
 					</div>
 				</form>
@@ -319,7 +336,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 					data-testid="menu-new"
 					@click="showNewMenu = true"
 				>
-					+ New menu
+					{{ $t('admin.menus.new') }}
 				</button>
 			</nav>
 
@@ -331,7 +348,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 				<template v-if="current">
 					<h2
 						class="m-0 mb-16 font-mono text-base font-semibold text-gray-900"
-						title="Handle: the site code loads the menu by it, so it can't change"
+						:title="$t('admin.menus.handleHint')"
 						data-testid="menu-handle"
 					>
 						{{ current.handle }}
@@ -349,7 +366,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 							data-testid="menu-add-item"
 							@click="addItem"
 						>
-							+ Add item
+							{{ $t('admin.menus.addItem') }}
 						</button>
 						<button
 							v-if="!isMain"
@@ -358,12 +375,11 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 							data-testid="menu-delete"
 							@click="deleteMenu"
 						>
-							Delete menu
+							{{ $t('admin.menus.delete') }}
 						</button>
 					</div>
 					<p class="mb-0 mt-12 text-xs text-gray-500">
-						Drag rows by the handle or pages from the list: onto a line to place it there, onto the middle
-						of an item to nest it inside. Items without a link group their children.
+						{{ $t('admin.menus.dragHint') }}
 					</p>
 				</template>
 			</section>
@@ -373,7 +389,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 				class="rounded-lg border border-gray-200 bg-white p-12 shadow-xs"
 				data-testid="menu-page-picker"
 			>
-				<h2 class="m-0 mb-8 text-sm font-semibold text-gray-900">Published pages</h2>
+				<h2 class="m-0 mb-8 text-sm font-semibold text-gray-900">{{ $t('admin.menus.publishedPages') }}</h2>
 				<PageFilters
 					v-model:search="search"
 					v-model:tag="tag"
@@ -381,12 +397,15 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 					:tags="tagsStore.names"
 					compact
 				/>
-				<Loading v-if="!pages.loaded" />
+				<Loading
+					v-if="!pages.loaded"
+					:label="$t('common.loading')"
+				/>
 				<p
 					v-else-if="!filtered.length"
 					class="mb-0 mt-12 text-sm text-gray-400"
 				>
-					No published pages match.
+					{{ $t('admin.menus.noPages') }}
 				</p>
 				<ul class="m-0 mt-12 flex max-h-[60vh] list-none flex-col gap-4 overflow-y-auto p-0">
 					<li
@@ -394,7 +413,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 						:key="page.id"
 						:draggable="!!current"
 						class="flex cursor-grab items-center gap-8 rounded-md border border-gray-300 bg-white px-8 py-6"
-						title="Drag into the menu or click +"
+						:title="$t('admin.menus.pickerHint')"
 						data-testid="menu-picker-page"
 						@dragstart="drag.start($event, { kind: 'page', pageId: page.id })"
 						@dragend="drag.end"
@@ -406,15 +425,15 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 						<span
 							v-if="inMenu.has(page.id)"
 							class="shrink-0 text-[11px] text-gray-400"
-							title="Already in this menu"
+							:title="$t('admin.menus.inMenu')"
 							>&#10003;</span
 						>
 						<button
 							type="button"
 							class="flex size-32 shrink-0 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
 							:disabled="!current || full"
-							:title="`Add ${page.title} to the menu`"
-							:aria-label="`Add ${page.title} to the menu`"
+							:title="$t('admin.menus.addPage', { title: page.title })"
+							:aria-label="$t('admin.menus.addPage', { title: page.title })"
 							data-testid="menu-picker-add"
 							@click="addPage(page)"
 						>
@@ -428,7 +447,7 @@ onBeforeRouteLeave(() => unsaved.confirmLeave())
 			</aside>
 		</div>
 	</div>
-	<UnsavedChangesDialog
+	<UnsavedDialog
 		v-if="unsaved.prompting.value"
 		:saving="saving"
 		:can-save="valid"

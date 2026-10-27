@@ -49,7 +49,7 @@ watch(
 			v-else
 			class="px-8 py-12 text-xs text-gray-400"
 		>
-			No blocks yet.
+			{{ $t('editor.outlineEmpty') }}
 		</p>
 	</div>
 </template>

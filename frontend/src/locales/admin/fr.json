@@ -1,0 +1,442 @@
+{
+	"admin": {
+		"nav": {
+			"label": "Administration",
+			"dashboard": "Tableau de bord",
+			"pages": "Pages",
+			"menus": "Menus",
+			"media": "Médias",
+			"configuration": "Configuration",
+			"user": "Utilisateur"
+		},
+		"dashboard": {
+			"welcome": "Bienvenue, {name} !",
+			"logOut": "Se déconnecter",
+			"goToPages": "Aller aux pages",
+			"pagesHint": "Créez, modifiez et publiez les pages de votre site."
+		},
+		"login": {
+			"heading": "Connexion à l’administration"
+		},
+		"preview": {
+			"label": "Aperçu",
+			"draft": "Aperçu d’un brouillon non publié",
+			"back": "Retour à l’éditeur",
+			"notFound": "Page introuvable.",
+			"loading": "Chargement de l’aperçu…"
+		},
+		"backups": {
+			"tab": "Sauvegardes",
+			"loadFailed": "Impossible de charger les sauvegardes",
+			"manage": "Gérer les sauvegardes",
+			"schedule": "Planification",
+			"nextRun": "Prochaine exécution",
+			"lastRun": "Dernière exécution",
+			"keeps": "Conserve",
+			"keepsValue": "les {n} dernières automatiques",
+			"saved": "Enregistrées",
+			"count": "{n} sauvegarde | {n} sauvegardes",
+			"countDetail": "{auto} automatiques, {size}",
+			"latest": "La plus récente",
+			"freeSpace": "Espace libre",
+			"lastFailed": "La dernière sauvegarde automatique a échoué : {error}",
+			"intervals": {
+				"off": "Désactivée",
+				"daily": "Quotidienne",
+				"weekly": "Hebdomadaire",
+				"biweekly": "Toutes les 2 semaines",
+				"monthly": "Mensuelle"
+			},
+			"summaryWeekday": "{interval} le {day}, {time} UTC",
+			"summaryMonthDay": "{interval} le {day}, {time} UTC",
+			"summaryDaily": "{interval}, {time} UTC",
+			"kinds": {
+				"auto": "Automatique",
+				"manual": "Manuelle",
+				"preRestore": "Avant restauration",
+				"upload": "Importée"
+			},
+			"scheduleSaved": "Planification des sauvegardes enregistrée",
+			"scheduleFailed": "Impossible d’enregistrer la planification",
+			"created": "Sauvegarde {name} créée",
+			"createFailed": "La sauvegarde a échoué",
+			"tooLarge": "Le fichier dépasse {size}.",
+			"uploaded": "Importée sous {name}. Restaurez-la depuis la liste.",
+			"uploadFailed": "Échec de l’envoi",
+			"downloadFailed": "Échec du téléchargement",
+			"deleteTitle": "Supprimer {name} ?",
+			"deleteHint": "L’archive est supprimée du dossier de sauvegarde. Cette action est irréversible.",
+			"deleteFailed": "Impossible de supprimer la sauvegarde",
+			"restoreTitle": "Restaurer {name} ?",
+			"restoreHint": "Tout est remplacé par l’état du {date} : pages, médias, menus, configuration et comptes du personnel. Tout le monde est déconnecté. Une sauvegarde de l’état actuel est d’abord créée : la restaurer annule cette opération.",
+			"restore": "Restaurer",
+			"restored": "Sauvegarde restaurée (état précédent enregistré sous {name}). Reconnectez-vous.",
+			"restoreFailed": "La restauration a échoué",
+			"loading": "Chargement des sauvegardes…",
+			"restoring": "Restauration de {name}. Le site est indisponible jusqu’à la fin ; ne fermez pas cette page.",
+			"automatic": "Sauvegardes automatiques",
+			"interval": "Fréquence",
+			"weekday": "Jour (UTC)",
+			"biweeklyHint": "Commence au premier jour correspondant après l’enregistrement",
+			"dayOfMonth": "Jour du mois (UTC)",
+			"time": "Heure (UTC)",
+			"localTime": "{time} chez vous",
+			"retention": "Sauvegardes automatiques à conserver",
+			"retentionHint": "Les sauvegardes automatiques plus anciennes sont supprimées ; les manuelles et importées sont conservées.",
+			"saveSchedule": "Enregistrer la planification",
+			"storage": "Stockage",
+			"folder": "Dossier",
+			"noFolder": "Aucun dossier de sauvegarde défini par le développeur",
+			"storageHint": "Le dossier est défini par la configuration Docker du serveur et ne peut pas être modifié ici. Copiez les archives hors du serveur (en les téléchargeant ou en synchronisant le dossier) pour les protéger d’une panne de disque. Les sauvegardes sont supprimées après {years} ans.",
+			"now": "Sauvegarder maintenant",
+			"uploadHint": "Ajouter une archive de sauvegarde (.tar.gz) d’un autre serveur ou d’un téléchargement précédent",
+			"upload": "Importer une sauvegarde",
+			"uploading": "Envoi de la sauvegarde",
+			"empty": "Aucune sauvegarde",
+			"emptyHint": "Sauvegardez maintenant ou activez les sauvegardes automatiques ci-dessus.",
+			"mediaFiles": "{n} fichier média | {n} fichiers médias",
+			"download": "Télécharger",
+			"downloadName": "Télécharger {name}",
+			"deleteName": "Supprimer {name}"
+		},
+		"status": {
+			"published": "Publiée",
+			"draft": "Brouillon"
+		},
+		"pages": {
+			"loadFailed": "Impossible de charger les pages",
+			"createFailed": "Impossible de créer la page",
+			"importFailed": "Impossible d’importer la page",
+			"exportFailed": "Impossible d’exporter la page",
+			"duplicateFailed": "Impossible de dupliquer la page",
+			"deleteFailed": "Impossible de supprimer la page",
+			"saveFailed": "Impossible d’enregistrer la page",
+			"imported": "Importée comme brouillon /{slug}",
+			"importedMissing": "Importée comme brouillon /{slug} ; {count} image introuvable dans la médiathèque | Importée comme brouillon /{slug} ; {count} images introuvables dans la médiathèque",
+			"duplicated": "Dupliquée comme brouillon /{slug}",
+			"duplicate": "Dupliquer",
+			"export": "Exporter",
+			"lockedDelete": "Fait partie de la configuration du site, ne peut pas être supprimée",
+			"deleteTitle": "Supprimer « {title} » ?",
+			"all": "Toutes les pages",
+			"new": "+ Nouvelle page",
+			"importHint": "Créer un brouillon à partir d’un fichier de page exporté (.json)",
+			"importLabel": "Importer une page",
+			"import": "Importer",
+			"titlePlaceholder": "Titre de la page…",
+			"titleLabel": "Titre de la page",
+			"create": "Créer",
+			"loading": "Chargement des pages…",
+			"empty": "Aucune page pour l’instant.",
+			"emptyHint": "Créez la première page de votre site.",
+			"noMatch": "Aucune page ne correspond.",
+			"noMatchHint": "Essayez une autre recherche ou un autre filtre.",
+			"clearFilters": "Effacer les filtres",
+			"blocks": "{n} bloc | {n} blocs",
+			"updated": "mise à jour le {date}",
+			"view": "Voir la page",
+			"previewDraft": "Aperçu du brouillon",
+			"slugRule": "Lettres minuscules, chiffres et traits d’union simples (100 max.).",
+			"slug": "Slug",
+			"lockedSlug": "Défini par la configuration du site",
+			"liveAt": "En ligne sur /{slug}",
+			"draftHint": "Brouillon : visible uniquement par le personnel",
+			"tags": "Tags"
+		},
+		"pageExport": {
+			"invalidJson": "Le fichier n’est pas un JSON valide.",
+			"notExport": "Le fichier n’est pas un export de page.",
+			"newer": "Le fichier a été exporté par une version plus récente du CMS.",
+			"incomplete": "L’export de page est incomplet (titre ou blocs manquants)."
+		},
+		"actions": "Actions",
+		"filters": {
+			"allTags": "Tous les tags",
+			"allStatuses": "Tous les statuts",
+			"notPublished": "Non publiées",
+			"searchPlaceholder": "Rechercher des pages…",
+			"search": "Rechercher des pages",
+			"byTag": "Filtrer par tag",
+			"byStatus": "Filtrer par statut",
+			"newestFirst": "Mises à jour récentes d’abord",
+			"oldestFirst": "Mises à jour anciennes d’abord",
+			"sortedNewest": "Triées par dernière mise à jour, les plus récentes d’abord. Cliquer pour inverser.",
+			"sortedOldest": "Triées par dernière mise à jour, les plus anciennes d’abord. Cliquer pour inverser."
+		},
+		"dismiss": "Fermer",
+		"unsavedChanges": "Modifications non enregistrées",
+		"moveUp": "Monter",
+		"moveDown": "Descendre",
+		"unsaved": {
+			"title": "Voulez-vous enregistrer les modifications ?",
+			"lost": "Vos modifications seront perdues si vous ne les enregistrez pas.",
+			"blocked": "Corrigez les champs en surbrillance pour enregistrer.",
+			"discard": "Ne pas enregistrer"
+		},
+		"menus": {
+			"badUrl": "Saisissez un chemin comme /about ou une URL http(s).",
+			"labelRequired": "Le libellé est obligatoire.",
+			"saved": "Menu enregistré",
+			"saveFailed": "Impossible d’enregistrer le menu",
+			"createFailed": "Impossible de créer le menu",
+			"deleteFailed": "Impossible de supprimer le menu",
+			"deleteTitle": "Supprimer le menu « {handle} » ?",
+			"intro": "Des groupes de liens pour votre site. Le {main} est la navigation en haut de chaque page publique.",
+			"mainMenu": "menu principal",
+			"loadFailed": "Impossible de charger les menus.",
+			"loading": "Chargement des menus…",
+			"main": "Principal",
+			"handlePlaceholder": "p. ex. footer",
+			"newHandle": "Identifiant du nouveau menu",
+			"savedAs": "Enregistré sous {handle}",
+			"new": "+ Nouveau menu",
+			"handleHint": "Identifiant : le code du site charge le menu par celui-ci, il ne peut donc pas changer",
+			"addItem": "+ Ajouter un élément",
+			"delete": "Supprimer le menu",
+			"dragHint": "Faites glisser les lignes par la poignée ou des pages depuis la liste : sur une ligne pour les placer à cet endroit, au milieu d’un élément pour les y imbriquer. Les éléments sans lien regroupent leurs sous-éléments.",
+			"publishedPages": "Pages publiées",
+			"noPages": "Aucune page publiée ne correspond.",
+			"pickerHint": "Faites glisser dans le menu ou cliquez sur +",
+			"inMenu": "Déjà dans ce menu",
+			"addPage": "Ajouter {title} au menu",
+			"empty": "Aucun élément pour l’instant. Ajoutez un élément ou faites glisser des pages ici depuis la liste.",
+			"dragToMove": "Glisser pour déplacer",
+			"label": "Libellé",
+			"linkPlaceholder": "Lien (facultatif)",
+			"link": "Lien",
+			"draftHint": "Les brouillons n’apparaissent pas dans le menu public",
+			"pageDeleted": "Page supprimée",
+			"outdent": "Désindenter",
+			"indent": "Indenter dans l’élément précédent",
+			"removeTree": "Retirer l’élément et ses sous-éléments",
+			"remove": "Retirer l’élément"
+		},
+		"remove": "Retirer",
+		"config": {
+			"noneSelected": "Aucune sélection",
+			"types": {
+				"text": "Texte",
+				"email": "E-mail",
+				"phone": "Téléphone",
+				"link": "Lien",
+				"address": "Adresse"
+			},
+			"placeholders": {
+				"text": "Valeur",
+				"phone": "+41 21 123 45 67"
+			},
+			"address": {
+				"street": "Rue et numéro",
+				"postalCode": "NPA",
+				"city": "Localité",
+				"country": "Pays"
+			},
+			"entryNamePlaceholder": "Nom, p. ex. Fax",
+			"entryName": "Nom de l’entrée",
+			"entryType": "Type de l’entrée",
+			"entryValue": "Valeur de l’entrée",
+			"requiredEntry": "Obligatoire pour ce site",
+			"removeEntry": "Retirer l’entrée",
+			"required": "Obligatoire.",
+			"nameRequired": "Le nom est obligatoire.",
+			"nameTwice": "Ce nom est utilisé deux fois.",
+			"saved": "Configuration enregistrée",
+			"saveFailed": "Impossible d’enregistrer la configuration",
+			"intro": "Informations sur votre site, utilisées sur ses pages publiques.",
+			"loadFailed": "Impossible de charger la configuration.",
+			"loading": "Chargement de la configuration…",
+			"noEntries": "Aucune entrée pour l’instant.",
+			"addCustom": "+ Entrée personnalisée",
+			"logo": "Logo",
+			"logoHint": "Affiché dans le pied de page et la navigation du site. PNG/WebP conviennent le mieux.",
+			"icon": "Icône",
+			"iconHint": "Icône de l’onglet du navigateur. PNG carré.",
+			"shareImage": "Image de partage",
+			"shareImageHint": "Aperçus de liens (WhatsApp, Slack…) des pages sans image propre. 1200×630 convient le mieux."
+		},
+		"media": {
+			"loadFailed": "Impossible de charger les médias",
+			"saveFailed": "Impossible d’enregistrer les modifications",
+			"deleteFailed": "Impossible de supprimer le média",
+			"deleteTitle": "Supprimer « {name} » ?",
+			"deleteHint": "Les pages qui l’utilisent n’afficheront plus l’image.",
+			"uploadNew": "+ Importer",
+			"types": "JPEG, PNG, GIF, WebP ou AVIF, jusqu’à 10 Mo.",
+			"loading": "Chargement des médias…",
+			"empty": "Aucun média pour l’instant.",
+			"type": "Type",
+			"size": "Taille",
+			"uploaded": "Importé le",
+			"name": "Nom",
+			"alt": "Texte alternatif",
+			"altPlaceholder": "Décrivez l’image…"
+		}
+	},
+	"editor": {
+		"publish": {
+			"publish": "Publier",
+			"changes": "Publier les modifications",
+			"saveFirst": "Enregistrez d’abord",
+			"noChanges": "Aucune modification à publier",
+			"pending": "Publiée · modifications non publiées",
+			"title": "Publier cette page ?",
+			"changesTitle": "Publier les modifications ?",
+			"message": "Les visiteurs de /{slug} verront la version enregistrée.",
+			"unpublishTitle": "Dépublier cette page ?",
+			"unpublishMessage": "Les visiteurs de /{slug} verront « page introuvable » jusqu’à une nouvelle publication.",
+			"unpublish": "Dépublier"
+		},
+		"header": {
+			"leftSidebarHint": "Afficher/masquer le panneau gauche (blocs, structure)",
+			"leftSidebar": "Afficher/masquer le panneau gauche",
+			"undo": "Annuler (Ctrl+Z)",
+			"redo": "Rétablir (Ctrl+Shift+Z)",
+			"saved": "Enregistré",
+			"saveHint": "Enregistrer (Ctrl+S)",
+			"noChanges": "Aucune modification non enregistrée",
+			"rightSidebar": "Afficher/masquer les réglages"
+		},
+		"page": {
+			"section": "Page",
+			"title": "Titre",
+			"slugLocked": "Défini par la configuration du site.",
+			"slugRule": "Lettres minuscules, chiffres et traits d’union.",
+			"servedAt": "Les pages publiées sont servies sur {path}.",
+			"seo": "Recherche et partage",
+			"metaTitle": "Méta-titre",
+			"tab": "Onglet : {title}",
+			"metaDescription": "Méta-description",
+			"metaDescriptionHint": "Résultats de recherche et aperçus de liens ; vide = le premier paragraphe.",
+			"status": "Statut",
+			"statusHint": "Enregistrer ne publie jamais : les visiteurs voient la dernière version publiée.",
+			"downloadJson": "Télécharger le JSON",
+			"exportHint": "Une copie de cette page. Importez-la dans la liste des pages pour créer un nouveau brouillon."
+		},
+		"loading": "Chargement de la page…",
+		"templateNotice": "Le contenu de cette page provient du modèle {template} du site. Vous pouvez toujours modifier son titre et ses réglages.",
+		"tabs": {
+			"block": "Bloc",
+			"page": "Page",
+			"blocks": "Blocs",
+			"outline": "Structure"
+		},
+		"width": {
+			"title": "Largeur",
+			"default": "Normale",
+			"wide": "Large",
+			"full": "Pleine largeur"
+		},
+		"backgroundColor": "Couleur de fond",
+		"textColor": "Couleur du texte",
+		"noSettings": "Aucun réglage pour ce bloc",
+		"noSelection": "Aucun bloc sélectionné",
+		"closeSidebar": "Fermer le panneau",
+		"colorNone": "Aucune",
+		"noColors": "Aucune couleur de thème n’est définie pour ce site.",
+		"outlineEmpty": "Aucun bloc pour l’instant.",
+		"collapse": "Replier",
+		"expand": "Déplier",
+		"emptyPage": "Ajoutez des blocs depuis le panneau latéral",
+		"searchBlocks": "Rechercher des blocs…",
+		"categories": {
+			"text": "Texte",
+			"media": "Médias",
+			"containers": "Conteneurs",
+			"embeds": "Intégrations"
+		},
+		"insertHint": "Cliquer ou glisser pour ajouter : {title}",
+		"noBlocksFound": "Aucun bloc trouvé",
+		"heading": {
+			"level": "Titre {n}",
+			"levelTitle": "Niveau de titre",
+			"placeholder": "Cliquez pour ajouter un titre…",
+			"levelSection": "Niveau"
+		},
+		"align": {
+			"title": "Alignement",
+			"left": "Aligner à gauche",
+			"center": "Centrer",
+			"right": "Aligner à droite"
+		},
+		"paragraph": {
+			"placeholder": "Cliquez pour ajouter du texte…"
+		},
+		"list": {
+			"bullet": "À puces",
+			"numbered": "Numérotée",
+			"type": "Type de liste"
+		},
+		"listItem": {
+			"empty": "Cliquez pour ajouter un élément…",
+			"placeholder": "Texte de l’élément…"
+		},
+		"link": {
+			"placeholder": "Cliquez pour ajouter un lien…",
+			"url": "URL"
+		},
+		"image": {
+			"widthShort": "L",
+			"failed": "Impossible de charger l’image",
+			"deleted": "Cette image a été supprimée de la médiathèque",
+			"add": "Ajouter une image",
+			"caption": "Ajouter une légende…",
+			"widthPercent": "Largeur (%)",
+			"widthSlider": "Curseur de largeur"
+		},
+		"card": {
+			"addImage": "Ajouter une image (facultatif)",
+			"title": "Cliquez pour ajouter un titre…",
+			"description": "Ajouter une description…",
+			"content": "Contenu"
+		},
+		"media": {
+			"uploading": "Envoi…",
+			"replace": "Remplacer",
+			"choose": "Choisir une image existante",
+			"altFailed": "Impossible d’enregistrer le texte alternatif",
+			"deleted": "Cette image a été supprimée de la médiathèque.",
+			"remove": "Retirer l’image",
+			"upload": "Importer",
+			"pickerTitle": "Choisir un média",
+			"pickerEmpty": "Aucun média pour l’instant. Importez une image pour commencer.",
+			"noAlt": "Pas de texte alternatif"
+		},
+		"errors": {
+			"load": "Impossible de charger la page",
+			"slug": "Impossible de modifier le slug",
+			"tags": "Impossible d’enregistrer les tags",
+			"publish": "Impossible de publier la page",
+			"unpublish": "Impossible de dépublier la page"
+		}
+	},
+	"blocks": {
+		"card": {
+			"title": "Carte",
+			"description": "Regrouper du contenu dans une carte"
+		},
+		"heading": {
+			"title": "Titre",
+			"description": "Ajouter un titre"
+		},
+		"image": {
+			"title": "Image",
+			"description": "Insérer une image"
+		},
+		"link": {
+			"title": "Lien",
+			"description": "Ajouter un lien"
+		},
+		"list-item": {
+			"title": "Élément de liste",
+			"description": "Ajouter un élément à une liste"
+		},
+		"list": {
+			"title": "Liste",
+			"description": "Créer une liste à puces ou numérotée"
+		},
+		"paragraph": {
+			"title": "Paragraphe",
+			"description": "Ajouter un bloc de texte"
+		}
+	}
+}

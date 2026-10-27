@@ -114,6 +114,10 @@ loadPage/savePage (working copy only, skips clean)/updateSlug/publish/unpublish/
 
 ## Gotchas
 
+- All UI text goes through vue-i18n (`$t` / `useI18n`; keys under `editor.*` / `blocks.*` in
+  `src/locales/admin/<code>.json`, see frontend/CLAUDE.md → Localization). Block titles/descriptions render through
+  `useBlockLabels()` (`i18n/siteConfigLabels.ts`), never `blockType.title` directly. Option lists keep message keys
+  (`blocks/paragraph/align.ts`, SidebarTabs `tabs[].label`) and translate where they render.
 - Mutate blocks only through store actions (`updateBlockAttributes`, `addBlock`, ...): they push history
   and count towards autosave (every 4 changes). Saves are serialized in `savePage`.
 - The editor store is a singleton: `Editor.vue` calls `loadPage` on mount / id change and `closePage` on back.

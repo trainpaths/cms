@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '../stores/auth'
 import { storeToRefs } from 'pinia'
 import { Button, Input, Card, Alert, Link, Form } from '@trainpaths/nb-ui'
@@ -12,6 +13,7 @@ defineProps<{ backTo: string }>()
 const emit = defineEmits<{ changed: [] }>()
 
 const authStore = useAuthStore()
+const { t } = useI18n()
 const { error, loading } = storeToRefs(authStore)
 
 const currentPassword = ref('')
@@ -35,18 +37,18 @@ async function handleSubmit() {
 	successMessage.value = ''
 
 	if (!passwordsMatch.value) {
-		localError.value = 'Passwords do not match'
+		localError.value = t('account.mismatch')
 		return
 	}
 
 	if (newPassword.value.length < 8) {
-		localError.value = 'New password must be at least 8 characters'
+		localError.value = t('account.tooShort')
 		return
 	}
 
 	const success = await authStore.changePassword(currentPassword.value, newPassword.value)
 	if (success) {
-		successMessage.value = 'Password changed successfully. Please log in again.'
+		successMessage.value = t('account.changed')
 		currentPassword.value = ''
 		newPassword.value = ''
 		confirmPassword.value = ''
@@ -58,8 +60,8 @@ async function handleSubmit() {
 <template>
 	<Card>
 		<div class="flex items-center justify-between mb-24">
-			<h1 class="text-2xl font-bold">Change Password</h1>
-			<Link :to="backTo">Back to Profile</Link>
+			<h1 class="text-2xl font-bold">{{ $t('account.changePassword') }}</h1>
+			<Link :to="backTo">{{ $t('account.backToProfile') }}</Link>
 		</div>
 
 		<Alert
@@ -74,20 +76,20 @@ async function handleSubmit() {
 			<Input
 				v-model="currentPassword"
 				type="password"
-				placeholder="Current password"
+				:placeholder="$t('account.currentPassword')"
 				required
 			/>
 			<Input
 				v-model="newPassword"
 				type="password"
-				placeholder="New password (min 8 characters)"
+				:placeholder="$t('account.newPassword')"
 				required
 				minlength="8"
 			/>
 			<Input
 				v-model="confirmPassword"
 				type="password"
-				placeholder="Confirm new password"
+				:placeholder="$t('account.confirmPassword')"
 				required
 				:invalid="!!confirmPassword && !passwordsMatch"
 			/>
@@ -95,7 +97,7 @@ async function handleSubmit() {
 				v-if="confirmPassword && !passwordsMatch"
 				type="error"
 			>
-				Passwords do not match
+				{{ $t('account.mismatch') }}
 			</Alert>
 			<Alert
 				v-if="localError"
@@ -114,7 +116,7 @@ async function handleSubmit() {
 				:loading="loading"
 				:disabled="!canSubmit"
 			>
-				{{ loading ? 'Changing...' : 'Change Password' }}
+				{{ loading ? $t('account.submitting') : $t('account.submit') }}
 			</Button>
 		</Form>
 	</Card>

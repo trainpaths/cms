@@ -4,6 +4,7 @@
  * and public/screens/UserProfile.vue (customers). `logged-out`: the parent decides where to go.
  */
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '../stores/auth'
 import { storeToRefs } from 'pinia'
 import { Button, Input, FormField, Card, DescriptionList, DescriptionItem, Alert, Link } from '@trainpaths/nb-ui'
@@ -12,6 +13,7 @@ defineProps<{ passwordTo: string }>()
 const emit = defineEmits<{ 'logged-out': [] }>()
 
 const authStore = useAuthStore()
+const { t } = useI18n()
 const { user, authType, error, loading } = storeToRefs(authStore)
 
 const editMode = ref(false)
@@ -41,7 +43,7 @@ async function saveProfile() {
 		const success = await authStore.updateProfile(editDisplayName.value)
 		if (success) {
 			editMode.value = false
-			successMessage.value = 'Profile updated successfully'
+			successMessage.value = t('account.updated')
 			await authStore.fetchCurrentUser()
 		}
 	} finally {
@@ -61,7 +63,7 @@ async function handleLogout() {
 			v-if="loading && !user"
 			class="text-black opacity-60"
 		>
-			Loading user info...
+			{{ $t('account.loading') }}
 		</div>
 
 		<div v-else-if="user">
@@ -79,7 +81,7 @@ async function handleLogout() {
 					@submit.prevent="saveProfile"
 				>
 					<FormField
-						label="Display Name"
+						:label="$t('account.displayName')"
 						:error="error || undefined"
 					>
 						<Input
@@ -92,7 +94,7 @@ async function handleLogout() {
 							type="submit"
 							:loading="saving"
 						>
-							{{ saving ? 'Saving...' : 'Save' }}
+							{{ saving ? $t('common.saving') : $t('common.save') }}
 						</Button>
 						<Button
 							type="button"
@@ -100,7 +102,7 @@ async function handleLogout() {
 							text="primary"
 							@click="cancelEdit"
 						>
-							Cancel
+							{{ $t('common.cancel') }}
 						</Button>
 					</div>
 				</form>
@@ -108,8 +110,8 @@ async function handleLogout() {
 
 			<Card v-else>
 				<DescriptionList>
-					<DescriptionItem label="Email">{{ user.email }}</DescriptionItem>
-					<DescriptionItem label="Display Name">
+					<DescriptionItem :label="$t('common.email')">{{ user.email }}</DescriptionItem>
+					<DescriptionItem :label="$t('account.displayName')">
 						{{ user.displayName ?? '—' }}
 						<Button
 							variant="ghost"
@@ -117,24 +119,24 @@ async function handleLogout() {
 							class="ml-8"
 							@click="startEdit"
 						>
-							Edit
+							{{ $t('common.edit') }}
 						</Button>
 					</DescriptionItem>
-					<DescriptionItem label="Type">{{ authType }}</DescriptionItem>
-					<DescriptionItem label="User Type">{{ user.userType ?? '—' }}</DescriptionItem>
-					<DescriptionItem label="Roles">{{ user.roles?.join(', ') || '—' }}</DescriptionItem>
-					<DescriptionItem label="Organization">{{ user.organizationId ?? '—' }}</DescriptionItem>
+					<DescriptionItem :label="$t('account.type')">{{ authType }}</DescriptionItem>
+					<DescriptionItem :label="$t('account.userType')">{{ user.userType ?? '—' }}</DescriptionItem>
+					<DescriptionItem :label="$t('account.roles')">{{ user.roles?.join(', ') || '—' }}</DescriptionItem>
+					<DescriptionItem :label="$t('account.organization')">{{ user.organizationId ?? '—' }}</DescriptionItem>
 				</DescriptionList>
 			</Card>
 
 			<div class="flex items-center gap-16 mt-16">
-				<Link :to="passwordTo">Change Password</Link>
-				<Button @click="handleLogout">Logout</Button>
+				<Link :to="passwordTo">{{ $t('account.changePassword') }}</Link>
+				<Button @click="handleLogout">{{ $t('account.logout') }}</Button>
 			</div>
 		</div>
 
 		<div v-else>
-			<p>Could not load user info.</p>
+			<p>{{ $t('account.loadFailed') }}</p>
 			<Alert
 				v-if="error"
 				type="error"

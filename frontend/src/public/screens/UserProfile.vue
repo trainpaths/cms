@@ -11,12 +11,15 @@ const ready = useCustomerSession()
 
 <template>
 	<div class="mx-auto max-w-600 p-32 font-sans">
-		<h1 class="mb-24 text-2xl font-bold">Profile</h1>
+		<h1 class="mb-24 text-2xl font-bold">{{ $t('screens.profile.title') }}</h1>
 		<ProfileDetails
 			v-if="ready"
 			password-to="/user/password"
 			@logged-out="router.push('/')"
 		/>
-		<Loading v-else />
+		<Loading
+			v-else
+			:label="$t('common.loading')"
+		/>
 	</div>
 </template>

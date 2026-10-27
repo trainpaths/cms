@@ -6,6 +6,16 @@ export { useMediaImage } from './lib/web-editor/media/useMediaImage'
 export { useSiteConfigStore } from './stores/siteConfig'
 export { usePublicMenusStore } from './stores/menus'
 export { default as SiteConfigEntry } from './components/SiteConfigEntry.vue'
+export { default as LanguageDropdown } from './components/LanguageDropdown.vue'
+export {
+	LANGUAGES,
+	DEFAULT_LANGUAGE,
+	IS_LOCALIZED,
+	languageLabel,
+	useLanguageSwitch,
+	type Language,
+	type LanguageSwitch,
+} from './i18n'
 export { firmName, configEntry, filledEntries, hasValue, addressLines, entryHref, entryText } from './lib/siteConfig'
 export type { TemplatePage, TemplateProps } from './public/templates'
 export type {

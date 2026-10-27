@@ -37,14 +37,14 @@ function choose(mediaId: string) {
 		>
 			<!-- media actions: placeholder below, replace in the settings sidebar -->
 			<div class="flex items-center gap-4">
-				<span class="text-xs text-gray-400">W:</span>
+				<span class="text-xs text-gray-400">{{ $t('editor.image.widthShort') }}:</span>
 				<input
 					:value="width"
 					type="number"
 					min="1"
 					max="100"
 					class="toolbar-input w-48"
-					aria-label="Width"
+					:aria-label="$t('editor.width.title')"
 					@change="width = Number(($event.target as HTMLInputElement).value)"
 				/>
 				<span class="text-xs text-gray-400">%</span>
@@ -65,7 +65,7 @@ function choose(mediaId: string) {
 					v-else
 					class="rounded bg-gray-100 px-16 py-32 text-center text-sm text-gray-400"
 				>
-					Image failed to load
+					{{ $t('editor.image.failed') }}
 				</div>
 			</template>
 			<div
@@ -74,7 +74,7 @@ function choose(mediaId: string) {
 			>
 				<span class="text-3xl">🖼</span>
 				<span class="text-sm">
-					{{ missing ? 'This image was deleted from the media library' : 'Add an image' }}
+					{{ missing ? $t('editor.image.deleted') : $t('editor.image.add') }}
 				</span>
 				<MediaActions @select="choose($event.id)" />
 			</div>
@@ -82,7 +82,7 @@ function choose(mediaId: string) {
 				v-model="caption"
 				type="text"
 				class="mt-8 w-full border-none bg-transparent p-0 text-center text-sm text-gray-500 outline-hidden placeholder:italic placeholder:text-gray-400 focus:ring-0"
-				placeholder="Add caption..."
+				:placeholder="$t('editor.image.caption')"
 			/>
 		</figure>
 	</div>

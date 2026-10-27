@@ -10,11 +10,11 @@ const width = useImageWidth(() => props.block)
 </script>
 
 <template>
-	<SettingsSection title="Image">
+	<SettingsSection :title="$t('blocks.image.title')">
 		<div class="flex flex-col gap-12">
 			<MediaField :block="block" />
 			<div class="field-label">
-				Width (%)
+				{{ $t('editor.image.widthPercent') }}
 				<div class="mt-2 flex items-center gap-8">
 					<!-- commit on release: every input step would be an undo entry + autosave tick -->
 					<input
@@ -23,7 +23,7 @@ const width = useImageWidth(() => props.block)
 						min="1"
 						max="100"
 						class="flex-1 accent-primary"
-						aria-label="Width slider"
+						:aria-label="$t('editor.image.widthSlider')"
 						@change="width = Number(($event.target as HTMLInputElement).value)"
 					/>
 					<input
@@ -32,7 +32,7 @@ const width = useImageWidth(() => props.block)
 						min="1"
 						max="100"
 						class="input-field mt-0 w-64"
-						aria-label="Width"
+						:aria-label="$t('editor.width.title')"
 						@change="width = Number(($event.target as HTMLInputElement).value)"
 					/>
 				</div>

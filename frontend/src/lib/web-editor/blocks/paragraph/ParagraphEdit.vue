@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import InlineToolbar from '../../editor/InlineToolbar.vue'
 import ToolbarDropdown from '../../editor/ToolbarDropdown.vue'
 import AlignIcon from './AlignIcon.vue'
@@ -11,6 +12,8 @@ import { alignOptions, type Align } from './align'
 
 const props = defineProps<{ block: BlockInstance }>()
 const { isSelected } = useSelection()
+const { t } = useI18n()
+const options = computed(() => alignOptions.map((o) => ({ ...o, label: t(o.label) })))
 
 const selected = computed(() => isSelected(props.block.id))
 
@@ -32,8 +35,8 @@ useAutoResize(textarea, text)
 		>
 			<ToolbarDropdown
 				v-model="alignment"
-				:options="alignOptions"
-				title="Alignment"
+				:options="options"
+				:title="$t('editor.align.title')"
 				show-labels
 			>
 				<template #default="{ value }">
@@ -48,7 +51,7 @@ useAutoResize(textarea, text)
 			rows="1"
 			:class="[alignClasses[alignment], colorClass]"
 			class="m-0 block w-full resize-none overflow-hidden border-none bg-transparent p-0 leading-relaxed outline-hidden placeholder:italic placeholder:text-gray-400 focus:ring-0"
-			placeholder="Click to add text..."
+			:placeholder="$t('editor.paragraph.placeholder')"
 		/>
 	</div>
 </template>

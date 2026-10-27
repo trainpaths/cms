@@ -6,7 +6,7 @@ Package internals: `frontend/CLAUDE.md`. Why instances: `claude-context/ARCHITEC
 
 ```
 cms.config.json     instance config (API; `site.lang` + `theme.colors` also read by cms() at build time; compose.yaml mounts it at /app/cms.config.json in the api container,
-                    restart the api after editing): publicAuth on (e2e uses customer accounts), site.lang en, theme.colors (primary, accent, dark, light,
+                    restart the api after editing): publicAuth on (e2e uses customer accounts), site.lang en-US + localization de-CH/fr-CH/it-CH, theme.colors (primary, accent, dark, light,
                     white: block-fixes.spec picks them), site config field
                     `vatId` + group `socials` (instagram/linkedin/facebook, no custom entries), the default pages
                     + `imprint` (template page)

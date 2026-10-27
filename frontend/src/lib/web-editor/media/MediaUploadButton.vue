@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { MediaItem } from '../core/types'
 import { MEDIA_ACCEPT } from '../limits'
 import { errorMessage } from '../../../api-error'
 import { useMediaStore } from '../../../stores/media'
 
 withDefaults(defineProps<{ label?: string; buttonClass?: string; multiple?: boolean }>(), {
-	label: 'Upload new',
+	label: undefined,
 	multiple: false,
 	buttonClass:
 		'cursor-pointer rounded border-none bg-primary px-12 py-6 text-sm text-white hover:bg-primary-dark disabled:opacity-60',
@@ -14,6 +15,7 @@ withDefaults(defineProps<{ label?: string; buttonClass?: string; multiple?: bool
 const emit = defineEmits<{ uploaded: [item: MediaItem]; error: [message: string]; busy: [uploading: boolean] }>()
 
 const media = useMediaStore()
+const { t } = useI18n()
 const input = ref<HTMLInputElement | null>(null)
 const uploading = ref(false)
 
@@ -26,7 +28,7 @@ async function onChange() {
 	try {
 		for (const file of files) emit('uploaded', await media.upload(file))
 	} catch (err: unknown) {
-		emit('error', errorMessage(err, 'Upload failed'))
+		emit('error', errorMessage(err, t('admin.backups.uploadFailed')))
 	} finally {
 		uploading.value = false
 		emit('busy', false)
@@ -42,7 +44,7 @@ async function onChange() {
 		data-testid="media-upload"
 		@click="input?.click()"
 	>
-		{{ uploading ? 'Uploading…' : label }}
+		{{ uploading ? $t('editor.media.uploading') : (label ?? $t('editor.media.upload')) }}
 	</button>
 	<input
 		ref="input"

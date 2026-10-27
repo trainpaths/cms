@@ -1,0 +1,125 @@
+{
+	"common": {
+		"save": "Speichern",
+		"saving": "Speichern…",
+		"cancel": "Abbrechen",
+		"edit": "Bearbeiten",
+		"delete": "Löschen",
+		"close": "Schliessen",
+		"loading": "Wird geladen…",
+		"email": "E-Mail",
+		"password": "Passwort",
+		"none": "—",
+		"language": "Sprache",
+		"logOut": "Abmelden",
+		"backToLogin": "Zurück zur Anmeldung",
+		"back": "Zurück",
+		"cannotUndo": "Dies kann nicht rückgängig gemacht werden."
+	},
+	"site": {
+		"home": "Startseite",
+		"logo": "Logo",
+		"mainNav": "Hauptnavigation",
+		"submenu": "Untermenü {label}",
+		"openMenu": "Menü öffnen",
+		"closeMenu": "Menü schliessen",
+		"account": "Konto",
+		"legalNav": "Rechtliches",
+		"notFound": {
+			"title": "Seite nicht gefunden",
+			"home": "Zur Startseite"
+		},
+		"adminBar": {
+			"admin": "Verwaltung"
+		}
+	},
+	"screens": {
+		"login": {
+			"title": "Anmelden",
+			"heading": "Anmelden",
+			"submit": "Anmelden",
+			"submitting": "Anmeldung läuft…",
+			"noAccount": "Noch kein Konto?",
+			"register": "Registrieren",
+			"forgot": "Passwort vergessen?"
+		},
+		"register": {
+			"title": "Registrieren",
+			"heading": "Registrieren",
+			"displayName": "Anzeigename (optional)",
+			"submit": "Als Kunde registrieren",
+			"submitting": "Registrierung läuft…",
+			"haveAccount": "Bereits ein Konto?",
+			"login": "Anmelden"
+		},
+		"forgotPassword": {
+			"title": "Passwort zurücksetzen",
+			"sent": "Falls zu dieser E-Mail-Adresse ein Konto besteht, wurde ein Link zum Zurücksetzen des Passworts gesendet. Prüfen Sie Ihren Posteingang.",
+			"submit": "Link senden",
+			"submitting": "Wird gesendet…",
+			"remembered": "Wieder eingefallen?"
+		},
+		"resetPassword": {
+			"title": "Neues Passwort wählen",
+			"missingToken": "Diesem Link fehlt das Token.",
+			"invalidLink": "Dieser Link ist ungültig oder unvollständig. Fordern Sie unter {link} einen neuen an.",
+			"invalidLinkLink": "Passwort vergessen",
+			"done": "Passwort zurückgesetzt. Weiterleitung zur Anmeldung…",
+			"submit": "Passwort zurücksetzen",
+			"submitting": "Wird zurückgesetzt…"
+		},
+		"verifyEmail": {
+			"title": "E-Mail-Bestätigung",
+			"pending": "Ihre E-Mail-Adresse wird bestätigt…",
+			"done": "Ihre E-Mail-Adresse wurde bestätigt. Sie können sich jetzt anmelden.",
+			"continue": "Weiter zur Anmeldung",
+			"invalid": "Dieser Bestätigungslink ist ungültig oder abgelaufen.",
+			"resent": "Falls zu dieser E-Mail-Adresse ein noch nicht bestätigtes Konto besteht, wurde ein neuer Bestätigungslink gesendet.",
+			"resendEmail": "E-Mail-Adresse für den neuen Bestätigungslink",
+			"submit": "Bestätigung erneut senden",
+			"submitting": "Wird gesendet…"
+		},
+		"profile": {
+			"title": "Profil"
+		},
+		"password": {
+			"title": "Passwort ändern"
+		}
+	},
+	"account": {
+		"loading": "Benutzerdaten werden geladen…",
+		"loadFailed": "Benutzerdaten konnten nicht geladen werden.",
+		"updated": "Profil aktualisiert",
+		"displayName": "Anzeigename",
+		"type": "Typ",
+		"userType": "Benutzertyp",
+		"roles": "Rollen",
+		"organization": "Organisation",
+		"changePassword": "Passwort ändern",
+		"backToProfile": "Zurück zum Profil",
+		"currentPassword": "Aktuelles Passwort",
+		"newPassword": "Neues Passwort (mind. 8 Zeichen)",
+		"confirmPassword": "Neues Passwort bestätigen",
+		"mismatch": "Die Passwörter stimmen nicht überein",
+		"tooShort": "Das neue Passwort muss mindestens 8 Zeichen lang sein",
+		"changed": "Passwort geändert. Bitte melden Sie sich erneut an.",
+		"submit": "Passwort ändern",
+		"submitting": "Wird geändert…",
+		"logout": "Abmelden"
+	},
+	"siteConfig": {
+		"fields": {
+			"firmName": "Firmenname"
+		},
+		"groups": {
+			"contact": "Kontakt"
+		},
+		"entries": {
+			"contact": {
+				"address": "Adresse",
+				"phone": "Telefon",
+				"email": "E-Mail"
+			}
+		}
+	}
+}
