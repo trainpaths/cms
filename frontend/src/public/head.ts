@@ -110,14 +110,6 @@ export function headTags(state: PublicState, t: Translate): string {
 		`<meta ${attr}="${key}" content="${escapeAttr(value)}">`
 
 	tags.push(`<link rel="canonical" href="${escapeAttr(url)}">`)
-	// every language of the page + x-default (unprefixed: the default language, or the visitor's remembered one)
-	if (IS_LOCALIZED) {
-		for (const language of LANGUAGES)
-			tags.push(
-				`<link rel="alternate" hreflang="${language.tag}" href="${escapeAttr(state.baseUrl + localePath(path, language.code))}">`,
-			)
-		tags.push(`<link rel="alternate" hreflang="x-default" href="${escapeAttr(state.baseUrl + path)}">`)
-	}
 	if (desc) tags.push(meta('name', 'description', desc), meta('property', 'og:description', desc))
 	tags.push(
 		meta('property', 'og:type', 'website'),
@@ -125,12 +117,18 @@ export function headTags(state: PublicState, t: Translate): string {
 		meta('property', 'og:url', url),
 	)
 	if (firm) tags.push(meta('property', 'og:site_name', firm))
+	// every language of the page: hreflang alternates + x-default (unprefixed: the default language, or the visitor's
+	// remembered one), og:locale (de_CH) + the others as alternates
 	if (IS_LOCALIZED) {
+		const current = languageOf(state.lang)
 		const ogLocale = (tag: string) => tag.replace('-', '_')
-		tags.push(meta('property', 'og:locale', ogLocale(languageOf(state.lang).tag)))
-		for (const language of LANGUAGES)
-			if (language.code !== languageOf(state.lang).code)
-				tags.push(meta('property', 'og:locale:alternate', ogLocale(language.tag)))
+		tags.push(meta('property', 'og:locale', ogLocale(current.tag)))
+		for (const language of LANGUAGES) {
+			const href = escapeAttr(state.baseUrl + localePath(path, language.code))
+			tags.push(`<link rel="alternate" hreflang="${language.tag}" href="${href}">`)
+			if (language !== current) tags.push(meta('property', 'og:locale:alternate', ogLocale(language.tag)))
+		}
+		tags.push(`<link rel="alternate" hreflang="x-default" href="${escapeAttr(state.baseUrl + path)}">`)
 	}
 	if (image) tags.push(meta('property', 'og:image', state.baseUrl + image))
 	tags.push(meta('name', 'twitter:card', image ? 'summary_large_image' : 'summary'))

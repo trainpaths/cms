@@ -82,17 +82,7 @@ export function parseConfig(json, source) {
 	}
 }
 
-/**
- * Sets `lang` on the `<html>` tag, replacing the template's own (any quoting).
- * @param {string} html
- * @param {string} lang validated tag (letters, digits, hyphens: no escaping needed)
- */
-export const setHtmlLang = (html, lang) =>
-	html.replace(
-		/<html\b([^>]*)>/i,
-		(_, /** @type {string} */ attrs) =>
-			`<html${attrs.replace(/\slang=("[^"]*"|'[^']*'|[^\s>]*)/i, '')} lang="${lang}">`,
-	)
+export { setHtmlLang } from './template.js'
 
 /**
  * Drops comments and trailing commas outside strings (JSON.parse accepts neither).
