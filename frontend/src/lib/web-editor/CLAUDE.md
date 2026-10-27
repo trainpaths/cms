@@ -98,7 +98,9 @@ composables/        usePublishState (publish rules shared by header + Page tab: 
                     from inside `[role=dialog|alertdialog]`), useToolbarPosition,
                     useBlockAttribute (writable computed over one attribute; translatable ones in store.editLang) +
                     useAttributeFallback (default's text while translating, for placeholders), usePageText (title/meta
-                    in store.editLang + original), useMissingTranslations (textFields per language), useAutoResize (textarea grow),
+                    in store.editLang + original), useMissingTranslations (textFields per language), useMachineTranslation
+                    (DeepL: available = instance machineTranslation + non-default editLang; translateMissing /
+                    retranslateAll (confirm) → POST /api/translate → store.applyTranslations; toast; errors → banner), useAutoResize (textarea grow),
                     useBlockDrag (shared dragged-block + dropTarget state, one indicator app-wide; canDropInto:
                     allowedBlocks/parent/no self-nesting)
 media/              useMediaImage (block's `mediaId` → src/alt/missing from the media store;
@@ -118,7 +120,8 @@ web-editor.css       @apply component classes (.input-field, .field-label, .inne
 `useEditorStore`: blocks tree ops, selection, UI toggles, snapshot undo/redo (50), page state
 (pageId/Title/Slug/Status/HasUnpublishedChanges), `editLang` (reset on load), `pageTranslations` (title/meta per
 code; sent with a save only when changed) + `setPageText`, `updateBlockTranslation(id, code, patch)` (history +
-autosave; '' removes a key, empty languages/`translations` are removed), `isDirty` (content ≠ last saved), `publishing`,
+autosave; '' removes a key, empty languages/`translations` are removed), `applyTranslations(code, entries)` (DeepL
+results: one undo step + one change), `isDirty` (content ≠ last saved), `publishing`,
 loadPage/savePage (working copy only, skips clean)/updateSlug/publish/unpublish/closePage. Imports the lib's
 `core/types` + `api.ts`; re-exported from the barrel.
 
@@ -147,7 +150,7 @@ loadPage/savePage (working copy only, skips clean)/updateSlug/publish/unpublish/
 - Images reference media by id in the `mediaId` attribute (image + card; `media/useMediaImage`). Alt text
   lives on the media object (edited in the settings panel or `/admin/media`), fallback `"image"`; the caption
   is not an alt fallback. No external image URLs: nginx CSP is `img-src 'self'`.
-- `data-testid`s used by e2e: `edit-language`, `translation-hint`, `translation-<code>`, `preview-language`, `page-title`, `page-slug`, `page-save`, `page-publish`, `page-publish-icon`,
+- `data-testid`s used by e2e: `deepl-missing`, `deepl-all`, `edit-language`, `translation-hint`, `translation-<code>`, `preview-language`, `page-title`, `page-slug`, `page-save`, `page-publish`, `page-publish-icon`,
   `page-unpublish`, `page-status`, `settings-publish`, `settings-unpublish`, `page-row`, `block-drag-handle`, `inserter-block`, `drop-indicator`,
   `media-upload`, `media-upload-input`, `media-choose`, `media-replace`, `media-picker`, `media-item`, `media-alt`, `media-name`, `media-details`, `media-save`, `media-delete`,
   `sidebar-tab-blocks`, `sidebar-tab-outline`, `outline-item`, `toggle-left-sidebar`, `toggle-right-sidebar`,

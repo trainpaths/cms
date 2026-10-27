@@ -14,6 +14,7 @@ export const useInstanceStore = defineStore('instance', () => {
 		publicAuth: false,
 		excludedBlocks: [],
 		siteConfig: { fields: [], groups: [] },
+		machineTranslation: false,
 	})
 
 	async function load(): Promise<void> {

@@ -417,6 +417,16 @@
 			"backToDefault": "Zurück zu {language}",
 			"hint": "Texte (Titel, Meta-Angaben und Blocktexte) werden pro Sprache übersetzt; leere Felder zeigen die Standardsprache.",
 			"canvasHint": "Sie bearbeiten {language}: Layout, Bilder und Farben gelten für alle Sprachen."
+		},
+		"deepl": {
+			"missing": "Fehlende Felder übersetzen",
+			"running": "Übersetzt…",
+			"retranslate": "Alles neu übersetzen",
+			"retranslateTitle": "Alle Felder neu übersetzen?",
+			"retranslateMessage": "Jeder übersetzte Text in dieser Sprache wird durch eine neue DeepL-Übersetzung ersetzt.",
+			"done": "{n} Feld von DeepL übersetzt, bitte prüfen | {n} Felder von DeepL übersetzt, bitte prüfen",
+			"nothing": "Nichts zu übersetzen",
+			"failed": "Übersetzung fehlgeschlagen"
 		}
 	},
 	"blocks": {

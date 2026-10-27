@@ -1,6 +1,6 @@
 # Phase 4: DeepL pre-fill of missing translations
 
-Status: **not started**. Read `README.md` (this folder) first. Issue trainpaths/cms#45. Starts after Phase 3 merged
+Status: **implemented** (PR pending, stacked on Phase 3, see #45). Read `README.md` (this folder) first. Issue trainpaths/cms#45. Started after Phase 3
 (it fills the Phase 3 `translations` through the editor store).
 
 ## Goal

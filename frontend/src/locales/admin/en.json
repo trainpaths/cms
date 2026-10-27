@@ -417,6 +417,16 @@
 			"backToDefault": "Back to {language}",
 			"hint": "Text (title, meta and block text) is translated per language; empty fields show the default language.",
 			"canvasHint": "Editing {language}: layout, images and colours apply to all languages."
+		},
+		"deepl": {
+			"missing": "Translate missing fields",
+			"running": "Translating…",
+			"retranslate": "Re-translate all",
+			"retranslateTitle": "Re-translate all fields?",
+			"retranslateMessage": "Every translated text in this language is replaced by a new DeepL translation.",
+			"done": "{n} field translated by DeepL, please review | {n} fields translated by DeepL, please review",
+			"nothing": "Nothing to translate",
+			"failed": "Translation failed"
 		}
 	},
 	"blocks": {
