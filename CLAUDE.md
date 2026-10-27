@@ -15,6 +15,7 @@ for development and e2e. Why/how: `claude-context/ARCHITECTURE.md` → Framework
 1. **`PROJECT_OVERVIEW.md`** — what the CMS is, who uses it, feature map, roadmap/open items
 2. **`ARCHITECTURE.md`** — key decisions (Postgres jsonb instead of Mongo, auth model, slugs, limits) and why
 3. **`BLOCK_SYSTEM.md`** — block data model, registry, editor/view split, **how to add a new block type**
+4. **`localization/`** — languages: state after Phase 1 + handoff plans for Phases 2–4 (`README.md` first)
 
 `frontend/docs/INSTANCE_GUIDE.md` is the guide for **instance developers** (ships in the package): keep it current
 whenever config keys, extension points, stable override points, exports or the Docker setup change.

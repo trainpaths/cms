@@ -283,7 +283,8 @@ staff save ─► API IRenderQueue ─► RenderWorker ─POST /render─► ren
   hydration mismatches show up in development; the renderer container isn't needed.
 
 ## Localization (issue #45)
-Sites need several languages (Swiss clients: de, fr, it + en), in the admin and on the public site.
+Sites need several languages (Swiss clients: de, fr, it + en), in the admin and on the public site. Work plan for the
+remaining phases (one PR each): `claude-context/localization/` (README first).
 - **Config**: `site.lang` = a tag (one language) or `{ default, localization: [tags] }`. A language's **code** = its
   primary subtag, unique per site: URL prefix, `cms_lang` cookie, message file, key of stored translations (survives
   `de-CH` → `de-DE`). The **tag** goes into `<html lang>`, `hreflang` and `Intl` formats. Validated by the API
