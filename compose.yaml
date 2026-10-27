@@ -95,6 +95,8 @@ services:
       # public pages are pre-rendered by the renderer service (frontend/server/render-server.ts)
       Renderer__BaseUrl: http://renderer:8080
       Renderer__PublicBaseUrl: ${APP_BASE_URL:-http://localhost:5173}
+      # editor "Translate missing fields" (empty = off)
+      Translation__DeepL__ApiKey: ${DEEPL_API_KEY:-}
       # shown in the admin's Backups tab (the API can't see the host side of its mount)
       Backup__HostPath: ${BACKUP_DIR:-./backups}
     # instance config of the playground (an instance's own api image COPYs its cms.config.json to /app instead)

@@ -12,6 +12,7 @@ using api_backend.Services.Media;
 using api_backend.Services.Menus;
 using api_backend.Services.Pages;
 using api_backend.Services.Rendering;
+using api_backend.Services.Translation;
 using api_backend.Services.Site;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -187,6 +188,10 @@ builder.Services.AddHttpClient<IRendererClient, HttpRendererClient>((sp, http) =
 	http.Timeout = TimeSpan.FromSeconds(30);
 });
 builder.Services.AddHostedService<RenderWorker>();
+
+// Machine translation for the editor (DeepL; off without Translation:DeepL:ApiKey)
+builder.Services.Configure<TranslationOptions>(builder.Configuration.GetSection(TranslationOptions.SectionName));
+builder.Services.AddHttpClient<ITranslator, DeepLTranslator>(http => http.Timeout = TimeSpan.FromSeconds(30));
 // Full backups (database + media archives in Backup:Directory) + their schedule
 builder.Services.Configure<BackupOptions>(builder.Configuration.GetSection(BackupOptions.SectionName));
 builder.Services.AddSingleton<BackupLock>();
