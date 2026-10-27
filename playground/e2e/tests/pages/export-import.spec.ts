@@ -25,8 +25,8 @@ test('a page downloaded as JSON imports as a new draft', async ({ staffPage: pag
 	expect(fromEditor.name).toBe(`${slug}.json`)
 	expect(fromEditor.json).toMatchObject({
 		format: 'cms-page',
-		version: 1,
-		page: { title, slug, metaTitle: 'Exported meta', blocks: [] },
+		version: 2,
+		page: { title, slug, metaTitle: 'Exported meta', translations: {}, blocks: [] },
 	})
 
 	// list: the saved server copy, from the row's "…" menu

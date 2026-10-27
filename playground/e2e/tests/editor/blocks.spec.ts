@@ -62,7 +62,7 @@ test.describe('Block operations', () => {
 		await expect(main(page).getByText('Click to add item...')).toHaveCount(2)
 
 		// The list is still selected, so its inline toolbar (list type) is showing.
-		await page.locator('select').selectOption('numbered')
+		await main(page).locator('select').selectOption('numbered')
 		await expect(main(page).getByText('2.', { exact: true })).toBeVisible()
 	})
 
