@@ -19,12 +19,13 @@ export function devSsr(apiTarget) {
 		name: 'cms-dev-ssr',
 		apply: 'serve',
 		configureServer(server) {
+			// once: cms() restarts the dev server when the languages change
+			const codes = readSiteLanguages(server.config.root).map(codeOf)
+			const [defaultCode] = codes
 			server.middlewares.use(async (req, res, next) => {
 				const [path = '', query] = (req.url ?? '').split(/\?(.*)/s)
 				const match = /^\/(?:([a-z]{2,3})(?=\/|$))?\/?((?:user\/)?[a-z0-9-]*)$/.exec(path)
 				if (req.method !== 'GET' || !match) return next()
-				const codes = readSiteLanguages(server.config.root).map(codeOf)
-				const [defaultCode] = codes
 				// a 2-3 letter page slug (/faq) unless it is a configured code
 				const known = !!match[1] && codes.includes(match[1])
 				const prefix = known ? match[1] : undefined
