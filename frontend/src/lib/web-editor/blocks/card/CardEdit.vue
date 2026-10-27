@@ -50,7 +50,7 @@ useAutoResize(descriptionEl, description)
 			>
 				<span class="text-2xl">🖼</span>
 				<span class="text-xs">
-					{{ missing ? 'This image was deleted from the media library' : 'Add an image (optional)' }}
+					{{ missing ? $t('editor.image.deleted') : $t('editor.card.addImage') }}
 				</span>
 				<MediaActions @select="choose($event.id)" />
 			</div>
@@ -74,7 +74,7 @@ useAutoResize(descriptionEl, description)
 				type="text"
 				class="m-0 mb-8 w-full border-none bg-transparent p-0 text-lg font-semibold outline-hidden placeholder:font-normal placeholder:italic placeholder:text-gray-400 focus:ring-0"
 				:class="hasTextColor ? '' : 'text-gray-900'"
-				placeholder="Click to add title..."
+				:placeholder="$t('editor.card.title')"
 			/>
 
 			<textarea
@@ -83,14 +83,14 @@ useAutoResize(descriptionEl, description)
 				rows="1"
 				class="m-0 mb-12 block w-full resize-none overflow-hidden border-none bg-transparent p-0 text-sm outline-hidden placeholder:italic placeholder:text-gray-400 focus:ring-0"
 				:class="hasTextColor ? '' : 'text-gray-600'"
-				placeholder="Add description..."
+				:placeholder="$t('editor.card.description')"
 			/>
 
 			<div
 				v-if="block.innerBlocks.length || selected"
 				class="inner-blocks-container mt-12 flex flex-col gap-4"
 			>
-				<span class="inner-blocks-label">Content</span>
+				<span class="inner-blocks-label">{{ $t('editor.card.content') }}</span>
 				<BlockList
 					:blocks="block.innerBlocks"
 					:parent-id="block.id"

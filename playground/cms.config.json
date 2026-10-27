@@ -2,7 +2,10 @@
 	"$schema": "./node_modules/@trainpaths/cms/cms.config.schema.json",
 	"publicAuth": true,
 	"site": {
-		"lang": "en"
+		"lang": {
+			"default": "en-US",
+			"localization": ["de-CH", "fr-CH", "it-CH"]
+		}
 	},
 	"theme": {
 		"colors": {

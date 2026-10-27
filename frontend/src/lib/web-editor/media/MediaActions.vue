@@ -65,7 +65,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocMouseDown))
 			data-testid="media-replace"
 			@click="menuOpen = !menuOpen"
 		>
-			{{ uploading ? 'Uploading…' : 'Replace' }}
+			{{ uploading ? $t('editor.media.uploading') : $t('editor.media.replace') }}
 		</button>
 		<!-- v-show, not v-if: the upload button (and its file input) must stay mounted to emit after the menu closes -->
 		<div
@@ -98,7 +98,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocMouseDown))
 				data-testid="media-choose"
 				@click="choose"
 			>
-				Choose existing
+				{{ $t('editor.media.choose') }}
 			</button>
 		</div>
 		<MediaPickerDialog

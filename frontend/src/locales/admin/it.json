@@ -1,0 +1,442 @@
+{
+	"admin": {
+		"nav": {
+			"label": "Amministrazione",
+			"dashboard": "Panoramica",
+			"pages": "Pagine",
+			"menus": "Menu",
+			"media": "Media",
+			"configuration": "Configurazione",
+			"user": "Utente"
+		},
+		"dashboard": {
+			"welcome": "Benvenuto, {name}!",
+			"logOut": "Esci",
+			"goToPages": "Vai alle pagine",
+			"pagesHint": "Crea, modifica e pubblica le pagine del tuo sito."
+		},
+		"login": {
+			"heading": "Accesso amministrazione"
+		},
+		"preview": {
+			"label": "Anteprima",
+			"draft": "Anteprima di una bozza non pubblicata",
+			"back": "Torna all’editor",
+			"notFound": "Pagina non trovata.",
+			"loading": "Caricamento dell’anteprima…"
+		},
+		"backups": {
+			"tab": "Backup",
+			"loadFailed": "Impossibile caricare i backup",
+			"manage": "Gestisci i backup",
+			"schedule": "Pianificazione",
+			"nextRun": "Prossima esecuzione",
+			"lastRun": "Ultima esecuzione",
+			"keeps": "Conserva",
+			"keepsValue": "gli ultimi {n} automatici",
+			"saved": "Salvati",
+			"count": "{n} backup | {n} backup",
+			"countDetail": "{auto} automatici, {size}",
+			"latest": "Il più recente",
+			"freeSpace": "Spazio libero",
+			"lastFailed": "L’ultimo backup automatico non è riuscito: {error}",
+			"intervals": {
+				"off": "Disattivato",
+				"daily": "Giornaliero",
+				"weekly": "Settimanale",
+				"biweekly": "Ogni 2 settimane",
+				"monthly": "Mensile"
+			},
+			"summaryWeekday": "{interval} di {day}, {time} UTC",
+			"summaryMonthDay": "{interval} il giorno {day}, {time} UTC",
+			"summaryDaily": "{interval}, {time} UTC",
+			"kinds": {
+				"auto": "Automatico",
+				"manual": "Manuale",
+				"preRestore": "Prima del ripristino",
+				"upload": "Caricato"
+			},
+			"scheduleSaved": "Pianificazione dei backup salvata",
+			"scheduleFailed": "Impossibile salvare la pianificazione",
+			"created": "Backup {name} creato",
+			"createFailed": "Backup non riuscito",
+			"tooLarge": "Il file supera {size}.",
+			"uploaded": "Caricato come {name}. Ripristinalo dall’elenco.",
+			"uploadFailed": "Caricamento non riuscito",
+			"downloadFailed": "Download non riuscito",
+			"deleteTitle": "Eliminare {name}?",
+			"deleteHint": "L’archivio viene rimosso dalla cartella dei backup. L’operazione non può essere annullata.",
+			"deleteFailed": "Impossibile eliminare il backup",
+			"restoreTitle": "Ripristinare {name}?",
+			"restoreHint": "Tutto viene sostituito con lo stato del {date}: pagine, media, menu, configurazione e account del personale. Tutti vengono disconnessi. Prima viene creato un backup dello stato attuale: ripristinandolo si annulla l’operazione.",
+			"restore": "Ripristina",
+			"restored": "Backup ripristinato (stato precedente salvato come {name}). Accedi di nuovo.",
+			"restoreFailed": "Ripristino non riuscito",
+			"loading": "Caricamento dei backup…",
+			"restoring": "Ripristino di {name} in corso. Il sito non è disponibile fino al termine; non chiudere questa pagina.",
+			"automatic": "Backup automatici",
+			"interval": "Frequenza",
+			"weekday": "Giorno (UTC)",
+			"biweeklyHint": "Inizia dal primo giorno corrispondente dopo il salvataggio",
+			"dayOfMonth": "Giorno del mese (UTC)",
+			"time": "Ora (UTC)",
+			"localTime": "{time} ora locale",
+			"retention": "Backup automatici da conservare",
+			"retentionHint": "I backup automatici più vecchi vengono eliminati; quelli manuali e caricati vengono conservati.",
+			"saveSchedule": "Salva pianificazione",
+			"storage": "Archiviazione",
+			"folder": "Cartella",
+			"noFolder": "Lo sviluppatore non ha impostato una cartella per i backup",
+			"storageHint": "La cartella è definita dalla configurazione Docker del server e non può essere modificata qui. Copia gli archivi fuori dal server (scaricandoli o sincronizzando la cartella) per proteggerli da un guasto del disco. I backup vengono eliminati dopo {years} anni.",
+			"now": "Esegui backup ora",
+			"uploadHint": "Aggiungi un archivio di backup (.tar.gz) da un altro server o da un download precedente",
+			"upload": "Carica backup",
+			"uploading": "Caricamento del backup",
+			"empty": "Ancora nessun backup",
+			"emptyHint": "Esegui un backup ora o attiva i backup automatici qui sopra.",
+			"mediaFiles": "{n} file multimediale | {n} file multimediali",
+			"download": "Scarica",
+			"downloadName": "Scarica {name}",
+			"deleteName": "Elimina {name}"
+		},
+		"status": {
+			"published": "Pubblicata",
+			"draft": "Bozza"
+		},
+		"pages": {
+			"loadFailed": "Impossibile caricare le pagine",
+			"createFailed": "Impossibile creare la pagina",
+			"importFailed": "Impossibile importare la pagina",
+			"exportFailed": "Impossibile esportare la pagina",
+			"duplicateFailed": "Impossibile duplicare la pagina",
+			"deleteFailed": "Impossibile eliminare la pagina",
+			"saveFailed": "Impossibile salvare la pagina",
+			"imported": "Importata come bozza /{slug}",
+			"importedMissing": "Importata come bozza /{slug}; {count} immagine non trovata nella mediateca | Importata come bozza /{slug}; {count} immagini non trovate nella mediateca",
+			"duplicated": "Duplicata come bozza /{slug}",
+			"duplicate": "Duplica",
+			"export": "Esporta",
+			"lockedDelete": "Fa parte della configurazione del sito, non può essere eliminata",
+			"deleteTitle": "Eliminare «{title}»?",
+			"all": "Tutte le pagine",
+			"new": "+ Nuova pagina",
+			"importHint": "Crea una bozza da un file di pagina esportato (.json)",
+			"importLabel": "Importa pagina",
+			"import": "Importa",
+			"titlePlaceholder": "Titolo della pagina…",
+			"titleLabel": "Titolo della pagina",
+			"create": "Crea",
+			"loading": "Caricamento delle pagine…",
+			"empty": "Ancora nessuna pagina.",
+			"emptyHint": "Crea la prima pagina del tuo sito.",
+			"noMatch": "Nessuna pagina corrisponde.",
+			"noMatchHint": "Prova un’altra ricerca o un altro filtro.",
+			"clearFilters": "Cancella filtri",
+			"blocks": "{n} blocco | {n} blocchi",
+			"updated": "aggiornata il {date}",
+			"view": "Visualizza pagina",
+			"previewDraft": "Anteprima della bozza",
+			"slugRule": "Lettere minuscole, cifre e trattini singoli (max. 100).",
+			"slug": "Slug",
+			"lockedSlug": "Definito dalla configurazione del sito",
+			"liveAt": "Online su /{slug}",
+			"draftHint": "Bozza: visibile solo al personale",
+			"tags": "Tag"
+		},
+		"pageExport": {
+			"invalidJson": "Il file non è un JSON valido.",
+			"notExport": "Il file non è un’esportazione di pagina.",
+			"newer": "Il file è stato esportato da una versione più recente del CMS.",
+			"incomplete": "L’esportazione della pagina è incompleta (mancano titolo o blocchi)."
+		},
+		"actions": "Azioni",
+		"filters": {
+			"allTags": "Tutti i tag",
+			"allStatuses": "Tutti gli stati",
+			"notPublished": "Non pubblicate",
+			"searchPlaceholder": "Cerca pagine…",
+			"search": "Cerca pagine",
+			"byTag": "Filtra per tag",
+			"byStatus": "Filtra per stato",
+			"newestFirst": "Aggiornate di recente prima",
+			"oldestFirst": "Aggiornate meno di recente prima",
+			"sortedNewest": "Ordinate per ultimo aggiornamento, le più recenti prima. Clicca per invertire.",
+			"sortedOldest": "Ordinate per ultimo aggiornamento, le meno recenti prima. Clicca per invertire."
+		},
+		"dismiss": "Chiudi",
+		"unsavedChanges": "Modifiche non salvate",
+		"moveUp": "Sposta su",
+		"moveDown": "Sposta giù",
+		"unsaved": {
+			"title": "Vuoi salvare le modifiche?",
+			"lost": "Le modifiche andranno perse se non le salvi.",
+			"blocked": "Correggi i campi evidenziati per salvare.",
+			"discard": "Non salvare"
+		},
+		"menus": {
+			"badUrl": "Inserisci un percorso come /about o un URL http(s).",
+			"labelRequired": "L’etichetta è obbligatoria.",
+			"saved": "Menu salvato",
+			"saveFailed": "Impossibile salvare il menu",
+			"createFailed": "Impossibile creare il menu",
+			"deleteFailed": "Impossibile eliminare il menu",
+			"deleteTitle": "Eliminare il menu «{handle}»?",
+			"intro": "Gruppi di link per il tuo sito. Il {main} è la navigazione in alto su ogni pagina pubblica.",
+			"mainMenu": "menu principale",
+			"loadFailed": "Impossibile caricare i menu.",
+			"loading": "Caricamento dei menu…",
+			"main": "Principale",
+			"handlePlaceholder": "p. es. footer",
+			"newHandle": "Identificativo del nuovo menu",
+			"savedAs": "Salvato come {handle}",
+			"new": "+ Nuovo menu",
+			"handleHint": "Identificativo: il codice del sito carica il menu tramite questo, quindi non può cambiare",
+			"addItem": "+ Aggiungi voce",
+			"delete": "Elimina menu",
+			"dragHint": "Trascina le righe dalla maniglia o le pagine dall’elenco: su una linea per inserirle lì, al centro di una voce per annidarle al suo interno. Le voci senza link raggruppano le loro sottovoci.",
+			"publishedPages": "Pagine pubblicate",
+			"noPages": "Nessuna pagina pubblicata corrisponde.",
+			"pickerHint": "Trascina nel menu o clicca +",
+			"inMenu": "Già in questo menu",
+			"addPage": "Aggiungi {title} al menu",
+			"empty": "Ancora nessuna voce. Aggiungi una voce o trascina qui delle pagine dall’elenco.",
+			"dragToMove": "Trascina per spostare",
+			"label": "Etichetta",
+			"linkPlaceholder": "Link (facoltativo)",
+			"link": "Link",
+			"draftHint": "Le bozze non compaiono nel menu pubblico",
+			"pageDeleted": "Pagina eliminata",
+			"outdent": "Riduci rientro",
+			"indent": "Rientra nella voce precedente",
+			"removeTree": "Rimuovi la voce e le sue sottovoci",
+			"remove": "Rimuovi voce"
+		},
+		"remove": "Rimuovi",
+		"config": {
+			"noneSelected": "Nessuna selezione",
+			"types": {
+				"text": "Testo",
+				"email": "E-mail",
+				"phone": "Telefono",
+				"link": "Link",
+				"address": "Indirizzo"
+			},
+			"placeholders": {
+				"text": "Valore",
+				"phone": "+41 91 123 45 67"
+			},
+			"address": {
+				"street": "Via e numero",
+				"postalCode": "NPA",
+				"city": "Località",
+				"country": "Paese"
+			},
+			"entryNamePlaceholder": "Nome, p. es. Fax",
+			"entryName": "Nome della voce",
+			"entryType": "Tipo della voce",
+			"entryValue": "Valore della voce",
+			"requiredEntry": "Obbligatoria per questo sito",
+			"removeEntry": "Rimuovi voce",
+			"required": "Obbligatorio.",
+			"nameRequired": "Il nome è obbligatorio.",
+			"nameTwice": "Il nome è usato due volte.",
+			"saved": "Configurazione salvata",
+			"saveFailed": "Impossibile salvare la configurazione",
+			"intro": "Informazioni sul tuo sito, usate nelle sue pagine pubbliche.",
+			"loadFailed": "Impossibile caricare la configurazione.",
+			"loading": "Caricamento della configurazione…",
+			"noEntries": "Ancora nessuna voce.",
+			"addCustom": "+ Voce personalizzata",
+			"logo": "Logo",
+			"logoHint": "Mostrato nel piè di pagina e nella navigazione del sito. PNG/WebP sono i formati migliori.",
+			"icon": "Icona",
+			"iconHint": "Icona della scheda del browser. PNG quadrato.",
+			"shareImage": "Immagine di condivisione",
+			"shareImageHint": "Anteprime dei link (WhatsApp, Slack…) delle pagine senza un’immagine propria. 1200×630 è la misura migliore."
+		},
+		"media": {
+			"loadFailed": "Impossibile caricare i media",
+			"saveFailed": "Impossibile salvare le modifiche",
+			"deleteFailed": "Impossibile eliminare il media",
+			"deleteTitle": "Eliminare «{name}»?",
+			"deleteHint": "Le pagine che lo usano non mostreranno più l’immagine.",
+			"uploadNew": "+ Carica nuovo",
+			"types": "JPEG, PNG, GIF, WebP o AVIF, fino a 10 MB.",
+			"loading": "Caricamento dei media…",
+			"empty": "Ancora nessun media.",
+			"type": "Tipo",
+			"size": "Dimensione",
+			"uploaded": "Caricato il",
+			"name": "Nome",
+			"alt": "Testo alternativo",
+			"altPlaceholder": "Descrivi l’immagine…"
+		}
+	},
+	"editor": {
+		"publish": {
+			"publish": "Pubblica",
+			"changes": "Pubblica modifiche",
+			"saveFirst": "Salva prima",
+			"noChanges": "Nessuna modifica da pubblicare",
+			"pending": "Pubblicata · modifiche non pubblicate",
+			"title": "Pubblicare questa pagina?",
+			"changesTitle": "Pubblicare le modifiche?",
+			"message": "I visitatori di /{slug} vedranno la versione salvata.",
+			"unpublishTitle": "Ritirare la pubblicazione di questa pagina?",
+			"unpublishMessage": "I visitatori di /{slug} vedranno «pagina non trovata» finché non la pubblichi di nuovo.",
+			"unpublish": "Ritira pubblicazione"
+		},
+		"header": {
+			"leftSidebarHint": "Mostra/nascondi il pannello sinistro (blocchi, struttura)",
+			"leftSidebar": "Mostra/nascondi il pannello sinistro",
+			"undo": "Annulla (Ctrl+Z)",
+			"redo": "Ripeti (Ctrl+Shift+Z)",
+			"saved": "Salvato",
+			"saveHint": "Salva (Ctrl+S)",
+			"noChanges": "Nessuna modifica non salvata",
+			"rightSidebar": "Mostra/nascondi le impostazioni"
+		},
+		"page": {
+			"section": "Pagina",
+			"title": "Titolo",
+			"slugLocked": "Definito dalla configurazione del sito.",
+			"slugRule": "Lettere minuscole, cifre e trattini.",
+			"servedAt": "Le pagine pubblicate sono disponibili su {path}.",
+			"seo": "Ricerca e condivisione",
+			"metaTitle": "Meta title",
+			"tab": "Scheda: {title}",
+			"metaDescription": "Meta description",
+			"metaDescriptionHint": "Risultati di ricerca e anteprime dei link; vuoto = il primo paragrafo.",
+			"status": "Stato",
+			"statusHint": "Salvare non pubblica mai: i visitatori vedono l’ultima versione pubblicata.",
+			"downloadJson": "Scarica JSON",
+			"exportHint": "Una copia di questa pagina. Importala nell’elenco delle pagine per creare una nuova bozza."
+		},
+		"loading": "Caricamento della pagina…",
+		"templateNotice": "Il contenuto di questa pagina proviene dal modello {template} del sito. Puoi comunque modificarne il titolo e le impostazioni.",
+		"tabs": {
+			"block": "Blocco",
+			"page": "Pagina",
+			"blocks": "Blocchi",
+			"outline": "Struttura"
+		},
+		"width": {
+			"title": "Larghezza",
+			"default": "Normale",
+			"wide": "Ampia",
+			"full": "Intera"
+		},
+		"backgroundColor": "Colore di sfondo",
+		"textColor": "Colore del testo",
+		"noSettings": "Nessuna impostazione per questo blocco",
+		"noSelection": "Nessun blocco selezionato",
+		"closeSidebar": "Chiudi pannello",
+		"colorNone": "Nessuno",
+		"noColors": "Nessun colore del tema configurato per questo sito.",
+		"outlineEmpty": "Ancora nessun blocco.",
+		"collapse": "Comprimi",
+		"expand": "Espandi",
+		"emptyPage": "Aggiungi blocchi dal pannello laterale",
+		"searchBlocks": "Cerca blocchi…",
+		"categories": {
+			"text": "Testo",
+			"media": "Media",
+			"containers": "Contenitori",
+			"embeds": "Incorporamenti"
+		},
+		"insertHint": "Clicca o trascina per aggiungere: {title}",
+		"noBlocksFound": "Nessun blocco trovato",
+		"heading": {
+			"level": "Titolo {n}",
+			"levelTitle": "Livello del titolo",
+			"placeholder": "Clicca per aggiungere un titolo…",
+			"levelSection": "Livello"
+		},
+		"align": {
+			"title": "Allineamento",
+			"left": "Allinea a sinistra",
+			"center": "Centra",
+			"right": "Allinea a destra"
+		},
+		"paragraph": {
+			"placeholder": "Clicca per aggiungere testo…"
+		},
+		"list": {
+			"bullet": "Puntato",
+			"numbered": "Numerato",
+			"type": "Tipo di elenco"
+		},
+		"listItem": {
+			"empty": "Clicca per aggiungere una voce…",
+			"placeholder": "Testo della voce…"
+		},
+		"link": {
+			"placeholder": "Clicca per aggiungere un link…",
+			"url": "URL"
+		},
+		"image": {
+			"widthShort": "L",
+			"failed": "Impossibile caricare l’immagine",
+			"deleted": "Questa immagine è stata eliminata dalla mediateca",
+			"add": "Aggiungi un’immagine",
+			"caption": "Aggiungi didascalia…",
+			"widthPercent": "Larghezza (%)",
+			"widthSlider": "Cursore della larghezza"
+		},
+		"card": {
+			"addImage": "Aggiungi un’immagine (facoltativo)",
+			"title": "Clicca per aggiungere un titolo…",
+			"description": "Aggiungi descrizione…",
+			"content": "Contenuto"
+		},
+		"media": {
+			"uploading": "Caricamento…",
+			"replace": "Sostituisci",
+			"choose": "Scegli esistente",
+			"altFailed": "Impossibile salvare il testo alternativo",
+			"deleted": "Questa immagine è stata eliminata dalla mediateca.",
+			"remove": "Rimuovi immagine",
+			"upload": "Carica nuovo",
+			"pickerTitle": "Scegli media",
+			"pickerEmpty": "Ancora nessun media. Carica un’immagine per iniziare.",
+			"noAlt": "Nessun testo alternativo"
+		},
+		"errors": {
+			"load": "Impossibile caricare la pagina",
+			"slug": "Impossibile modificare lo slug",
+			"tags": "Impossibile salvare i tag",
+			"publish": "Impossibile pubblicare la pagina",
+			"unpublish": "Impossibile ritirare la pubblicazione della pagina"
+		}
+	},
+	"blocks": {
+		"card": {
+			"title": "Scheda",
+			"description": "Raggruppa contenuti in una scheda"
+		},
+		"heading": {
+			"title": "Titolo",
+			"description": "Aggiungi un titolo"
+		},
+		"image": {
+			"title": "Immagine",
+			"description": "Inserisci un’immagine"
+		},
+		"link": {
+			"title": "Link",
+			"description": "Aggiungi un link"
+		},
+		"list-item": {
+			"title": "Voce di elenco",
+			"description": "Aggiungi una voce a un elenco"
+		},
+		"list": {
+			"title": "Elenco",
+			"description": "Crea un elenco puntato o numerato"
+		},
+		"paragraph": {
+			"title": "Paragrafo",
+			"description": "Aggiungi un blocco di testo"
+		}
+	}
+}

@@ -29,7 +29,7 @@ const emit = defineEmits<{ error: [message: string] }>()
 			<span
 				v-else
 				class="text-xs text-gray-400"
-				>None selected</span
+				>{{ $t('admin.config.noneSelected') }}</span
 			>
 		</div>
 		<div class="flex items-center justify-between gap-8">
@@ -45,7 +45,7 @@ const emit = defineEmits<{ error: [message: string] }>()
 				:data-testid="`${testId}-remove`"
 				@click="model = null"
 			>
-				Remove
+				{{ $t('admin.remove') }}
 			</button>
 		</div>
 	</section>

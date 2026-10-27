@@ -37,13 +37,13 @@ async function handleResend() {
 <template>
 	<div class="p-32 max-w-480 mx-auto font-sans">
 		<Card>
-			<h1 class="text-2xl font-bold mb-24">Email verification</h1>
+			<h1 class="text-2xl font-bold mb-24">{{ $t('screens.verifyEmail.title') }}</h1>
 
 			<Alert
 				v-if="status === 'pending'"
 				type="info"
 			>
-				Verifying your email...
+				{{ $t('screens.verifyEmail.pending') }}
 			</Alert>
 
 			<template v-if="status === 'success'">
@@ -51,9 +51,9 @@ async function handleResend() {
 					type="success"
 					class="mb-16"
 				>
-					Your email address has been confirmed. You can now log in.
+					{{ $t('screens.verifyEmail.done') }}
 				</Alert>
-				<Link to="/login">Continue to login</Link>
+				<Link to="/login">{{ $t('screens.verifyEmail.continue') }}</Link>
 			</template>
 
 			<template v-if="status === 'error'">
@@ -61,7 +61,7 @@ async function handleResend() {
 					type="error"
 					class="mb-16"
 				>
-					This verification link is invalid or has expired.
+					{{ $t('screens.verifyEmail.invalid') }}
 				</Alert>
 
 				<Alert
@@ -69,8 +69,7 @@ async function handleResend() {
 					type="info"
 					class="mb-16"
 				>
-					If an account exists for that email and isn't confirmed yet, a new verification link has
-					been sent.
+					{{ $t('screens.verifyEmail.resent') }}
 				</Alert>
 
 				<Form
@@ -80,7 +79,7 @@ async function handleResend() {
 					<Input
 						v-model="resendEmail"
 						type="email"
-						placeholder="Email to resend verification to"
+						:placeholder="$t('screens.verifyEmail.resendEmail')"
 						required
 					/>
 					<Button
@@ -88,12 +87,12 @@ async function handleResend() {
 						:loading="resendLoading"
 						:disabled="resendLoading"
 					>
-						{{ resendLoading ? 'Sending...' : 'Resend verification' }}
+						{{ resendLoading ? $t('screens.verifyEmail.submitting') : $t('screens.verifyEmail.submit') }}
 					</Button>
 				</Form>
 
 				<p class="mt-16 text-black opacity-60">
-					<Link to="/login">Back to login</Link>
+					<Link to="/login">{{ $t('common.backToLogin') }}</Link>
 				</p>
 			</template>
 		</Card>

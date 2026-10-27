@@ -6,7 +6,7 @@ export interface Screen {
 	slug: string
 	/** Route name. */
 	name: string
-	/** Document title, before the firm name. */
+	/** Message key of the document title (before the firm name). */
 	title: string
 	/** Account page: needs a customer session (checked after mount, see `session.ts`). */
 	account: boolean
@@ -20,13 +20,13 @@ declare module 'vue-router' {
 
 /** Same slugs as `server/screens.js` (dev SSR) and the API's `PublicScreens` (render.test.ts checks the first). */
 export const SCREENS: readonly Screen[] = [
-	{ slug: 'login', name: 'login', title: 'Log in', account: false },
-	{ slug: 'register', name: 'register', title: 'Register', account: false },
-	{ slug: 'forgot-password', name: 'forgot-password', title: 'Reset your password', account: false },
-	{ slug: 'reset-password', name: 'reset-password', title: 'Choose a new password', account: false },
-	{ slug: 'verify-email', name: 'verify-email', title: 'Email verification', account: false },
-	{ slug: 'user/profile', name: 'user-profile', title: 'Profile', account: true },
-	{ slug: 'user/password', name: 'user-password', title: 'Change password', account: true },
+	{ slug: 'login', name: 'login', title: 'screens.login.title', account: false },
+	{ slug: 'register', name: 'register', title: 'screens.register.title', account: false },
+	{ slug: 'forgot-password', name: 'forgot-password', title: 'screens.forgotPassword.title', account: false },
+	{ slug: 'reset-password', name: 'reset-password', title: 'screens.resetPassword.title', account: false },
+	{ slug: 'verify-email', name: 'verify-email', title: 'screens.verifyEmail.title', account: false },
+	{ slug: 'user/profile', name: 'user-profile', title: 'screens.profile.title', account: true },
+	{ slug: 'user/password', name: 'user-password', title: 'screens.password.title', account: true },
 ]
 
 /**

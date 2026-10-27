@@ -38,6 +38,7 @@ src/style.css          @import '@trainpaths/cms/style.css'; + the site theme
 src/blocks/<name>/     instance blocks
 src/templates/<name>.vue   template pages
 src/overrides/<Name>.vue   component overrides (nb-ui components: src/overrides/ui/<Name>.vue)
+src/locales/<code>.json    UI strings: reword the CMS's, add your own (see Languages)
 Dockerfile, compose.yaml, .env.example
 ```
 Build: `vue-tsc -b && vite build && vite build --ssr src/entry-server.ts --outDir dist-ssr`.
@@ -51,7 +52,7 @@ No file = defaults. Full schema: `node_modules/@trainpaths/cms/cms.config.schema
 {
 	"$schema": "./node_modules/@trainpaths/cms/cms.config.schema.json",
 	"publicAuth": false,                 // customer accounts (/login, /register, /user/*...); off: screens + API gone
-	"site": { "lang": "de" },            // <html lang> (set by cms() at build time: rebuild the frontend)
+	"site": { "lang": "de-CH" },         // language(s), see Languages (set by cms() at build time: rebuild the frontend)
 	"blocks": { "exclude": ["list"] },   // built-in blocks hidden from the inserters
 	"theme": {                           // site palette (see Theme; set by cms() at build time: rebuild the frontend)
 		"colors": { "primary": "#0f766e", "accent": "#f59e0b", "light": "#f3f4f6" }
@@ -159,6 +160,35 @@ Header/footer overrides and templates should read the menu and site config **rea
 `usePublicMenusStore().menus.main` / `useSiteConfigStore().config` from `@trainpaths/cms/site`), not copy them once in
 setup: after a menu or site config change, pages still waiting for their background re-render refetch both after
 loading and update the stores, so the new menu/footer appears right away.
+
+## Languages
+
+`site.lang` is one BCP 47 tag (`"de-CH"`: a German site, admin included) or several:
+```jsonc
+"site": { "lang": { "default": "en-US", "localization": ["de-CH", "fr-CH", "it-CH"] } }
+```
+A language's **code** is its primary subtag (`de-CH` → `de`): one per code (`en-US` + `en-GB` is an error). The tag
+goes into `<html lang>` and date/number formats (`de-CH`: 27.10.2026, 1’000), the code names message files and the
+`cms_lang` cookie. `cms()` reads the list at build time (rebuild after changing it; the dev server restarts).
+
+- **UI strings** (admin, editor, customer screens, header/footer labels, not-found) ship in English, German, French
+  and Italian (vue-i18n). Missing strings fall back to English.
+- **Admin**: opens in the language of the `cms_lang` cookie, else the default; the language switch in the admin
+  navigation and on the admin login changes it in place and remembers it.
+- **`<LanguageDropdown />`** (`@trainpaths/cms/site`, prop `align: 'start' | 'end'`): nb-ui dropdown of the site's
+  languages, each named in itself ("Deutsch", "Français"); renders nothing on a single-language site. Place it in a
+  `SiteFooter`/`SiteHeader` override or a template. `LANGUAGES`, `DEFAULT_LANGUAGE`, `IS_LOCALIZED`, `languageLabel`
+  and `useLanguageSwitch()` (current language + `change(code)`) are exported too.
+- **Public site**: rendered in the default language for now. Language URLs (`/de/about`), one rendered page per
+  language and translated page content follow in the next releases (issue trainpaths/cms#45).
+
+**Your own strings**: `src/locales/<code>.json` (`en.json`, `de.json`...) is deep-merged over the CMS's messages:
+reword any CMS string by its key (see `node_modules/@trainpaths/cms/src/locales/{public,admin}/en.json`), add keys for
+your blocks and templates (`useI18n()` / `$t('mysite.title')` from `vue-i18n`), or add a language the CMS doesn't ship.
+Messages use vue-i18n syntax: `{name}` placeholders, `one | many` plurals, `{'@'}` for a literal `@`.
+Block titles/descriptions and site config labels are translated by key when a message exists:
+`blocks.<name>.title` / `.description`, `siteConfig.fields.<key>`, `siteConfig.groups.<key>`,
+`siteConfig.entries.<group>.<key>` (a label your config renamed keeps your wording unless you add messages for it).
 
 ## Theme
 

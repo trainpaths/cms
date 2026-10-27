@@ -9,7 +9,7 @@ const level = useBlockAttribute(() => props.block, 'level', 2)
 </script>
 
 <template>
-	<SettingsSection title="Level">
+	<SettingsSection :title="$t('editor.heading.levelSection')">
 		<div class="flex rounded-md border border-gray-200">
 			<button
 				v-for="n in 6"

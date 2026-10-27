@@ -21,7 +21,7 @@ const colorClass = computed(() => (props.block.attributes.textColor ? '' : 'text
 			:show="selected"
 			:block-id="block.id"
 		>
-			<span class="mr-4 text-sm text-gray-400">URL:</span>
+			<span class="mr-4 text-sm text-gray-400">{{ $t('editor.link.url') }}:</span>
 			<input
 				v-model="url"
 				type="url"
@@ -35,7 +35,7 @@ const colorClass = computed(() => (props.block.attributes.textColor ? '' : 'text
 			type="text"
 			class="border-none bg-transparent p-0 outline-hidden placeholder:italic placeholder:text-gray-400 focus:ring-0"
 			:class="colorClass"
-			placeholder="Click to add link..."
+			:placeholder="$t('editor.link.placeholder')"
 		/>
 	</div>
 </template>

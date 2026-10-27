@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import type { SiteConfig } from '../lib/web-editor'
 import { filledEntries, firmName as firmNameOf } from '../lib/siteConfig'
 import SiteConfigEntry from './SiteConfigEntry.vue'
+import { useConfigLabels } from '../i18n/siteConfigLabels'
 
 /**
  * Public site footer (default; instances override it to place their own groups, e.g. socials): the owner's logo,
@@ -11,6 +12,7 @@ import SiteConfigEntry from './SiteConfigEntry.vue'
  */
 const props = defineProps<{ config: SiteConfig | null }>()
 
+const labels = useConfigLabels()
 const firmName = computed(() => firmNameOf(props.config))
 const contact = computed(() => filledEntries(props.config, 'contact'))
 const logo = computed(() => props.config?.logo ?? null)
@@ -33,7 +35,7 @@ const visible = computed(() => hasContent.value || links.value.length > 0)
 				<img
 					v-if="logo"
 					:src="logo.url"
-					:alt="logo.alt || 'Logo'"
+					:alt="logo.alt || $t('site.logo')"
 					class="max-h-48 max-w-200 object-contain"
 					data-testid="site-footer-logo"
 				/>
@@ -52,7 +54,7 @@ const visible = computed(() => hasContent.value || links.value.length > 0)
 					class="min-w-0"
 					data-testid="site-footer-entry"
 				>
-					<dt class="text-xs font-medium uppercase tracking-wide text-gray-500">{{ entry.label }}</dt>
+					<dt class="text-xs font-medium uppercase tracking-wide text-gray-500">{{ labels.entry('contact', entry.key, entry.label) }}</dt>
 					<dd class="m-0 mt-2 text-sm text-gray-800">
 						<SiteConfigEntry :entry="entry" />
 					</dd>
@@ -63,7 +65,7 @@ const visible = computed(() => hasContent.value || links.value.length > 0)
 			v-if="links.length"
 			class="mx-auto flex max-w-5xl flex-wrap gap-x-24 gap-y-8 px-24 py-16 text-xs"
 			:class="{ 'border-t border-gray-200': hasContent }"
-			aria-label="Legal"
+			:aria-label="$t('site.legalNav')"
 		>
 			<RouterLink
 				v-for="link in links"

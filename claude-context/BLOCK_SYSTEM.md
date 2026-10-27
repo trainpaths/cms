@@ -85,6 +85,9 @@ inner blocks are structured, repeatable children with their own editing (a card'
    follows the canvas width in the editor (sidebars open → narrower) and the page width when published.
    Same classes in Edit and View; see `blocks/card` (image beside text at `@md:`).
 8. Add e2e coverage in `playground/e2e/tests/editor/blocks.spec.ts`.
+9. UI text in Edit/Settings: message keys (`$t('editor.…')`, `frontend/src/locales/admin/*.json`, all four languages).
+   The block's title/description in the inserter, toolbar and outline are translated by `blocks.<name>.title` /
+   `.description` when such a message exists (built-ins have them; instance blocks add them in `src/locales/`).
 
 **Instance blocks** (a client site): the same folder format in the instance app's `src/blocks/<folder>/`; imports from
 `@trainpaths/cms/editor` (index.ts, Edit, Settings) and `@trainpaths/cms/site` (View: no editor code in the public

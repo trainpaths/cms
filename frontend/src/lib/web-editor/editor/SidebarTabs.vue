@@ -1,6 +1,7 @@
 <script setup lang="ts" generic="T extends string">
 /** Sidebar top row: tab bar + close X (both editor sidebars). Tab testids: `sidebar-tab-{id}`. */
 defineProps<{
+	/** label = message key */
 	tabs: readonly { id: T; label: string }[]
 	closeTestid: string
 }>()
@@ -33,14 +34,14 @@ const emit = defineEmits<{
 				:data-testid="`sidebar-tab-${tab.id}`"
 				@click="active = tab.id"
 			>
-				{{ tab.label }}
+				{{ $t(tab.label) }}
 			</button>
 		</div>
 		<button
 			type="button"
 			class="shrink-0 cursor-pointer border-none bg-transparent px-12 text-lg text-gray-500 hover:text-gray-800"
-			title="Close"
-			aria-label="Close sidebar"
+			:title="$t('common.close')"
+			:aria-label="$t('editor.closeSidebar')"
 			:data-testid="closeTestid"
 			@click="emit('close')"
 		>

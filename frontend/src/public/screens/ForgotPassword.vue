@@ -20,14 +20,14 @@ async function handleSubmit() {
 <template>
 	<div class="p-32 max-w-480 mx-auto font-sans">
 		<Card>
-			<h1 class="text-2xl font-bold mb-24">Reset your password</h1>
+			<h1 class="text-2xl font-bold mb-24">{{ $t('screens.forgotPassword.title') }}</h1>
 
 			<Alert
 				v-if="submitted"
 				type="info"
 				class="mb-16"
 			>
-				If an account exists for that email, a password reset link has been sent. Check your inbox.
+				{{ $t('screens.forgotPassword.sent') }}
 			</Alert>
 
 			<Form
@@ -37,7 +37,7 @@ async function handleSubmit() {
 				<Input
 					v-model="email"
 					type="email"
-					placeholder="Email"
+					:placeholder="$t('common.email')"
 					required
 				/>
 				<Button
@@ -45,13 +45,13 @@ async function handleSubmit() {
 					:disabled="loading"
 					:loading="loading"
 				>
-					{{ loading ? 'Sending...' : 'Send reset link' }}
+					{{ loading ? $t('screens.forgotPassword.submitting') : $t('screens.forgotPassword.submit') }}
 				</Button>
 			</Form>
 
 			<p class="mt-16 text-black opacity-60">
-				Remembered it?
-				<Link to="/login">Back to login</Link>
+				{{ $t('screens.forgotPassword.remembered') }}
+				<Link to="/login">{{ $t('common.backToLogin') }}</Link>
 			</p>
 		</Card>
 	</div>

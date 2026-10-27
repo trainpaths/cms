@@ -36,7 +36,7 @@ const emit = defineEmits<{ select: [item: MediaItem] }>()
 					v-if="!item.alt"
 					class="px-6 pb-4 text-[11px] text-yellow-700"
 				>
-					No alt text
+					{{ $t('editor.media.noAlt') }}
 				</span>
 			</button>
 		</li>

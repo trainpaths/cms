@@ -34,8 +34,10 @@ export async function uploadBackup(file: File, onProgress: (fraction: number) =>
 	})
 }
 
-export function formatBytes(bytes: number): string {
-	if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
-	if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-	return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
+export function formatBytes(bytes: number, tag?: string): string {
+	const fixed = (value: number, digits: number) =>
+		value.toLocaleString(tag ?? 'en', { minimumFractionDigits: digits, maximumFractionDigits: digits })
+	if (bytes < 1024 * 1024) return `${fixed(Math.max(1, Math.round(bytes / 1024)), 0)} KB`
+	if (bytes < 1024 * 1024 * 1024) return `${fixed(bytes / 1024 / 1024, 1)} MB`
+	return `${fixed(bytes / 1024 / 1024 / 1024, 2)} GB`
 }

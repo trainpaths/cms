@@ -26,18 +26,18 @@ async function handleSubmit() {
 <template>
 	<div class="p-32 max-w-480 mx-auto font-sans">
 		<Card>
-			<h1 class="text-2xl font-bold mb-24">Login</h1>
+			<h1 class="text-2xl font-bold mb-24">{{ $t('screens.login.heading') }}</h1>
 
 			<Form @submit="handleSubmit">
 				<Input
 					v-model="email"
 					type="email"
-					placeholder="Email"
+					:placeholder="$t('common.email')"
 				/>
 				<Input
 					v-model="password"
 					type="password"
-					placeholder="Password"
+					:placeholder="$t('common.password')"
 				/>
 				<Alert
 					v-if="error"
@@ -50,16 +50,16 @@ async function handleSubmit() {
 					:disabled="loading"
 					:loading="loading"
 				>
-					{{ loading ? 'Logging in...' : 'Log in' }}
+					{{ loading ? $t('screens.login.submitting') : $t('screens.login.submit') }}
 				</Button>
 			</Form>
 
 			<p class="mt-16 text-black opacity-60">
-				Don't have an account?
-				<Link :to="carry('/register')">Register</Link>
+				{{ $t('screens.login.noAccount') }}
+				<Link :to="carry('/register')">{{ $t('screens.login.register') }}</Link>
 			</p>
 			<p class="mt-8 text-black opacity-60">
-				<Link to="/forgot-password">Forgot password?</Link>
+				<Link to="/forgot-password">{{ $t('screens.login.forgot') }}</Link>
 			</p>
 		</Card>
 	</div>

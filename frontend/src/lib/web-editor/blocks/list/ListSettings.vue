@@ -7,13 +7,13 @@ const props = defineProps<{ block: BlockInstance }>()
 
 const ordered = useBlockAttribute(() => props.block, 'ordered', false)
 const options = [
-	{ value: false, label: 'Bullet' },
-	{ value: true, label: 'Numbered' },
+	{ value: false, label: 'editor.list.bullet' },
+	{ value: true, label: 'editor.list.numbered' },
 ]
 </script>
 
 <template>
-	<SettingsSection title="List type">
+	<SettingsSection :title="$t('editor.list.type')">
 		<div class="flex rounded-md border border-gray-200">
 			<button
 				v-for="opt in options"
@@ -22,7 +22,7 @@ const options = [
 				:class="ordered === opt.value ? 'bg-primary text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
 				@click="ordered = opt.value"
 			>
-				{{ opt.label }}
+				{{ $t(opt.label) }}
 			</button>
 		</div>
 	</SettingsSection>

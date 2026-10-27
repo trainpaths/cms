@@ -35,8 +35,14 @@ export function toPageExport(page: PageExportContent, now = new Date()): PageExp
 	}
 }
 
-/** A file that isn't a usable page export; the message is meant for the user. */
-export class PageExportError extends Error {}
+/** A file that isn't a usable page export; the message (English) / `key` (message key) is meant for the user. */
+export class PageExportError extends Error {
+	readonly key: string
+	constructor(message: string, key: string) {
+		super(message)
+		this.key = key
+	}
+}
 
 export function pageExportFileName(slug: string): string {
 	return `${slug || 'page'}.json`
@@ -51,15 +57,18 @@ export function parsePageExport(text: string): ImportPageRequest {
 	try {
 		data = JSON.parse(text)
 	} catch {
-		throw new PageExportError('The file is not valid JSON.')
+		throw new PageExportError('The file is not valid JSON.', 'admin.pageExport.invalidJson')
 	}
-	if (!isObject(data) || data.format !== PAGE_EXPORT_FORMAT) throw new PageExportError('The file is not a page export.')
+	if (!isObject(data) || data.format !== PAGE_EXPORT_FORMAT) throw new PageExportError('The file is not a page export.', 'admin.pageExport.notExport')
 	if (typeof data.version !== 'number' || data.version > PAGE_EXPORT_VERSION)
-		throw new PageExportError('The file was exported by a newer CMS version.')
+		throw new PageExportError('The file was exported by a newer CMS version.', 'admin.pageExport.newer')
 
 	const page = data.page
 	if (!isObject(page) || typeof page.title !== 'string' || !page.title.trim() || !Array.isArray(page.blocks))
-		throw new PageExportError('The page export is incomplete (title or blocks missing).')
+		throw new PageExportError(
+			'The page export is incomplete (title or blocks missing).',
+			'admin.pageExport.incomplete',
+		)
 	const tags = Array.isArray(page.tags) ? page.tags.filter((t): t is string => typeof t === 'string') : []
 
 	return {

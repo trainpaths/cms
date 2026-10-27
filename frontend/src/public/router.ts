@@ -5,6 +5,7 @@ import { pageTitle, screenTitle } from './head'
 import { SCREENS } from './screens'
 import PublicPage from './PublicPage.vue'
 import { useSiteConfigStore } from '../stores/siteConfig'
+import type { Translate } from './head'
 
 // lazy: plain visitors don't load the forms; router.isReady() resolves them before SSR and hydration
 const screenViews: Record<string, () => Promise<RouteComponent>> = {
@@ -23,7 +24,7 @@ const screenViews: Record<string, () => Promise<RouteComponent>> = {
  * the page first, and anything the public site can't show (admin routes, unknown slugs, deeper paths)
  * becomes a full page load so the server decides. Customer screens (`screens/`) are client-side routes.
  */
-export function createPublicRouter(history: RouterHistory, pinia: Pinia): Router {
+export function createPublicRouter(history: RouterHistory, pinia: Pinia, t: Translate): Router {
 	const screens = SCREENS.map((screen) => ({
 		path: `/${screen.slug}`,
 		name: screen.name,
@@ -71,8 +72,8 @@ export function createPublicRouter(history: RouterHistory, pinia: Pinia): Router
 		if (from === START_LOCATION) return
 		const config = useSiteConfigStore(pinia).config
 		document.title = to.meta.screen
-			? screenTitle(to.meta.screen.title, config)
-			: pageTitle({ page: usePublicPageStore(pinia).page, config })
+			? screenTitle(t(to.meta.screen.title), config)
+			: pageTitle({ page: usePublicPageStore(pinia).page, config }, t)
 	})
 
 	return router

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { I18nT, useI18n } from 'vue-i18n'
 import SettingsSection from './SettingsSection.vue'
 import { TagInput } from '@trainpaths/nb-ui'
 import { META_DESCRIPTION_MAX, META_TITLE_MAX, TAG_MAX_LENGTH, TAGS_PER_PAGE, normalizeTag } from '../limits'
@@ -12,6 +13,7 @@ import { pageExportFileName, toPageExport } from '../../pageExport'
 import { saveJson } from '../../download'
 
 const store = useEditorStore()
+const { t } = useI18n()
 const tags = useTagsStore()
 const siteConfig = useSiteConfigStore()
 const { published, canPublish, publishLabel, publishHint, statusText, publish, unpublish } = usePublishState()
@@ -22,7 +24,11 @@ onMounted(() => {
 
 // what the public page's browser tab will show (firm name from the site config)
 const tabTitle = computed(() =>
-	documentTitle({ title: store.pageTitle, metaTitle: store.pageMetaTitle }, siteConfig.config),
+	documentTitle(
+		{ title: store.pageTitle, metaTitle: store.pageMetaTitle },
+		siteConfig.config,
+		t('site.notFound.title'),
+	),
 )
 
 const slugDraft = ref(store.pageSlug)
@@ -58,10 +64,10 @@ async function commitSlug() {
 
 <template>
 	<div class="p-16">
-		<SettingsSection title="Page">
+		<SettingsSection :title="$t('editor.page.section')">
 			<!-- < sm only: the header hides its title input there -->
 			<label class="field-label mb-12 sm:hidden">
-				Title
+				{{ $t('editor.page.title') }}
 				<input
 					v-model="store.pageTitle"
 					data-testid="page-title-mobile"
@@ -71,7 +77,7 @@ async function commitSlug() {
 				/>
 			</label>
 			<label class="field-label">
-				Slug
+				{{ $t('admin.pages.slug') }}
 				<div class="mt-4 flex items-center rounded border border-gray-300 bg-white text-sm">
 					<span class="pl-8 text-gray-400">/</span>
 					<input
@@ -85,16 +91,22 @@ async function commitSlug() {
 				</div>
 			</label>
 			<p class="mt-8 mb-0 text-xs text-gray-400">
-				<template v-if="store.pageLocked">Fixed by the site configuration.</template>
-				<template v-else>Lowercase letters, digits and hyphens.</template>
-				Published pages are served at
-				<span class="font-mono">/{{ store.pageSlug }}</span
-				>.
+				<template v-if="store.pageLocked">{{ $t('editor.page.slugLocked') }}</template>
+				<template v-else>{{ $t('editor.page.slugRule') }}</template>
+				{{ ' ' }}
+				<I18nT
+					keypath="editor.page.servedAt"
+					scope="global"
+				>
+					<template #path>
+						<span class="font-mono">/{{ store.pageSlug }}</span>
+					</template>
+				</I18nT>
 			</p>
 		</SettingsSection>
-		<SettingsSection title="Search & sharing">
+		<SettingsSection :title="$t('editor.page.seo')">
 			<label class="field-label">
-				Meta title
+				{{ $t('editor.page.metaTitle') }}
 				<input
 					v-model="store.pageMetaTitle"
 					:maxlength="META_TITLE_MAX"
@@ -109,12 +121,12 @@ async function commitSlug() {
 					class="min-w-0 truncate"
 					data-testid="page-tab-title"
 					:title="tabTitle"
-					>Tab: {{ tabTitle }}</span
+					>{{ $t('editor.page.tab', { title: tabTitle }) }}</span
 				>
 				<span class="shrink-0">{{ store.pageMetaTitle.length }}/{{ META_TITLE_MAX }}</span>
 			</p>
 			<label class="field-label">
-				Meta description
+				{{ $t('editor.page.metaDescription') }}
 				<textarea
 					v-model="store.pageMetaDescription"
 					:maxlength="META_DESCRIPTION_MAX"
@@ -125,11 +137,11 @@ async function commitSlug() {
 				/>
 			</label>
 			<p class="mt-4 mb-0 flex justify-between gap-8 text-xs text-gray-400">
-				<span>Search results and link previews; empty = the first paragraph.</span>
+				<span>{{ $t('editor.page.metaDescriptionHint') }}</span>
 				<span class="shrink-0">{{ store.pageMetaDescription.length }}/{{ META_DESCRIPTION_MAX }}</span>
 			</p>
 		</SettingsSection>
-		<SettingsSection title="Tags">
+		<SettingsSection :title="$t('admin.pages.tags')">
 			<TagInput
 				:model-value="store.pageTags"
 				:suggestions="tags.names"
@@ -138,10 +150,11 @@ async function commitSlug() {
 				:max-length="TAG_MAX_LENGTH"
 				:normalize="normalizeTag"
 				test-id="page-tags"
+				:label="$t('admin.pages.tags')"
 				@update:model-value="store.updateTags"
 			/>
 		</SettingsSection>
-		<SettingsSection title="Status">
+		<SettingsSection :title="$t('editor.page.status')">
 			<p
 				class="mt-0 mb-8 text-sm"
 				:class="published ? 'text-green-700' : 'text-gray-600'"
@@ -166,21 +179,21 @@ async function commitSlug() {
 					data-testid="settings-unpublish"
 					@click="unpublish"
 				>
-					Unpublish
+					{{ $t('editor.publish.unpublish') }}
 				</button>
 			</div>
-			<p class="mt-8 mb-0 text-xs text-gray-400">Saving never publishes: visitors see the last published version.</p>
+			<p class="mt-8 mb-0 text-xs text-gray-400">{{ $t('editor.page.statusHint') }}</p>
 		</SettingsSection>
-		<SettingsSection title="Export">
+		<SettingsSection :title="$t('admin.pages.export')">
 			<button
 				class="cursor-pointer rounded border border-gray-300 bg-white px-12 py-4 text-xs text-gray-700 hover:bg-gray-50"
 				data-testid="page-download-json"
 				@click="downloadJson"
 			>
-				Download JSON
+				{{ $t('editor.page.downloadJson') }}
 			</button>
 			<p class="mt-8 mb-0 text-xs text-gray-400">
-				A copy of this page. Import it on the Pages list to create a new draft.
+				{{ $t('editor.page.exportHint') }}
 			</p>
 		</SettingsSection>
 	</div>

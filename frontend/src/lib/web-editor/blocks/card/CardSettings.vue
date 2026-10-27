@@ -7,7 +7,7 @@ defineProps<{ block: BlockInstance }>()
 </script>
 
 <template>
-	<SettingsSection title="Image">
+	<SettingsSection :title="$t('blocks.image.title')">
 		<MediaField :block="block" />
 	</SettingsSection>
 </template>

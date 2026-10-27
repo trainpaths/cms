@@ -10,10 +10,10 @@ export type { PublicState }
 
 /** Renders one public page or customer screen; the render server splices the parts into the `public.html` template. */
 export async function render(state: PublicState): Promise<Rendered> {
-	const { app, router } = createPublicApp(state, createMemoryHistory(), true)
+	const { app, router, i18n } = createPublicApp(state, createMemoryHistory(), true)
 	// not-found renders under any path; the client keeps its own URL (START_LOCATION)
 	const screen = screenOf(state)
 	await router.push(state.page ? pathOf(state.slug) : screen ? `/${screen.slug}` : '/not-found')
 	await router.isReady()
-	return { head: headTags(state), html: await renderToString(app), state: serializeState(state) }
+	return { head: headTags(state, i18n.global.t), html: await renderToString(app), state: serializeState(state) }
 }

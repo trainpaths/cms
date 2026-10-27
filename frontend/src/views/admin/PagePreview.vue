@@ -29,8 +29,8 @@ onMounted(async () => {
 
 <template>
 	<div class="border-b border-yellow-200 bg-yellow-50 px-16 py-8 text-center text-sm text-yellow-800 font-sans">
-		Preview{{ page?.status === 'draft' ? ' of an unpublished draft' : '' }} &middot;
-		<Link :to="`/admin/pages/${id}`">Back to editor</Link>
+		{{ page?.status === 'draft' ? $t('admin.preview.draft') : $t('admin.preview.label') }} &middot;
+		<Link :to="`/admin/pages/${id}`">{{ $t('admin.preview.back') }}</Link>
 	</div>
 	<div
 		v-if="page"
@@ -50,10 +50,10 @@ onMounted(async () => {
 		v-else-if="failed"
 		class="p-32 text-center text-gray-500"
 	>
-		Page not found.
+		{{ $t('admin.preview.notFound') }}
 	</p>
 	<Loading
 		v-else
-		label="Loading preview…"
+		:label="$t('admin.preview.loading')"
 	/>
 </template>

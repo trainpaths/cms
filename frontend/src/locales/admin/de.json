@@ -1,0 +1,442 @@
+{
+	"admin": {
+		"nav": {
+			"label": "Verwaltung",
+			"dashboard": "Übersicht",
+			"pages": "Seiten",
+			"menus": "Menüs",
+			"media": "Medien",
+			"configuration": "Konfiguration",
+			"user": "Benutzer"
+		},
+		"dashboard": {
+			"welcome": "Willkommen, {name}!",
+			"logOut": "Abmelden",
+			"goToPages": "Zu den Seiten",
+			"pagesHint": "Seiten Ihrer Website erstellen, bearbeiten und veröffentlichen."
+		},
+		"login": {
+			"heading": "Anmeldung Verwaltung"
+		},
+		"preview": {
+			"label": "Vorschau",
+			"draft": "Vorschau eines unveröffentlichten Entwurfs",
+			"back": "Zurück zum Editor",
+			"notFound": "Seite nicht gefunden.",
+			"loading": "Vorschau wird geladen…"
+		},
+		"backups": {
+			"tab": "Backups",
+			"loadFailed": "Backups konnten nicht geladen werden",
+			"manage": "Backups verwalten",
+			"schedule": "Zeitplan",
+			"nextRun": "Nächster Lauf",
+			"lastRun": "Letzter Lauf",
+			"keeps": "Behält",
+			"keepsValue": "die letzten {n} automatischen",
+			"saved": "Gespeichert",
+			"count": "{n} Backup | {n} Backups",
+			"countDetail": "{auto} automatisch, {size}",
+			"latest": "Neuestes",
+			"freeSpace": "Freier Speicher",
+			"lastFailed": "Letztes automatisches Backup fehlgeschlagen: {error}",
+			"intervals": {
+				"off": "Aus",
+				"daily": "Täglich",
+				"weekly": "Wöchentlich",
+				"biweekly": "Alle 2 Wochen",
+				"monthly": "Monatlich"
+			},
+			"summaryWeekday": "{interval} am {day}, {time} UTC",
+			"summaryMonthDay": "{interval} am {day}., {time} UTC",
+			"summaryDaily": "{interval}, {time} UTC",
+			"kinds": {
+				"auto": "Automatisch",
+				"manual": "Manuell",
+				"preRestore": "Vor Wiederherstellung",
+				"upload": "Hochgeladen"
+			},
+			"scheduleSaved": "Backup-Zeitplan gespeichert",
+			"scheduleFailed": "Zeitplan konnte nicht gespeichert werden",
+			"created": "Backup {name} erstellt",
+			"createFailed": "Backup fehlgeschlagen",
+			"tooLarge": "Die Datei ist grösser als {size}.",
+			"uploaded": "Hochgeladen als {name}. Stellen Sie es über die Liste wieder her.",
+			"uploadFailed": "Hochladen fehlgeschlagen",
+			"downloadFailed": "Herunterladen fehlgeschlagen",
+			"deleteTitle": "{name} löschen?",
+			"deleteHint": "Das Archiv wird aus dem Backup-Ordner entfernt. Dies kann nicht rückgängig gemacht werden.",
+			"deleteFailed": "Backup konnte nicht gelöscht werden",
+			"restoreTitle": "{name} wiederherstellen?",
+			"restoreHint": "Alles wird durch den Stand vom {date} ersetzt: Seiten, Medien, Menüs, Konfiguration und Mitarbeiterkonten. Alle werden abgemeldet. Zuerst wird ein Backup des aktuellen Stands erstellt; durch dessen Wiederherstellung lässt sich der Schritt rückgängig machen.",
+			"restore": "Wiederherstellen",
+			"restored": "Backup wiederhergestellt (vorheriger Stand gespeichert als {name}). Bitte melden Sie sich erneut an.",
+			"restoreFailed": "Wiederherstellung fehlgeschlagen",
+			"loading": "Backups werden geladen…",
+			"restoring": "{name} wird wiederhergestellt. Die Website ist bis zum Abschluss nicht erreichbar; schliessen Sie diese Seite nicht.",
+			"automatic": "Automatische Backups",
+			"interval": "Intervall",
+			"weekday": "Tag (UTC)",
+			"biweeklyHint": "Beginnt mit dem ersten nach dem Speichern",
+			"dayOfMonth": "Tag des Monats (UTC)",
+			"time": "Uhrzeit (UTC)",
+			"localTime": "{time} Ihre Zeit",
+			"retention": "Automatische Backups behalten",
+			"retentionHint": "Ältere automatische Backups werden gelöscht; manuelle und hochgeladene bleiben erhalten.",
+			"saveSchedule": "Zeitplan speichern",
+			"storage": "Speicherort",
+			"folder": "Ordner",
+			"noFolder": "Die Entwicklerin oder der Entwickler hat keinen Backup-Ordner festgelegt",
+			"storageHint": "Der Ordner wird durch die Docker-Einrichtung des Servers festgelegt und kann hier nicht geändert werden. Kopieren Sie die Archive vom Server (herunterladen oder den Ordner synchronisieren), um sie vor einem Festplattenausfall zu schützen. Backups werden nach {years} Jahren gelöscht.",
+			"now": "Jetzt sichern",
+			"uploadHint": "Ein Backup-Archiv (.tar.gz) von einem anderen Server oder einem früheren Download hinzufügen",
+			"upload": "Backup hochladen",
+			"uploading": "Backup wird hochgeladen",
+			"empty": "Noch keine Backups",
+			"emptyHint": "Jetzt sichern oder oben automatische Backups einschalten.",
+			"mediaFiles": "{n} Mediendatei | {n} Mediendateien",
+			"download": "Herunterladen",
+			"downloadName": "{name} herunterladen",
+			"deleteName": "{name} löschen"
+		},
+		"status": {
+			"published": "Veröffentlicht",
+			"draft": "Entwurf"
+		},
+		"pages": {
+			"loadFailed": "Seiten konnten nicht geladen werden",
+			"createFailed": "Seite konnte nicht erstellt werden",
+			"importFailed": "Seite konnte nicht importiert werden",
+			"exportFailed": "Seite konnte nicht exportiert werden",
+			"duplicateFailed": "Seite konnte nicht dupliziert werden",
+			"deleteFailed": "Seite konnte nicht gelöscht werden",
+			"saveFailed": "Seite konnte nicht gespeichert werden",
+			"imported": "Als Entwurf /{slug} importiert",
+			"importedMissing": "Als Entwurf /{slug} importiert; {count} Bild nicht in der Mediathek gefunden | Als Entwurf /{slug} importiert; {count} Bilder nicht in der Mediathek gefunden",
+			"duplicated": "Als Entwurf /{slug} dupliziert",
+			"duplicate": "Duplizieren",
+			"export": "Exportieren",
+			"lockedDelete": "Teil der Website-Konfiguration, kann nicht gelöscht werden",
+			"deleteTitle": "«{title}» löschen?",
+			"all": "Alle Seiten",
+			"new": "+ Neue Seite",
+			"importHint": "Einen Seitenentwurf aus einer exportierten Seitendatei (.json) erstellen",
+			"importLabel": "Seite importieren",
+			"import": "Importieren",
+			"titlePlaceholder": "Seitentitel…",
+			"titleLabel": "Seitentitel",
+			"create": "Erstellen",
+			"loading": "Seiten werden geladen…",
+			"empty": "Noch keine Seiten.",
+			"emptyHint": "Erstellen Sie die erste Seite Ihrer Website.",
+			"noMatch": "Keine passenden Seiten.",
+			"noMatchHint": "Versuchen Sie eine andere Suche oder einen anderen Filter.",
+			"clearFilters": "Filter zurücksetzen",
+			"blocks": "{n} Block | {n} Blöcke",
+			"updated": "aktualisiert am {date}",
+			"view": "Seite ansehen",
+			"previewDraft": "Entwurf ansehen",
+			"slugRule": "Kleinbuchstaben, Ziffern und einzelne Bindestriche (max. 100).",
+			"slug": "Slug",
+			"lockedSlug": "Durch die Website-Konfiguration festgelegt",
+			"liveAt": "Online unter /{slug}",
+			"draftHint": "Entwurf: nur für Mitarbeitende sichtbar",
+			"tags": "Tags"
+		},
+		"pageExport": {
+			"invalidJson": "Die Datei ist kein gültiges JSON.",
+			"notExport": "Die Datei ist kein Seitenexport.",
+			"newer": "Die Datei wurde mit einer neueren CMS-Version exportiert.",
+			"incomplete": "Der Seitenexport ist unvollständig (Titel oder Blöcke fehlen)."
+		},
+		"actions": "Aktionen",
+		"filters": {
+			"allTags": "Alle Tags",
+			"allStatuses": "Alle Status",
+			"notPublished": "Nicht veröffentlicht",
+			"searchPlaceholder": "Seiten durchsuchen…",
+			"search": "Seiten durchsuchen",
+			"byTag": "Nach Tag filtern",
+			"byStatus": "Nach Status filtern",
+			"newestFirst": "Zuletzt aktualisierte zuerst",
+			"oldestFirst": "Am längsten nicht aktualisierte zuerst",
+			"sortedNewest": "Nach letzter Aktualisierung sortiert, neueste zuerst. Klicken zum Umkehren.",
+			"sortedOldest": "Nach letzter Aktualisierung sortiert, älteste zuerst. Klicken zum Umkehren."
+		},
+		"dismiss": "Schliessen",
+		"unsavedChanges": "Ungespeicherte Änderungen",
+		"moveUp": "Nach oben",
+		"moveDown": "Nach unten",
+		"unsaved": {
+			"title": "Möchten Sie die Änderungen speichern?",
+			"lost": "Ihre Änderungen gehen verloren, wenn Sie sie nicht speichern.",
+			"blocked": "Korrigieren Sie die markierten Felder, um zu speichern.",
+			"discard": "Nicht speichern"
+		},
+		"menus": {
+			"badUrl": "Geben Sie einen Pfad wie /about oder eine http(s)-URL ein.",
+			"labelRequired": "Bezeichnung ist erforderlich.",
+			"saved": "Menü gespeichert",
+			"saveFailed": "Menü konnte nicht gespeichert werden",
+			"createFailed": "Menü konnte nicht erstellt werden",
+			"deleteFailed": "Menü konnte nicht gelöscht werden",
+			"deleteTitle": "Menü «{handle}» löschen?",
+			"intro": "Gruppen von Links für Ihre Website. Das {main} ist die Navigation oben auf jeder öffentlichen Seite.",
+			"mainMenu": "Hauptmenü",
+			"loadFailed": "Menüs konnten nicht geladen werden.",
+			"loading": "Menüs werden geladen…",
+			"main": "Haupt",
+			"handlePlaceholder": "z. B. footer",
+			"newHandle": "Kennung des neuen Menüs",
+			"savedAs": "Gespeichert als {handle}",
+			"new": "+ Neues Menü",
+			"handleHint": "Kennung: Der Code der Website lädt das Menü darüber, deshalb kann sie nicht geändert werden",
+			"addItem": "+ Eintrag hinzufügen",
+			"delete": "Menü löschen",
+			"dragHint": "Ziehen Sie Zeilen am Griff oder Seiten aus der Liste: auf eine Linie, um sie dort einzufügen, auf die Mitte eines Eintrags, um sie darin zu verschachteln. Einträge ohne Link gruppieren ihre Untereinträge.",
+			"publishedPages": "Veröffentlichte Seiten",
+			"noPages": "Keine passenden veröffentlichten Seiten.",
+			"pickerHint": "In das Menü ziehen oder + klicken",
+			"inMenu": "Bereits in diesem Menü",
+			"addPage": "{title} zum Menü hinzufügen",
+			"empty": "Noch keine Einträge. Fügen Sie einen Eintrag hinzu oder ziehen Sie Seiten aus der Liste hierher.",
+			"dragToMove": "Zum Verschieben ziehen",
+			"label": "Bezeichnung",
+			"linkPlaceholder": "Link (optional)",
+			"link": "Link",
+			"draftHint": "Entwürfe erscheinen nicht im öffentlichen Menü",
+			"pageDeleted": "Seite gelöscht",
+			"outdent": "Ausrücken",
+			"indent": "In den vorherigen Eintrag einrücken",
+			"removeTree": "Eintrag und Untereinträge entfernen",
+			"remove": "Eintrag entfernen"
+		},
+		"remove": "Entfernen",
+		"config": {
+			"noneSelected": "Nichts ausgewählt",
+			"types": {
+				"text": "Text",
+				"email": "E-Mail",
+				"phone": "Telefon",
+				"link": "Link",
+				"address": "Adresse"
+			},
+			"placeholders": {
+				"text": "Wert",
+				"phone": "+41 44 123 45 67"
+			},
+			"address": {
+				"street": "Strasse und Nummer",
+				"postalCode": "PLZ",
+				"city": "Ort",
+				"country": "Land"
+			},
+			"entryNamePlaceholder": "Name, z. B. Fax",
+			"entryName": "Name des Eintrags",
+			"entryType": "Typ des Eintrags",
+			"entryValue": "Wert des Eintrags",
+			"requiredEntry": "Für diese Website erforderlich",
+			"removeEntry": "Eintrag entfernen",
+			"required": "Erforderlich.",
+			"nameRequired": "Name ist erforderlich.",
+			"nameTwice": "Name wird zweimal verwendet.",
+			"saved": "Konfiguration gespeichert",
+			"saveFailed": "Konfiguration konnte nicht gespeichert werden",
+			"intro": "Angaben zu Ihrer Website, die auf ihren öffentlichen Seiten verwendet werden.",
+			"loadFailed": "Konfiguration konnte nicht geladen werden.",
+			"loading": "Konfiguration wird geladen…",
+			"noEntries": "Noch keine Einträge.",
+			"addCustom": "+ Eigener Eintrag",
+			"logo": "Logo",
+			"logoHint": "Wird in der Fusszeile und der Navigation der Website angezeigt. PNG/WebP eignen sich am besten.",
+			"icon": "Icon",
+			"iconHint": "Symbol im Browser-Tab der Website. Quadratisches PNG.",
+			"shareImage": "Vorschaubild",
+			"shareImageHint": "Linkvorschauen (WhatsApp, Slack…) von Seiten ohne eigenes Bild. 1200×630 eignet sich am besten."
+		},
+		"media": {
+			"loadFailed": "Medien konnten nicht geladen werden",
+			"saveFailed": "Änderungen konnten nicht gespeichert werden",
+			"deleteFailed": "Medium konnte nicht gelöscht werden",
+			"deleteTitle": "«{name}» löschen?",
+			"deleteHint": "Seiten, die es verwenden, zeigen das Bild nicht mehr an.",
+			"uploadNew": "+ Neu hochladen",
+			"types": "JPEG, PNG, GIF, WebP oder AVIF, bis 10 MB.",
+			"loading": "Medien werden geladen…",
+			"empty": "Noch keine Medien.",
+			"type": "Typ",
+			"size": "Grösse",
+			"uploaded": "Hochgeladen",
+			"name": "Name",
+			"alt": "Alternativtext",
+			"altPlaceholder": "Bild beschreiben…"
+		}
+	},
+	"editor": {
+		"publish": {
+			"publish": "Veröffentlichen",
+			"changes": "Änderungen veröffentlichen",
+			"saveFirst": "Zuerst speichern",
+			"noChanges": "Keine Änderungen zu veröffentlichen",
+			"pending": "Veröffentlicht · unveröffentlichte Änderungen",
+			"title": "Diese Seite veröffentlichen?",
+			"changesTitle": "Änderungen veröffentlichen?",
+			"message": "Besucher unter /{slug} sehen die gespeicherte Version.",
+			"unpublishTitle": "Veröffentlichung dieser Seite aufheben?",
+			"unpublishMessage": "Besucher unter /{slug} erhalten «Seite nicht gefunden», bis Sie erneut veröffentlichen.",
+			"unpublish": "Veröffentlichung aufheben"
+		},
+		"header": {
+			"leftSidebarHint": "Linke Seitenleiste ein-/ausblenden (Blöcke, Gliederung)",
+			"leftSidebar": "Linke Seitenleiste ein-/ausblenden",
+			"undo": "Rückgängig (Ctrl+Z)",
+			"redo": "Wiederholen (Ctrl+Shift+Z)",
+			"saved": "Gespeichert",
+			"saveHint": "Speichern (Ctrl+S)",
+			"noChanges": "Keine ungespeicherten Änderungen",
+			"rightSidebar": "Einstellungen ein-/ausblenden"
+		},
+		"page": {
+			"section": "Seite",
+			"title": "Titel",
+			"slugLocked": "Durch die Website-Konfiguration festgelegt.",
+			"slugRule": "Kleinbuchstaben, Ziffern und Bindestriche.",
+			"servedAt": "Veröffentlichte Seiten sind erreichbar unter {path}.",
+			"seo": "Suche & Teilen",
+			"metaTitle": "Meta-Titel",
+			"tab": "Tab: {title}",
+			"metaDescription": "Meta-Beschreibung",
+			"metaDescriptionHint": "Suchergebnisse und Linkvorschauen; leer = der erste Absatz.",
+			"status": "Status",
+			"statusHint": "Speichern veröffentlicht nie: Besucher sehen die zuletzt veröffentlichte Version.",
+			"downloadJson": "JSON herunterladen",
+			"exportHint": "Eine Kopie dieser Seite. Importieren Sie sie in der Seitenliste, um einen neuen Entwurf zu erstellen."
+		},
+		"loading": "Seite wird geladen…",
+		"templateNotice": "Der Inhalt dieser Seite stammt aus der Vorlage {template} der Website. Titel und Einstellungen können Sie trotzdem ändern.",
+		"tabs": {
+			"block": "Block",
+			"page": "Seite",
+			"blocks": "Blöcke",
+			"outline": "Gliederung"
+		},
+		"width": {
+			"title": "Breite",
+			"default": "Standard",
+			"wide": "Breit",
+			"full": "Volle Breite"
+		},
+		"backgroundColor": "Hintergrundfarbe",
+		"textColor": "Textfarbe",
+		"noSettings": "Keine Einstellungen für diesen Block",
+		"noSelection": "Kein Block ausgewählt",
+		"closeSidebar": "Seitenleiste schliessen",
+		"colorNone": "Keine",
+		"noColors": "Für diese Website sind keine Themenfarben eingerichtet.",
+		"outlineEmpty": "Noch keine Blöcke.",
+		"collapse": "Zuklappen",
+		"expand": "Aufklappen",
+		"emptyPage": "Fügen Sie Blöcke aus der Seitenleiste hinzu",
+		"searchBlocks": "Blöcke suchen…",
+		"categories": {
+			"text": "Text",
+			"media": "Medien",
+			"containers": "Container",
+			"embeds": "Einbettungen"
+		},
+		"insertHint": "Klicken oder ziehen, um {title} hinzuzufügen",
+		"noBlocksFound": "Keine Blöcke gefunden",
+		"heading": {
+			"level": "Überschrift {n}",
+			"levelTitle": "Überschriftenebene",
+			"placeholder": "Klicken, um eine Überschrift hinzuzufügen…",
+			"levelSection": "Ebene"
+		},
+		"align": {
+			"title": "Ausrichtung",
+			"left": "Linksbündig",
+			"center": "Zentriert",
+			"right": "Rechtsbündig"
+		},
+		"paragraph": {
+			"placeholder": "Klicken, um Text hinzuzufügen…"
+		},
+		"list": {
+			"bullet": "Aufzählung",
+			"numbered": "Nummeriert",
+			"type": "Listentyp"
+		},
+		"listItem": {
+			"empty": "Klicken, um einen Eintrag hinzuzufügen…",
+			"placeholder": "Text des Listeneintrags…"
+		},
+		"link": {
+			"placeholder": "Klicken, um einen Link hinzuzufügen…",
+			"url": "URL"
+		},
+		"image": {
+			"widthShort": "B",
+			"failed": "Bild konnte nicht geladen werden",
+			"deleted": "Dieses Bild wurde aus der Mediathek gelöscht",
+			"add": "Bild hinzufügen",
+			"caption": "Bildunterschrift hinzufügen…",
+			"widthPercent": "Breite (%)",
+			"widthSlider": "Breitenregler"
+		},
+		"card": {
+			"addImage": "Bild hinzufügen (optional)",
+			"title": "Klicken, um einen Titel hinzuzufügen…",
+			"description": "Beschreibung hinzufügen…",
+			"content": "Inhalt"
+		},
+		"media": {
+			"uploading": "Wird hochgeladen…",
+			"replace": "Ersetzen",
+			"choose": "Vorhandenes wählen",
+			"altFailed": "Alternativtext konnte nicht gespeichert werden",
+			"deleted": "Dieses Bild wurde aus der Mediathek gelöscht.",
+			"remove": "Bild entfernen",
+			"upload": "Neu hochladen",
+			"pickerTitle": "Medium wählen",
+			"pickerEmpty": "Noch keine Medien. Laden Sie ein Bild hoch, um zu beginnen.",
+			"noAlt": "Kein Alternativtext"
+		},
+		"errors": {
+			"load": "Seite konnte nicht geladen werden",
+			"slug": "Slug konnte nicht geändert werden",
+			"tags": "Tags konnten nicht gespeichert werden",
+			"publish": "Seite konnte nicht veröffentlicht werden",
+			"unpublish": "Veröffentlichung konnte nicht aufgehoben werden"
+		}
+	},
+	"blocks": {
+		"card": {
+			"title": "Karte",
+			"description": "Inhalte in einer Karte gruppieren"
+		},
+		"heading": {
+			"title": "Überschrift",
+			"description": "Eine Überschrift hinzufügen"
+		},
+		"image": {
+			"title": "Bild",
+			"description": "Ein Bild einfügen"
+		},
+		"link": {
+			"title": "Link",
+			"description": "Einen Link hinzufügen"
+		},
+		"list-item": {
+			"title": "Listeneintrag",
+			"description": "Einen Eintrag zu einer Liste hinzufügen"
+		},
+		"list": {
+			"title": "Liste",
+			"description": "Eine Aufzählung oder nummerierte Liste erstellen"
+		},
+		"paragraph": {
+			"title": "Absatz",
+			"description": "Einen Textabsatz hinzufügen"
+		}
+	}
+}

@@ -1,4 +1,5 @@
 import { ref, computed, watch } from 'vue'
+import { translate } from '../i18n'
 import { defineStore } from 'pinia'
 import { nanoid } from 'nanoid'
 import type { BlockInstance, BlockContext, PageDetail, PageStatus } from '../lib/web-editor/core/types'
@@ -266,7 +267,7 @@ export const useEditorStore = defineStore('editor', () => {
 			if (missing) pages.forget(id)
 			if (seq !== loadSeq) return false
 			if (missing) closePage()
-			errorMessage.value = missing ? 'Page not found' : 'Failed to load page'
+			errorMessage.value = missing ? translate('admin.preview.notFound') : translate('editor.errors.load')
 			return false
 		} finally {
 			if (seq === loadSeq) loading.value = false
@@ -333,7 +334,7 @@ export const useEditorStore = defineStore('editor', () => {
 					saveStatus.value = 'saved'
 				} catch (err: unknown) {
 					saveStatus.value = 'idle'
-					errorMessage.value = describe(err, 'Failed to save page')
+					errorMessage.value = describe(err, translate('admin.pages.saveFailed'))
 					break
 				}
 			} while (saveQueued)
@@ -354,7 +355,7 @@ export const useEditorStore = defineStore('editor', () => {
 			pageSlug.value = page.slug
 			return true
 		} catch (err: unknown) {
-			errorMessage.value = describe(err, 'Failed to update slug')
+			errorMessage.value = describe(err, translate('editor.errors.slug'))
 			return false
 		}
 	}
@@ -376,7 +377,7 @@ export const useEditorStore = defineStore('editor', () => {
 					})
 					usePagesStore().applySaved(page)
 				} catch (err: unknown) {
-					errorMessage.value = describe(err, 'Failed to save tags')
+					errorMessage.value = describe(err, translate('editor.errors.tags'))
 					break
 				}
 			}
@@ -408,12 +409,12 @@ export const useEditorStore = defineStore('editor', () => {
 
 	/** Publishes the saved copy (the controls require a save first: unsaved edits never go live). */
 	function publish(): Promise<void> {
-		return setStatus('published', 'Failed to publish page')
+		return setStatus('published', translate('editor.errors.publish'))
 	}
 
 	/** Takes the page off the public site; the live copy is kept server-side. */
 	function unpublish(): Promise<void> {
-		return setStatus('draft', 'Failed to unpublish page')
+		return setStatus('draft', translate('editor.errors.unpublish'))
 	}
 
 	function dismissError(): void {

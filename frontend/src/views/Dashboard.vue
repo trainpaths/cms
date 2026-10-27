@@ -20,31 +20,31 @@ async function logout() {
 
 <template>
 	<div class="p-32 max-w-600 mx-auto font-sans">
-		<h1 class="text-2xl font-bold mb-24">Dashboard</h1>
+		<h1 class="text-2xl font-bold mb-24">{{ $t('admin.nav.dashboard') }}</h1>
 
 		<div class="mb-24 flex flex-wrap items-center justify-between gap-16">
-			<p class="m-0 text-black opacity-70">Welcome, {{ user?.displayName || user?.email || 'User' }}!</p>
+			<p class="m-0 text-black opacity-70">{{ $t('admin.dashboard.welcome', { name: user?.displayName || user?.email || $t('admin.nav.user') }) }}</p>
 			<Button
 				variant="outline"
 				data-testid="dashboard-logout"
 				@click="logout"
 			>
-				Log Out
+				{{ $t('admin.dashboard.logOut') }}
 			</Button>
 		</div>
 
 		<Card data-testid="dashboard-pages">
 			<template #header>
 				<div class="flex items-center justify-between gap-16">
-					<h3 class="m-0 text-base font-semibold text-black">Pages</h3>
+					<h3 class="m-0 text-base font-semibold text-black">{{ $t('admin.nav.pages') }}</h3>
 					<Link
 						to="/admin/pages"
 						data-testid="dashboard-pages-link"
-						>&rarr; Go to Pages</Link
+						>&rarr; {{ $t('admin.dashboard.goToPages') }}</Link
 					>
 				</div>
 			</template>
-			<p class="m-0 text-sm text-black/60">Create, edit and publish the pages of your website.</p>
+			<p class="m-0 text-sm text-black/60">{{ $t('admin.dashboard.pagesHint') }}</p>
 		</Card>
 
 		<BackupsSummary

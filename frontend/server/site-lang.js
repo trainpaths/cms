@@ -2,36 +2,72 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 /**
- * `<html lang>` of the instance, from its `cms.config.json` (`site.lang`, default `en`). Set at build time by `cms()`
- * (`transformIndexHtml`: index.html + public.html, dev and build), so pages carry it without runtime work. The API
- * validates the same key on startup (`CmsConfigLoader`); keep LANG_TAG in sync with its LangPattern.
+ * Languages of the instance, from its `cms.config.json` (`site.lang`): a tag (`"de-CH"`, one language) or
+ * `{ "default": "en-US", "localization": ["de-CH", "fr-CH"] }`. Read at build time by `cms()`: the default tag is the
+ * `<html lang>` of index.html + public.html (`transformIndexHtml`), all tags reach the app as `__CMS_LANGUAGES__`
+ * (src/i18n/languages.ts). A language's code is its primary subtag (`de`): URL prefix, cookie value, message file.
+ * The API validates the same key on startup (`CmsConfigLoader`); keep LANG_TAG and the rules in sync with it.
  */
 
 const LANG_TAG = /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/
 export const DEFAULT_LANG = 'en'
 
+/** @param {string} tag */
+export const codeOf = (tag) => /** @type {string} */ (tag.split('-')[0])
+
 /**
  * @param {string} root app root (where cms.config.json lives)
- * @returns {string}
+ * @returns {string[]} tags, default first
  */
-export function readSiteLang(root) {
+export function readSiteLanguages(root) {
 	const path = join(root, 'cms.config.json')
-	if (!existsSync(path)) return DEFAULT_LANG
-	return siteLang(readFileSync(path, 'utf8'), path)
+	if (!existsSync(path)) return [DEFAULT_LANG]
+	return siteLanguages(readFileSync(path, 'utf8'), path)
+}
+
+/**
+ * @param {string} root app root (where cms.config.json lives)
+ * @returns {string} the default language's tag
+ */
+export const readSiteLang = (root) => /** @type {string} */ (readSiteLanguages(root)[0])
+
+/**
+ * @param {string} json cms.config.json content (comments + trailing commas allowed, like the API)
+ * @param {string} [source] for error messages
+ * @returns {string[]} tags, default first
+ */
+export function siteLanguages(json, source = 'cms.config.json') {
+	const lang = parseConfig(json, source)?.site?.lang ?? DEFAULT_LANG
+	/** @type {unknown[]} */
+	let tags
+	if (typeof lang === 'string') {
+		tags = [lang]
+	} else if (typeof lang === 'object' && lang !== null && !Array.isArray(lang)) {
+		const { default: def = DEFAULT_LANG, localization = [], ...rest } = /** @type {Record<string, unknown>} */ (lang)
+		const unknown = Object.keys(rest)
+		if (unknown.length) throw new Error(`${source}: site.lang has unknown key '${unknown[0]}' (default, localization).`)
+		if (!Array.isArray(localization)) throw new Error(`${source}: site.lang.localization must be a list of language tags.`)
+		tags = [def, ...localization]
+	} else {
+		throw new Error(`${source}: site.lang must be a language tag or { "default", "localization" }.`)
+	}
+	const codes = new Set()
+	for (const tag of tags) {
+		if (typeof tag !== 'string' || !LANG_TAG.test(tag))
+			throw new Error(`${source}: site.lang '${tag}' is not a language tag (e.g. en, de, en-GB).`)
+		if (codes.has(codeOf(tag)))
+			throw new Error(`${source}: site.lang '${tag}' has the same language code '${codeOf(tag)}' as another language.`)
+		codes.add(codeOf(tag))
+	}
+	return /** @type {string[]} */ (tags)
 }
 
 /**
  * @param {string} json cms.config.json content (comments + trailing commas allowed, like the API)
  * @param {string} [source] for error messages
- * @returns {string}
+ * @returns {string} the default language's tag
  */
-export function siteLang(json, source = 'cms.config.json') {
-	const config = parseConfig(json, source)
-	const lang = config?.site?.lang ?? DEFAULT_LANG
-	if (typeof lang !== 'string' || !LANG_TAG.test(lang))
-		throw new Error(`${source}: site.lang '${lang}' is not a language tag (e.g. en, de, en-GB).`)
-	return lang
-}
+export const siteLang = (json, source = 'cms.config.json') => /** @type {string} */ (siteLanguages(json, source)[0])
 
 /**
  * @param {string} json cms.config.json content (comments + trailing commas allowed, like the API)

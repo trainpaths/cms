@@ -81,7 +81,7 @@ function onDrop(e: DragEvent) {
 			class="rounded-md border-2 border-dashed p-24 text-center text-sm"
 			:class="isSlot(null, 0) ? 'border-primary bg-primary/5 text-primary' : 'border-gray-300 text-gray-500'"
 		>
-			No items yet. Add an item or drag pages here from the list.
+			{{ $t('admin.menus.empty') }}
 		</div>
 		<MenuList
 			v-else

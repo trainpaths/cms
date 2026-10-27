@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useBlockLabels } from '../../../i18n/siteConfigLabels'
 import { ref, computed } from 'vue'
 import { Icon } from '@trainpaths/nb-ui'
 import type { BlockInstance } from '../core/types'
@@ -11,6 +12,7 @@ import { useBlockDrag } from '../composables/useBlockDrag'
 import { useIsMobile } from '../composables/useIsMobile'
 
 const props = defineProps<{ block: BlockInstance }>()
+const blockLabels = useBlockLabels()
 const store = useEditorStore()
 const { select, isSelected } = useSelection()
 const { startDrag, endDrag } = useBlockDrag()
@@ -120,7 +122,7 @@ function onDragStart(e: DragEvent) {
 			>
 				<span
 					class="drag-handle"
-					title="Drag to move"
+					:title="$t('admin.menus.dragToMove')"
 					draggable="true"
 					data-testid="block-drag-handle"
 					@dragstart.stop="onDragStart"
@@ -135,10 +137,10 @@ function onDragStart(e: DragEvent) {
 					/>
 				</span>
 				<!-- narrow canvas (column < 320px): icon only, keeps the toolbar on one row -->
-				<span class="text-md mr-6 text-gray-300 @max-xs:hidden">{{ blockType.title }}</span>
+				<span class="text-md mr-6 text-gray-300 @max-xs:hidden">{{ blockLabels.title(blockType) }}</span>
 				<button
 					class="floating-toolbar-btn"
-					title="Move up"
+					:title="$t('admin.moveUp')"
 					:disabled="isFirst"
 					@click.stop="store.moveBlock(block.id, 'up')"
 				>
@@ -146,7 +148,7 @@ function onDragStart(e: DragEvent) {
 				</button>
 				<button
 					class="floating-toolbar-btn"
-					title="Move down"
+					:title="$t('admin.moveDown')"
 					:disabled="isLast"
 					@click.stop="store.moveBlock(block.id, 'down')"
 				>
@@ -154,14 +156,14 @@ function onDragStart(e: DragEvent) {
 				</button>
 				<button
 					class="floating-toolbar-btn"
-					title="Duplicate"
+					:title="$t('admin.pages.duplicate')"
 					@click.stop="store.duplicateBlock(block.id)"
 				>
 					&#10697;
 				</button>
 				<button
 					class="floating-toolbar-btn text-red-400 hover:text-red-300"
-					title="Remove"
+					:title="$t('admin.remove')"
 					@click.stop="store.removeBlock(block.id)"
 				>
 					<Icon name="trash" :size="18" />

@@ -33,14 +33,14 @@ async function logout() {
 			</a>
 			<div class="flex items-center gap-4 *:h-32">
 				<a href="/admin" class="flex items-center px-8 text-white no-underline hover:bg-white/15">
-					Admin
+					{{ $t('site.adminBar.admin') }}
 				</a>
 				<button type="button"
 					class="flex cursor-pointer items-center gap-6 border-none bg-transparent px-8 text-xs text-white hover:bg-white/15 disabled:opacity-60"
 					:disabled="busy" data-testid="admin-bar-logout" @click="logout">
 					<Icon name="exit" :size="14" />
-					Log out
-				</Button>
+					{{ $t('common.logOut') }}
+				</button>
 			</div>
 		</div>
 	</div>

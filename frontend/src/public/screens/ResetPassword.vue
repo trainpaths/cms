@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { I18nT, useI18n } from 'vue-i18n'
 import { useAuthStore } from '../../stores/auth'
 import { storeToRefs } from 'pinia'
 import { Button, Input, Card, Alert, Link, Form } from '@trainpaths/nb-ui'
 
 const route = useRoute()
+const { t } = useI18n()
 const router = useRouter()
 const authStore = useAuthStore()
 const { error, loading } = storeToRefs(authStore)
@@ -35,21 +37,21 @@ async function handleSubmit() {
 	successMessage.value = ''
 
 	if (!token.value) {
-		localError.value = 'This reset link is missing its token.'
+		localError.value = t('screens.resetPassword.missingToken')
 		return
 	}
 	if (!passwordsMatch.value) {
-		localError.value = 'Passwords do not match'
+		localError.value = t('account.mismatch')
 		return
 	}
 	if (newPassword.value.length < 8) {
-		localError.value = 'New password must be at least 8 characters'
+		localError.value = t('account.tooShort')
 		return
 	}
 
 	const success = await authStore.resetPassword(token.value, newPassword.value)
 	if (success) {
-		successMessage.value = 'Password reset successfully. Redirecting to login...'
+		successMessage.value = t('screens.resetPassword.done')
 		newPassword.value = ''
 		confirmPassword.value = ''
 		setTimeout(() => {
@@ -62,15 +64,21 @@ async function handleSubmit() {
 <template>
 	<div class="p-32 max-w-480 mx-auto font-sans">
 		<Card>
-			<h1 class="text-2xl font-bold mb-24">Choose a new password</h1>
+			<h1 class="text-2xl font-bold mb-24">{{ $t('screens.resetPassword.title') }}</h1>
 
 			<Alert
 				v-if="mounted && !token"
 				type="error"
 				class="mb-16"
 			>
-				This reset link is invalid or incomplete. Request a new one from
-				<Link to="/forgot-password">forgot password</Link>.
+				<I18nT
+					keypath="screens.resetPassword.invalidLink"
+					scope="global"
+				>
+					<template #link>
+						<Link to="/forgot-password">{{ $t('screens.resetPassword.invalidLinkLink') }}</Link>
+					</template>
+				</I18nT>
 			</Alert>
 
 			<Alert
@@ -85,14 +93,14 @@ async function handleSubmit() {
 				<Input
 					v-model="newPassword"
 					type="password"
-					placeholder="New password (min 8 characters)"
+					:placeholder="$t('account.newPassword')"
 					required
 					minlength="8"
 				/>
 				<Input
 					v-model="confirmPassword"
 					type="password"
-					placeholder="Confirm new password"
+					:placeholder="$t('account.confirmPassword')"
 					required
 					:invalid="!!confirmPassword && !passwordsMatch"
 				/>
@@ -100,7 +108,7 @@ async function handleSubmit() {
 					v-if="confirmPassword && !passwordsMatch"
 					type="error"
 				>
-					Passwords do not match
+					{{ $t('account.mismatch') }}
 				</Alert>
 				<Alert
 					v-if="localError"
@@ -119,12 +127,12 @@ async function handleSubmit() {
 					:loading="loading"
 					:disabled="!canSubmit"
 				>
-					{{ loading ? 'Resetting...' : 'Reset password' }}
+					{{ loading ? $t('screens.resetPassword.submitting') : $t('screens.resetPassword.submit') }}
 				</Button>
 			</Form>
 
 			<p class="mt-16 text-black opacity-60">
-				<Link to="/login">Back to login</Link>
+				<Link to="/login">{{ $t('common.backToLogin') }}</Link>
 			</p>
 		</Card>
 	</div>

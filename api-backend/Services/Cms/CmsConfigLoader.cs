@@ -90,8 +90,7 @@ public static partial class CmsConfigLoader
 			if (PageService.ValidateBlocks(page.Blocks) is { } blockError)
 				errors.Add($"{at}: {blockError}");
 		}
-		if (!LangPattern().IsMatch(cms.Site.Lang))
-			errors.Add($"site.lang: '{cms.Site.Lang}' is not a language tag (e.g. en, de, en-GB).");
+		ValidateLang(cms, errors);
 		foreach (var name in cms.Blocks.Exclude.Where(n => !NamePattern().IsMatch(n)))
 			errors.Add($"blocks.exclude: '{name}' is not a block name.");
 		foreach (var (key, value) in cms.Theme.Colors)
@@ -103,6 +102,32 @@ public static partial class CmsConfigLoader
 		}
 		ValidateSiteConfig(cms.SiteConfig, errors);
 		return errors;
+	}
+
+	private static void ValidateLang(CmsConfig cms, List<string> errors)
+	{
+		var lang = cms.Site.Lang;
+		if (lang is null || lang.Default is null || lang.Localization is null)
+		{
+			errors.Add("site.lang: must be a language tag or { \"default\", \"localization\" }.");
+			return;
+		}
+		var bad = lang.Tags.Where(t => t is null || !LangPattern().IsMatch(t)).ToList();
+		foreach (var tag in bad)
+			errors.Add($"site.lang: '{tag}' is not a language tag (e.g. en, de, en-GB).");
+		if (bad.Count > 0 || !lang.IsLocalized)
+			return;
+
+		// the code (primary subtag) is the URL prefix: /de/about
+		var codes = new HashSet<string>();
+		foreach (var tag in lang.Tags)
+		{
+			var code = CmsSiteLang.CodeOf(tag);
+			if (!codes.Add(code))
+				errors.Add($"site.lang: '{tag}' has the same language code '{code}' as another language (one per code: it is the URL prefix).");
+			else if (PageService.ReservedSlugs.Contains(code) || cms.Pages.Any(p => p.Slug == code))
+				errors.Add($"site.lang: language code '{code}' is a reserved or configured page slug (it would be the URL prefix).");
+		}
 	}
 
 	private static void ValidateSiteConfig(SiteConfigSchema schema, List<string> errors)

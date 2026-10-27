@@ -5,6 +5,8 @@ import { storeToRefs } from 'pinia'
 import { Icon, type IconName } from '@trainpaths/nb-ui'
 import { useAuthStore } from '../stores/auth'
 import { CMS_ICON } from '../public/head'
+import { IS_LOCALIZED } from '../i18n'
+import LanguageDropdown from './LanguageDropdown.vue'
 
 /**
  * Navigation for signed-in views: fixed left sidebar on md+ (items on top, user + log out at the bottom).
@@ -18,11 +20,11 @@ const { user } = storeToRefs(authStore)
 const open = ref(false)
 
 const items: { to: string; label: string; icon: IconName }[] = [
-	{ to: '/admin', label: 'Dashboard', icon: 'masonry' },
-	{ to: '/admin/pages', label: 'Pages', icon: 'file' },
-	{ to: '/admin/menus', label: 'Menus', icon: 'list-tree' },
-	{ to: '/admin/media', label: 'Media', icon: 'image' },
-	{ to: '/admin/configuration', label: 'Configuration', icon: 'settings' },
+	{ to: '/admin', label: 'admin.nav.dashboard', icon: 'masonry' },
+	{ to: '/admin/pages', label: 'admin.nav.pages', icon: 'file' },
+	{ to: '/admin/menus', label: 'admin.nav.menus', icon: 'list-tree' },
+	{ to: '/admin/media', label: 'admin.nav.media', icon: 'image' },
+	{ to: '/admin/configuration', label: 'admin.nav.configuration', icon: 'settings' },
 ]
 
 function isActive(to: string) {
@@ -69,19 +71,22 @@ onBeforeUnmount(() => (document.body.style.overflow = ''))
 			/>
 			CMS
 		</RouterLink>
-		<button
-			type="button"
-			class="flex size-36 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-gray-600 hover:bg-gray-100"
-			:aria-expanded="open"
-			aria-controls="app-nav-menu"
-			:aria-label="open ? 'Close menu' : 'Open menu'"
-			@click="open = !open"
-		>
-			<Icon
-				:name="open ? 'x' : 'menu'"
-				:size="20"
-			/>
-		</button>
+		<div class="flex items-center gap-4">
+			<LanguageDropdown align="end" />
+			<button
+				type="button"
+				class="flex size-36 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-gray-600 hover:bg-gray-100"
+				:aria-expanded="open"
+				aria-controls="app-nav-menu"
+				:aria-label="open ? $t('site.closeMenu') : $t('site.openMenu')"
+				@click="open = !open"
+			>
+				<Icon
+					:name="open ? 'x' : 'menu'"
+					:size="20"
+				/>
+			</button>
+		</div>
 	</header>
 
 	<!-- md+: sidebar; below md: full-screen overlay under the top bar -->
@@ -91,21 +96,27 @@ onBeforeUnmount(() => (document.body.style.overflow = ''))
 		:class="open ? 'flex' : 'hidden'"
 		@keydown.escape="open = false"
 	>
-		<RouterLink
-			to="/admin"
-			class="hidden h-56 shrink-0 items-center gap-8 px-20 text-lg font-semibold text-primary no-underline md:flex"
-		>
-			<img
-				:src="CMS_ICON"
-				alt=""
-				class="size-24"
+		<div class="hidden h-56 shrink-0 items-center justify-between gap-8 pl-20 pr-8 md:flex">
+			<RouterLink
+				to="/admin"
+				class="flex items-center gap-8 text-lg font-semibold text-primary no-underline"
+			>
+				<img
+					:src="CMS_ICON"
+					alt=""
+					class="size-24"
+				/>
+				CMS
+			</RouterLink>
+			<LanguageDropdown
+				v-if="IS_LOCALIZED"
+				align="end"
 			/>
-			CMS
-		</RouterLink>
+		</div>
 
 		<nav
 			class="p-8"
-			aria-label="Admin"
+			:aria-label="$t('admin.nav.label')"
 		>
 			<ul class="m-0 flex list-none flex-col gap-2 p-0">
 				<li
@@ -122,7 +133,7 @@ onBeforeUnmount(() => (document.body.style.overflow = ''))
 							:name="item.icon"
 							:size="18"
 						/>
-						{{ item.label }}
+						{{ $t(item.label) }}
 					</RouterLink>
 				</li>
 			</ul>
@@ -140,13 +151,13 @@ onBeforeUnmount(() => (document.body.style.overflow = ''))
 					name="user"
 					:size="18"
 				/>
-				User
+				{{ $t('admin.nav.user') }}
 			</RouterLink>
 			<button
 				type="button"
 				class="flex size-36 shrink-0 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-				title="Log out"
-				aria-label="Log out"
+				:title="$t('common.logOut')"
+				:aria-label="$t('common.logOut')"
 				data-testid="app-nav-logout"
 				@click="logout"
 			>

@@ -1,0 +1,125 @@
+{
+	"common": {
+		"save": "Enregistrer",
+		"saving": "Enregistrement…",
+		"cancel": "Annuler",
+		"edit": "Modifier",
+		"delete": "Supprimer",
+		"close": "Fermer",
+		"loading": "Chargement…",
+		"email": "E-mail",
+		"password": "Mot de passe",
+		"none": "—",
+		"language": "Langue",
+		"logOut": "Se déconnecter",
+		"backToLogin": "Retour à la connexion",
+		"back": "Retour",
+		"cannotUndo": "Cette action est irréversible."
+	},
+	"site": {
+		"home": "Accueil",
+		"logo": "Logo",
+		"mainNav": "Navigation principale",
+		"submenu": "Sous-menu {label}",
+		"openMenu": "Ouvrir le menu",
+		"closeMenu": "Fermer le menu",
+		"account": "Compte",
+		"legalNav": "Mentions légales",
+		"notFound": {
+			"title": "Page introuvable",
+			"home": "Aller à la page d’accueil"
+		},
+		"adminBar": {
+			"admin": "Administration"
+		}
+	},
+	"screens": {
+		"login": {
+			"title": "Connexion",
+			"heading": "Connexion",
+			"submit": "Se connecter",
+			"submitting": "Connexion…",
+			"noAccount": "Pas encore de compte ?",
+			"register": "S’inscrire",
+			"forgot": "Mot de passe oublié ?"
+		},
+		"register": {
+			"title": "Inscription",
+			"heading": "Inscription",
+			"displayName": "Nom affiché (facultatif)",
+			"submit": "S’inscrire comme client",
+			"submitting": "Inscription…",
+			"haveAccount": "Vous avez déjà un compte ?",
+			"login": "Se connecter"
+		},
+		"forgotPassword": {
+			"title": "Réinitialiser votre mot de passe",
+			"sent": "Si un compte existe pour cette adresse e-mail, un lien de réinitialisation a été envoyé. Consultez votre boîte de réception.",
+			"submit": "Envoyer le lien",
+			"submitting": "Envoi…",
+			"remembered": "Il vous est revenu ?"
+		},
+		"resetPassword": {
+			"title": "Choisir un nouveau mot de passe",
+			"missingToken": "Le jeton manque dans ce lien de réinitialisation.",
+			"invalidLink": "Ce lien de réinitialisation est invalide ou incomplet. Demandez-en un nouveau via {link}.",
+			"invalidLinkLink": "mot de passe oublié",
+			"done": "Mot de passe réinitialisé. Redirection vers la connexion…",
+			"submit": "Réinitialiser le mot de passe",
+			"submitting": "Réinitialisation…"
+		},
+		"verifyEmail": {
+			"title": "Vérification de l’e-mail",
+			"pending": "Vérification de votre adresse e-mail…",
+			"done": "Votre adresse e-mail a été confirmée. Vous pouvez maintenant vous connecter.",
+			"continue": "Continuer vers la connexion",
+			"invalid": "Ce lien de vérification est invalide ou a expiré.",
+			"resent": "Si un compte non confirmé existe pour cette adresse e-mail, un nouveau lien de vérification a été envoyé.",
+			"resendEmail": "E-mail auquel renvoyer la vérification",
+			"submit": "Renvoyer la vérification",
+			"submitting": "Envoi…"
+		},
+		"profile": {
+			"title": "Profil"
+		},
+		"password": {
+			"title": "Changer le mot de passe"
+		}
+	},
+	"account": {
+		"loading": "Chargement des informations…",
+		"loadFailed": "Impossible de charger les informations de l’utilisateur.",
+		"updated": "Profil mis à jour",
+		"displayName": "Nom affiché",
+		"type": "Type",
+		"userType": "Type d’utilisateur",
+		"roles": "Rôles",
+		"organization": "Organisation",
+		"changePassword": "Changer le mot de passe",
+		"backToProfile": "Retour au profil",
+		"currentPassword": "Mot de passe actuel",
+		"newPassword": "Nouveau mot de passe (8 caractères min.)",
+		"confirmPassword": "Confirmer le nouveau mot de passe",
+		"mismatch": "Les mots de passe ne correspondent pas",
+		"tooShort": "Le nouveau mot de passe doit comporter au moins 8 caractères",
+		"changed": "Mot de passe modifié. Veuillez vous reconnecter.",
+		"submit": "Changer le mot de passe",
+		"submitting": "Modification…",
+		"logout": "Se déconnecter"
+	},
+	"siteConfig": {
+		"fields": {
+			"firmName": "Nom de l’entreprise"
+		},
+		"groups": {
+			"contact": "Contact"
+		},
+		"entries": {
+			"contact": {
+				"address": "Adresse",
+				"phone": "Téléphone",
+				"email": "E-mail"
+			}
+		}
+	}
+}

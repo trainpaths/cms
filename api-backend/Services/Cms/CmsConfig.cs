@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using api_backend.Models.Pages;
 
@@ -51,10 +52,56 @@ public sealed record CmsConfig
 public sealed record CmsSiteMeta
 {
 	/// <summary>
-	/// <c>&lt;html lang&gt;</c> of the site (BCP 47, e.g. <c>de</c>, <c>en-GB</c>). Applied at build time by the frontend's
-	/// <c>cms()</c> Vite plugin (server/site-lang.js); the API only validates it, so a bad tag fails here too.
+	/// Languages of the site: <c>"de-CH"</c> (one language) or <c>{ "default": "en-US", "localization": ["de-CH"] }</c>.
+	/// Applied at build time by the frontend's <c>cms()</c> Vite plugin (server/site-lang.js: <c>&lt;html lang&gt;</c>,
+	/// UI languages); the API only validates it, so a bad tag fails here too.
 	/// </summary>
-	public string Lang { get; init; } = "en";
+	public CmsSiteLang Lang { get; init; } = new();
+}
+
+/// <summary>
+/// <see cref="Default"/> + <see cref="Localization"/> are BCP 47 tags (<c>de-CH</c>); a language's <b>code</b> is the
+/// primary subtag (<c>de</c>), unique per site: URL prefix, <c>cms_lang</c> cookie, key of stored translations.
+/// No localization = a single-language site, exactly as before.
+/// </summary>
+[JsonConverter(typeof(CmsSiteLangConverter))]
+public sealed record CmsSiteLang
+{
+	public string Default { get; init; } = "en";
+	public List<string> Localization { get; init; } = [];
+
+	/// <summary>Default first.</summary>
+	[JsonIgnore]
+	public IEnumerable<string> Tags => [Default, .. Localization];
+
+	[JsonIgnore]
+	public bool IsLocalized => Localization.Count > 0;
+
+	public static string CodeOf(string tag) => tag.Split('-')[0];
+}
+
+/// <summary>Reads <c>site.lang</c> as a tag string (one language) or as the object form.</summary>
+public sealed class CmsSiteLangConverter : JsonConverter<CmsSiteLang>
+{
+	// the object form without this converter (it would recurse); the caller's options keep unknown keys an error
+	private sealed record Form
+	{
+		public string Default { get; init; } = "en";
+		public List<string> Localization { get; init; } = [];
+	}
+
+	public override CmsSiteLang Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+	{
+		if (reader.TokenType == JsonTokenType.String)
+			return new CmsSiteLang { Default = reader.GetString()! };
+		if (reader.TokenType != JsonTokenType.StartObject)
+			throw new JsonException("site.lang must be a language tag or { \"default\", \"localization\" }.");
+		var form = JsonSerializer.Deserialize<Form>(ref reader, options)!;
+		return new CmsSiteLang { Default = form.Default, Localization = form.Localization };
+	}
+
+	public override void Write(Utf8JsonWriter writer, CmsSiteLang value, JsonSerializerOptions options) =>
+		JsonSerializer.Serialize(writer, new Form { Default = value.Default, Localization = value.Localization }, options);
 }
 
 public sealed record CmsThemeConfig

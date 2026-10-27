@@ -3,11 +3,13 @@ import { computed } from 'vue'
 import { getRegisteredBlockTypes, getBlockType, createBlockInstance } from '../core/blockRegistry'
 import { useEditorStore } from '../../../stores/editor'
 import { useInstanceStore } from '../../../stores/instance'
+import { useBlockLabels } from '../../../i18n/siteConfigLabels'
 
 const props = defineProps<{ parentId?: string }>()
 const store = useEditorStore()
 
 const instance = useInstanceStore()
+const blockLabels = useBlockLabels()
 
 const blockTypes = computed(() => {
 	const all = getRegisteredBlockTypes().filter((bt) => instance.isOffered(bt.name))
@@ -36,7 +38,7 @@ function insert(name: string) {
 			class="cursor-pointer rounded border border-dashed border-gray-400 bg-transparent px-12 py-4 text-sm text-gray-500 hover:border-gray-500 hover:bg-gray-100 hover:text-gray-700"
 			@click="insert(bt.name)"
 		>
-			+ {{ bt.title }}
+			+ {{ blockLabels.title(bt) }}
 		</button>
 	</div>
 </template>

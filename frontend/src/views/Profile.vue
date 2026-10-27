@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { Tabs } from '@trainpaths/nb-ui'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '../stores/auth'
 import ProfileDetails from '../components/ProfileDetails.vue'
 import BackupsPanel from '../components/backups/BackupsPanel.vue'
@@ -13,10 +14,11 @@ const { user, authType } = storeToRefs(useAuthStore())
 
 // the API enforces it too (SuperAdmin policy); this only hides the tab
 const isSuperAdmin = computed(() => authType.value === 'staff' && !!user.value?.roles?.includes('super_admin'))
-const tabs = [
-	{ key: 'profile', label: 'Profile' },
-	{ key: 'backups', label: 'Backups' },
-]
+const { t } = useI18n()
+const tabs = computed(() => [
+	{ key: 'profile', label: t('screens.profile.title') },
+	{ key: 'backups', label: t('admin.backups.tab') },
+])
 const loggedOut = () => router.push({ name: 'admin-login' })
 // in the query so a reload or link lands on the same tab
 const tab = computed({
@@ -30,7 +32,7 @@ const tab = computed({
 		class="mx-auto p-32 font-sans"
 		:class="isSuperAdmin ? 'max-w-800' : 'max-w-600'"
 	>
-		<h1 class="mb-24 text-2xl font-bold">Profile</h1>
+		<h1 class="mb-24 text-2xl font-bold">{{ $t('screens.profile.title') }}</h1>
 		<Tabs
 			v-if="isSuperAdmin"
 			v-model="tab"

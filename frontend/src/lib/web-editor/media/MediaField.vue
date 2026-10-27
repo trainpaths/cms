@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { BlockInstance } from '../core/types'
 import MediaActions from './MediaActions.vue'
 import { useMediaImage } from './useMediaImage'
@@ -13,6 +14,7 @@ import { errorMessage } from '../../../api-error'
 const props = defineProps<{ block: BlockInstance }>()
 
 const media = useMediaStore()
+const { t } = useI18n()
 const editor = useEditorStore()
 const { asset, src, missing } = useMediaImage(() => props.block)
 
@@ -29,7 +31,7 @@ async function saveAlt() {
 	try {
 		await media.update(asset.value.id, { alt: alt.value.trim() })
 	} catch (err: unknown) {
-		editor.errorMessage = errorMessage(err, 'Failed to save alt text')
+		editor.errorMessage = errorMessage(err, t('editor.media.altFailed'))
 	}
 }
 </script>
@@ -46,7 +48,7 @@ async function saveAlt() {
 			v-else-if="missing"
 			class="m-0 text-xs text-red-600"
 		>
-			This image was deleted from the media library.
+			{{ $t('editor.media.deleted') }}
 		</p>
 		<MediaActions
 			:replace="!!src"
@@ -56,13 +58,13 @@ async function saveAlt() {
 			v-if="asset"
 			class="field-label"
 		>
-			Alt text
+			{{ $t('admin.media.alt') }}
 			<input
 				v-model="alt"
 				type="text"
 				:maxlength="MEDIA_ALT_MAX"
 				class="input-field"
-				placeholder="Describe the image…"
+				:placeholder="$t('admin.media.altPlaceholder')"
 				data-testid="media-alt"
 				@change="saveAlt"
 			/>
@@ -73,7 +75,7 @@ async function saveAlt() {
 			class="self-start cursor-pointer border-none bg-transparent p-0 text-xs text-red-600 hover:underline"
 			@click="assignMedia(block.id, '')"
 		>
-			Remove image
+			{{ $t('editor.media.remove') }}
 		</button>
 	</div>
 </template>

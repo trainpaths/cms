@@ -10,20 +10,28 @@ const DESCRIPTION_MAX = 160
  */
 export const CMS_ICON = '/favicon.svg'
 
+/** A UI string by message key (the app's i18n `t`): head tags are built outside components. */
+export type Translate = (key: string) => string
+
 /**
  * Document title (site meta rule): "{meta title} - {firm name}", just the firm name when the page has no meta title;
- * without a firm name the meta title, then the page title.
+ * without a firm name the meta title, then the page title. No page: `notFound` (translated "Page not found").
  */
-export function documentTitle(page: Pick<PublicPage, 'title' | 'metaTitle'> | null, config: SiteConfig | null): string {
+export function documentTitle(
+	page: Pick<PublicPage, 'title' | 'metaTitle'> | null,
+	config: SiteConfig | null,
+	notFound = 'Page not found',
+): string {
 	const firm = firmName(config)
-	if (!page) return firm ? `Page not found - ${firm}` : 'Page not found'
+	if (!page) return firm ? `${notFound} - ${firm}` : notFound
 	const meta = page.metaTitle.trim()
 	if (firm) return meta ? `${meta} - ${firm}` : firm
 	return meta || page.title
 }
 
 /** Document title of a public page (also used by client navigation). */
-export const pageTitle = (state: Pick<PublicState, 'page' | 'config'>) => documentTitle(state.page, state.config)
+export const pageTitle = (state: Pick<PublicState, 'page' | 'config'>, t: Translate) =>
+	documentTitle(state.page, state.config, t('site.notFound.title'))
 
 /** Document title of a customer screen: "{screen title} - {firm name}". */
 export function screenTitle(title: string, config: SiteConfig | null): string {
@@ -76,9 +84,9 @@ function previewImage(state: PublicState): string | null {
  * first image or the site's share image), favicon. Link-preview scrapers (Slack, WhatsApp, LinkedIn...) run no JS,
  * so this is all they see.
  */
-export function headTags(state: PublicState): string {
+export function headTags(state: PublicState, t: Translate): string {
 	const screen = screenOf(state)
-	const title = screen ? screenTitle(screen.title, state.config) : pageTitle(state)
+	const title = screen ? screenTitle(t(screen.title), state.config) : pageTitle(state, t)
 	const icon = state.config?.icon?.url ?? null
 	const tags = [`<title>${escapeAttr(title)}</title>`]
 

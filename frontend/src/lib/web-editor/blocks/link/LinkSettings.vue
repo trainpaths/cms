@@ -9,9 +9,9 @@ const url = useBlockAttribute(() => props.block, 'url', '')
 </script>
 
 <template>
-	<SettingsSection title="Link">
+	<SettingsSection :title="$t('blocks.link.title')">
 		<label class="field-label">
-			URL
+			{{ $t('editor.link.url') }}
 			<input
 				v-model="url"
 				type="url"
