@@ -42,7 +42,7 @@ editor/Editor.vue   editor for ONE page: props pageId/publicBase/previewPath, em
                     (store.pageEditable false) → template notice instead of the BlockList
 editor/EditorHeader.vue   back (stays on phones: the only visible way out), left-sidebar toggle, title (in the edited
                     language, usePageText; saves on blur; hidden < sm → PageSettings shows it), EditLanguageSelect
-                    (localized sites: store.editLang + untranslated counts), undo/redo, View/Preview link (`eye` icon, like the pages list), Save
+                    (localized sites, md+: store.editLang + untranslated counts), undo/redo, View/Preview link (`eye` icon, like the pages list), Save
                     (disabled when clean / saving), Publish ("Publish" / "Publish changes" text button md+, `globe` icon
                     button < md; rules, tooltip + confirm from usePublishState), Unpublish (bordered `globe-slash` +
                     text button, only when published, hidden < md: Page tab has it),
