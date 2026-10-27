@@ -339,7 +339,9 @@ remaining phases (one PR each): `claude-context/localization/` (README first).
   translated title change re-renders other pages like a rename). Editor: `store.editLang` (header select + Page tab
   "Translations" with untranslated counts); `useBlockAttribute` reads/writes the edited language for translatable
   attributes, `usePageText` for title/meta; the admin preview localizes the working copy client-side
-  (`core/localize.ts`, mirror of `Localize`). Page title/meta translations are not in the undo history (like the title).
+  (`core/localize.ts`, mirror of `Localize`). Typed page title/meta translations are not in the undo history (like the title); a DeepL fill's are (its undo step
+  restores them). Saves drop block translations of attributes that aren't `translatable` (`pruneTranslations`): the API
+  overlays any stored key publicly, so a stale one would show there while the editor can't.
   Rejected: a block tree per language (layouts drift apart, every image change done N times).
 - **Machine translation** (Phase 4, optional): with `DEEPL_API_KEY` set, the editor offers "Translate missing fields"
   (and "Re-translate all", behind a confirm) for the edited language: `core/translatable.ts` `textFields` collects the

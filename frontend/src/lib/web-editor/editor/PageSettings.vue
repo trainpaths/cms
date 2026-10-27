@@ -12,7 +12,6 @@ import { usePublishState } from '../composables/usePublishState'
 import { pageExportFileName, toPageExport } from '../../pageExport'
 import { saveJson } from '../../download'
 import { usePageText } from '../composables/usePageText'
-import { useMissingTranslations } from '../composables/useMissingTranslations'
 import { useMachineTranslation } from '../composables/useMachineTranslation'
 import { DEFAULT_LANGUAGE, IS_LOCALIZED, LANGUAGES, languageLabel } from '../../../i18n/languages'
 import { localePath } from '../../../public/locale'
@@ -31,13 +30,12 @@ onMounted(() => {
 const title = usePageText('title')
 const metaTitle = usePageText('metaTitle')
 const metaDescription = usePageText('metaDescription')
-const missing = useMissingTranslations()
 const deepl = useMachineTranslation()
 const translationRows = computed(() =>
 	LANGUAGES.filter(({ code }) => code !== DEFAULT_LANGUAGE.code).map(({ code }) => ({
 		code,
 		name: languageLabel(code),
-		missing: missing.value[code]!.length,
+		missing: store.missingTranslations[code] ?? 0,
 	})),
 )
 

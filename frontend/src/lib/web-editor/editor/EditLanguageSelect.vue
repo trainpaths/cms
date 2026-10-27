@@ -2,8 +2,7 @@
 import { computed } from 'vue'
 import { Select } from '@trainpaths/nb-ui'
 import { useEditorStore } from '../../../stores/editor'
-import { DEFAULT_LANGUAGE, IS_LOCALIZED, LANGUAGES, languageLabel } from '../../../i18n/languages'
-import { useMissingTranslations } from '../composables/useMissingTranslations'
+import { IS_LOCALIZED, LANGUAGES, languageLabel } from '../../../i18n/languages'
 
 /**
  * Which language the editor edits (localized sites only): the default edits the page itself, another language the
@@ -11,11 +10,10 @@ import { useMissingTranslations } from '../composables/useMissingTranslations'
  * md+ only: no room in the phone header (the Page tab's Translations section switches there).
  */
 const store = useEditorStore()
-const missing = useMissingTranslations()
 
 const options = computed(() =>
 	LANGUAGES.map(({ code }) => {
-		const count = code === DEFAULT_LANGUAGE.code ? 0 : missing.value[code]!.length
+		const count = store.missingTranslations[code] ?? 0
 		const name = languageLabel(code)
 		// "Deutsch · 3": untranslated fields (the Page tab spells it out)
 		return { value: code, label: count ? `${name} · ${count}` : name }
