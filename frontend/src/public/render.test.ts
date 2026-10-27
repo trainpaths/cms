@@ -12,6 +12,8 @@ import { usePublicPageStore } from './store'
 import { createPinia } from 'pinia'
 import { createMemoryHistory } from 'vue-router'
 import type { BlockInstance } from '../lib/web-editor'
+import { localeBase, localePath, stripLocale } from './locale'
+import { safeRedirect } from './redirect'
 
 const block = (
 	name: string,
@@ -27,6 +29,7 @@ const block = (
 const state = (overrides: Partial<PublicState> = {}): PublicState => ({
 	slug: 'about',
 	baseUrl: 'https://site.test',
+	lang: 'en',
 	page: {
 		title: 'About <us> $&',
 		slug: 'about',
@@ -206,7 +209,7 @@ describe('description', () => {
 
 describe('splice', () => {
 	it('keeps $ patterns in content literally', () => {
-		const out = splice('<!--app-head--><!--app-html--><!--app-state-->', { head: '$&', html: "$'", state: '$1' })
+		const out = splice('<!--app-head--><!--app-html--><!--app-state-->', { head: '$&', html: "$'", state: '$1', tag: 'en' })
 		expect(out).toBe("$&$'$1")
 	})
 })
@@ -274,5 +277,67 @@ describe('theme colours (build time)', () => {
 		expect(style).toBe('<style data-cms-theme>:root .site-theme{--color-primary:#111;--color-brand:#0f766e}</style>')
 		expect(injectThemeStyle('<head><title>x</title></head>', style)).toBe(`<head><title>x</title>${style}</head>`)
 		expect(injectThemeStyle('<head></head>', themeStyle({}))).toBe('<head></head>')
+	})
+})
+
+describe('languages (localized site: en-US default + de-CH, fr-CH, it-CH)', () => {
+	it('renders German strings, prefixed links and the German <html lang>', async () => {
+		const rendered = await render(state({ lang: 'de', slug: 'login', page: null }))
+		expect(rendered.tag).toBe('de-CH')
+		expect(rendered.html).toContain('href="/de/register"')
+		expect(rendered.html).toContain('href="/de/contact"') // menu link
+		expect(rendered.html).toContain('href="/de/legal"') // footer link
+		expect(rendered.html).toContain('Deutsch') // footer language switch
+		expect(rendered.html).not.toContain('>Log in<')
+		expect(splice('<html lang="en-US"><!--app-html--></html>', rendered)).toMatch(/^<html lang="de-CH">/)
+	})
+
+	it('canonical, hreflang for every language + x-default, og:locale', async () => {
+		const { head } = await render(state({ lang: 'de' }))
+		expect(head).toContain('<link rel="canonical" href="https://site.test/de/about">')
+		expect(head).toContain('<link rel="alternate" hreflang="en-US" href="https://site.test/about">')
+		expect(head).toContain('<link rel="alternate" hreflang="de-CH" href="https://site.test/de/about">')
+		expect(head).toContain('<link rel="alternate" hreflang="fr-CH" href="https://site.test/fr/about">')
+		expect(head).toContain('<link rel="alternate" hreflang="it-CH" href="https://site.test/it/about">')
+		expect(head).toContain('<link rel="alternate" hreflang="x-default" href="https://site.test/about">')
+		expect(head).toContain('<meta property="og:locale" content="de_CH">')
+		expect(head).toContain('<meta property="og:locale:alternate" content="en_US">')
+		expect(head).not.toContain('og:locale:alternate" content="de_CH"')
+	})
+
+	it('home: /de, the default unprefixed', async () => {
+		const page = { ...state().page!, slug: 'home' }
+		expect((await render(state({ slug: 'home', page, lang: 'fr' }))).head).toContain('href="https://site.test/fr"')
+		expect((await render(state({ slug: 'home', page }))).head).toContain('<link rel="canonical" href="https://site.test/">')
+	})
+
+	it('router with a language base resolves names and paths with the prefix', () => {
+		const router = createPublicRouter(createMemoryHistory(localeBase('de')), createPinia(), (k) => k)
+		expect(router.resolve({ name: 'home' }).href).toBe('/de/')
+		expect(router.resolve('/login').href).toBe('/de/login')
+		expect(router.resolve({ name: 'public-page', params: { slug: 'about' } }).href).toBe('/de/about')
+	})
+
+	it('localePath / stripLocale / localeBase', () => {
+		expect(localePath('/about', 'de')).toBe('/de/about')
+		expect(localePath('/', 'de')).toBe('/de')
+		expect(localePath('/about', 'en')).toBe('/about')
+		expect(localeBase('en')).toBe('/')
+		expect(localeBase('fr')).toBe('/fr/')
+		expect(stripLocale('/de/about')).toEqual({ code: 'de', path: '/about' })
+		expect(stripLocale('/de')).toEqual({ code: 'de', path: '/' })
+		expect(stripLocale('/de/')).toEqual({ code: 'de', path: '/' })
+		expect(stripLocale('/de/user/profile')).toEqual({ code: 'de', path: '/user/profile' })
+		expect(stripLocale('/about')).toEqual({ code: 'en', path: '/about' })
+		expect(stripLocale('/en/about')).toEqual({ code: 'en', path: '/en/about' })
+		expect(stripLocale('/es/about')).toEqual({ code: 'en', path: '/es/about' })
+		expect(stripLocale('/')).toEqual({ code: 'en', path: '/' })
+	})
+
+	it('safeRedirect strips a language prefix', () => {
+		expect(safeRedirect('/de/about?x=1#y')).toBe('/about?x=1#y')
+		expect(safeRedirect('/de')).toBe('/')
+		expect(safeRedirect('/de/admin')).toBeNull()
+		expect(safeRedirect('/fr/login')).toBeNull()
 	})
 })

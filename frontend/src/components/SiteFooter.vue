@@ -4,11 +4,14 @@ import type { SiteConfig } from '../lib/web-editor'
 import { filledEntries, firmName as firmNameOf } from '../lib/siteConfig'
 import SiteConfigEntry from './SiteConfigEntry.vue'
 import { useConfigLabels } from '../i18n/siteConfigLabels'
+import { IS_LOCALIZED } from '../i18n/languages'
+import LanguageDropdown from './LanguageDropdown.vue'
 
 /**
  * Public site footer (default; instances override it to place their own groups, e.g. socials): the owner's logo,
  * firm name and filled contact entries (address as lines, mailto/tel/link by type), then the published footer pages
- * (instance config `"footer": true`). Nothing is rendered when all of these are empty.
+ * (instance config `"footer": true`) and, on a localized site, the language switch. Nothing is rendered when all of
+ * these are empty.
  */
 const props = defineProps<{ config: SiteConfig | null }>()
 
@@ -18,7 +21,8 @@ const contact = computed(() => filledEntries(props.config, 'contact'))
 const logo = computed(() => props.config?.logo ?? null)
 const links = computed(() => props.config?.footerLinks ?? [])
 const hasContent = computed(() => !!logo.value || !!firmName.value || contact.value.length > 0)
-const visible = computed(() => hasContent.value || links.value.length > 0)
+const bottomRow = computed(() => links.value.length > 0 || IS_LOCALIZED)
+const visible = computed(() => hasContent.value || bottomRow.value)
 </script>
 
 <template>
@@ -61,21 +65,31 @@ const visible = computed(() => hasContent.value || links.value.length > 0)
 				</div>
 			</dl>
 		</div>
-		<nav
-			v-if="links.length"
-			class="mx-auto flex max-w-5xl flex-wrap gap-x-24 gap-y-8 px-24 py-16 text-xs"
+		<div
+			v-if="bottomRow"
+			class="mx-auto flex max-w-5xl flex-wrap items-center gap-x-24 gap-y-8 px-24 py-16 text-xs"
 			:class="{ 'border-t border-gray-200': hasContent }"
-			:aria-label="$t('site.legalNav')"
 		>
-			<RouterLink
-				v-for="link in links"
-				:key="link.slug"
-				:to="{ name: 'public-page', params: { slug: link.slug } }"
-				class="text-gray-500 no-underline hover:text-gray-800 hover:underline"
-				data-testid="site-footer-link"
+			<nav
+				v-if="links.length"
+				class="flex flex-wrap gap-x-24 gap-y-8"
+				:aria-label="$t('site.legalNav')"
 			>
-				{{ link.title }}
-			</RouterLink>
-		</nav>
+				<RouterLink
+					v-for="link in links"
+					:key="link.slug"
+					:to="{ name: 'public-page', params: { slug: link.slug } }"
+					class="text-gray-500 no-underline hover:text-gray-800 hover:underline"
+					data-testid="site-footer-link"
+				>
+					{{ link.title }}
+				</RouterLink>
+			</nav>
+			<LanguageDropdown
+				v-if="IS_LOCALIZED"
+				align="end"
+				class="ml-auto"
+			/>
+		</div>
 	</footer>
 </template>

@@ -16,6 +16,7 @@ export {
 	type Language,
 	type LanguageSwitch,
 } from './i18n'
+export { localePath } from './public/locale'
 export { firmName, configEntry, filledEntries, hasValue, addressLines, entryHref, entryText } from './lib/siteConfig'
 export type { TemplatePage, TemplateProps } from './public/templates'
 export type {

@@ -1011,7 +1011,9 @@ export type GetApiPublicPagesBySlugData = {
     path: {
         slug: string;
     };
-    query?: never;
+    query?: {
+        lang?: string;
+    };
     url: '/api/public/pages/{slug}';
 };
 
@@ -1045,7 +1047,9 @@ export type GetApiPublicStateBySlugData = {
     path: {
         slug: string;
     };
-    query?: never;
+    query?: {
+        lang?: string;
+    };
     url: '/api/public/state/{slug}';
 };
 
@@ -1061,7 +1065,9 @@ export type GetApiPublicStateBySlugResponse = GetApiPublicStateBySlugResponses[k
 export type GetApiPublicStateData = {
     body?: never;
     path?: never;
-    query?: never;
+    query?: {
+        lang?: string;
+    };
     url: '/api/public/state';
 };
 

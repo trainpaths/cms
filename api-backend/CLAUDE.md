@@ -12,7 +12,8 @@ compose.yaml). The API is its **only runtime reader**: the admin gets what it ne
 `site.lang` and `theme.colors` are applied at frontend build time by the `cms()` Vite plugin (the API still validates them).
 ```
 CmsConfig.cs        records CmsConfig { publicAuth, site.lang (CmsSiteLang { default, localization }: a tag string or the
-                    object, CmsSiteLangConverter; CodeOf(tag) = primary subtag), blocks.exclude, theme.colors {key: colour}, pages[], siteConfig } + CmsPageConfig { slug, title, template?,
+                    object, CmsSiteLangConverter; CodeOf(tag) = primary subtag, Codes (default first), DefaultCode,
+                    IsPrefix(code) = configured non-default code, Resolve(code?) = configured else default), blocks.exclude, theme.colors {key: colour}, pages[], siteConfig } + CmsPageConfig { slug, title, template?,
                     locked, editable, footer, blocks }; IsLocked = locked || template; SiteConfigSchema() (core + instance)
 CmsConfigLoader.cs  Load (path = Cms:ConfigPath relative to the content root, default cms.config.json; missing →
                     CmsConfig.Default = DefaultPages + public auth off), Parse (strict JSON: unknown keys fail,
@@ -50,9 +51,9 @@ PagesController        /api/pages            [Authorize(StaffOnly)], rate limit 
   DELETE /{id}                 → 204 | 400 (locked config page) | 404
   POST/PUT carry [RequestSizeLimit(2 MB)] (global cap is 64 KB)
 PublicPagesController  /api/public/pages     [AllowAnonymous], rate limit "pages"
-  GET    /{slug}               → PublicPage (published only, the live snapshot) | 404
+  GET    /{slug}?lang=         → PublicPage (published only, the live snapshot) | 404
 PublicStateController  /api/public/state     [AllowAnonymous], rate limit "pages"
-  GET    / | /{slug}           → PublicStateResponse(page? (published, null when unknown/draft/no slug), menu? (main),
+  GET    / | /{slug} (?lang=)  → PublicStateResponse(page? (published, null when unknown/draft/no slug), menu? (main),
                                  config) — menu + config from PublicCache; the public shell, data-refresh, dev SSR
 TagsController         /api/tags             [Authorize(StaffOnly)], rate limit "pages"
   GET    /                     → TagUsage[] (name, pageCount; most used first)
@@ -76,6 +77,8 @@ TagsController         /api/tags             [Authorize(StaffOnly)], rate limit 
 - Slugs: kebab-case, ≤100, generated from title when omitted (dedup `-2`, `-3`), `ReservedSlugs` rejected
   (customer screens incl. `user` for `/user/*`, admin SPA routes, API paths — keep in sync with `PublicScreens` and
   `frontend/src/router/index.ts`; `PublicHtmlController` also uses the list to send non-screen ones to the admin SPA).
+  Localized site: the language codes too (`SlugError`; generated ones get `-page`; `PageSeeder` warns about existing
+  pages whose slug became a code).
 - Block validation (`ValidateBlocks`): id non-empty ≤64, name `^[a-z0-9-]+$`, attributes primitive only,
   depth ≤10, ≤2000 blocks; null attributes/innerBlocks normalized to empty. No knowledge of block types.
 - `AppDbContext` maps `Blocks` via a System.Text.Json value converter (camelCase) + ValueComparer, column type `jsonb`.
@@ -157,6 +160,10 @@ PublicHtmlController   /api/public/html      [AllowAnonymous], rate limit "pages
                                  | X-Accel-Redirect: /public.html (no fresh HTML yet → client-rendered shell)
                                  | customer screen (PublicScreens: login, register, ...) → see below
   GET|HEAD /user/{name}        → customer account page (user/profile, user/password) | 404 not-found page
+  GET|HEAD /{lang}/{slug}, /{lang}/user/{name}  (localized site) → the same in that language; `/{code}` alone = its home;
+                                 default code → 301 unprefixed; unknown code → 404; reserved non-screen → 301 unprefixed
+  unprefixed page/screen/home + `cms_lang` cookie naming another configured code → 302 to its prefixed path (query kept);
+  localized: `Vary: Cookie` on every response. Single-language site: no prefixes, no redirect, no Vary
   screens: public auth off or unknown → 404 not-found page; RenderStatus.Screens of the current renderer version →
            200 (no-cache, data-refresh marker after a quiet change); else → /public.html shell
 ```
@@ -164,8 +171,8 @@ PublicHtmlController   /api/public/html      [AllowAnonymous], rate limit "pages
   that page's content (stale → shell until re-rendered), `Refresh()` = main menu, site config, media alt/delete, page
   live title/slug change (`PageService.UpdateAsync` → `PageUpdate.LiveRenamed`), publish/unpublish (+ `Page(id)`)/delete
   (all pages, stored HTML stays servable, marked right away; the worker's widening is only a safety net), `All()` = backup restore only (everything stale); `Requeue(id?)` = worker-internal, no invalidation),
-  `RenderStatus` (singleton: renderer `CurrentVersion`, in-memory `NotFoundHtml` + `Screens` (`RenderedScreens`: HTML
-  by `PublicScreens` path, render start, version; rendered with every full render, only with public auth), change timestamps → `IsFresh`,
+  `RenderStatus` (singleton: renderer `CurrentVersion`, in-memory `NotFoundHtml` (per language code) + `Screens` (`RenderedScreens`: HTML
+  by `RenderedScreens.Key(code, path)` = `de:user/profile`, render start, version; rendered with every full render, only with public auth), change timestamps → `IsFresh`,
   refresh marker → `NeedsRefresh`: `PublicHtmlController` adds `data-refresh` to `#__STATE__` and an `-r` ETag suffix,
   the public client then refetches the main menu + site config),
   `PublicCache` (singleton: resolved public menus by handle + `SiteConfigResponse`, generation-checked; invalidated by
@@ -174,10 +181,12 @@ PublicHtmlController   /api/public/html      [AllowAnonymous], rate limit "pages
   `HttpRendererClient` (`IRendererClient`, typed HttpClient to the Node renderer; `RenderState` mirrors
   `frontend/src/public/state.ts`), `PublicScreens` (screen paths; mirrors
   `frontend/src/public/screens/index.ts`), `RenderWorker` (hosted: debounced render loop + version check every
-  `CheckIntervalSeconds`; failures retry after 30 s; widen check = one query over the queued ids; chunks of 20 pages:
+  `CheckIntervalSeconds` (stale = a published page lacks a current row in some configured language); failures retry
+  after 30 s; widen check = one query over the queued ids (default language's rows); every page/screen/not-found rendered
+  once per language (`RenderState.Lang`); full render deletes rows of unpublished pages + unconfigured languages; chunks of 20 pages:
   `PageService.GetPublishedByIdsAsync`, existing row ids (old HTML never read: `Update` of a fresh entity), committed per
   chunk, row by row after an FK violation; logs the duration).
-- `Models/Rendering/RenderedPage.cs` → `rendered_pages` (PK/FK `PageId`, cascade): `Html`, the `Title`/`Slug` it was
+- `Models/Rendering/RenderedPage.cs` → `rendered_pages` (PK `(PageId, Lang)`, FK `PageId` cascade; `Lang` = code): `Html`, the `Title`/`Slug` it was
   rendered with (a difference widens a one-page job to all), `RendererVersion`, `RenderedAt` (= render start, compared
   with change timestamps). Only rows of the current renderer version and newer than the last change are served.
 - `Renderer:BaseUrl` empty → worker off, every page is the shell (integration tests, `dotnet run` without the renderer).
@@ -446,7 +455,7 @@ UpdateSiteConfigRequest   Fields {key: value}, Groups {key: ConfigEntryValue[]},
 `CreatedById`/`UpdatedById` → staff ON DELETE SET NULL), `media_assets` (unique `StorageKey`, index on `CreatedAt`,
 `CreatedById` → staff ON DELETE SET NULL), `site_config` (singleton, `Values` jsonb, logo/icon/share image →
 media_assets SET NULL), `tags` + `page_tags` and `menus` (unique tag `Name`, unique menu `Handle`, `Items` jsonb),
-`rendered_pages` (PK/FK `PageId` → pages CASCADE), `backup_settings` (singleton, enums as strings, no FKs)
+`rendered_pages` (PK `(PageId, Lang)`, FK `PageId` → pages CASCADE), `backup_settings` (singleton, enums as strings, no FKs)
 
 **Migrations were squashed into one `Init` on 2026-10-15** (no database held real data). From now on they are fixed:
 add new ones, never edit or squash existing ones. A database created before the squash doesn't match the new history:
@@ -493,7 +502,8 @@ Integration/          ApiFactory.cs (WebApplicationFactory + Testcontainers Post
                       RateLimitingTests, ExceptionHandlerTests, EmailFlowTests,
                       BootstrapTests, TokenCleanupTests, PagesTests, MediaTests, SiteConfigTests, TagsTests, MenusTests (AuthCookies.cs: refresh-cookie helpers),
                       InstanceConfigTests (locked/template pages, footer links, public auth off; own CmsConfig via ConfigureTestServices),
-                      RenderingTests (FakeRenderer replaces IRendererClient; fast debounce/check config),
+                      RenderingTests (FakeRenderer replaces IRendererClient; fast debounce/check config;
+                      RenderingTests.Languages.cs: localized config, routing/cookie/Vary, rows per language),
                       QueryBudgetTests (QueryCounter: DbCommandInterceptor in ApiFactory counting commands of requests
                       with the X-Count-Queries header; public cache invalidation, BlockCount),
                       BackupsTests (auth, settings, names, busy 409, 503 gate, invalid uploads, newer schema refused),

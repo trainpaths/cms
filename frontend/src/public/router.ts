@@ -64,7 +64,8 @@ export function createPublicRouter(history: RouterHistory, pinia: Pinia, t: Tran
 			// same page (hash/query) or a page that exists
 			if (slug === store.slug || (await store.load(slug))) return true
 		}
-		window.location.assign(to.fullPath)
+		// href includes the history base (language prefix), fullPath doesn't
+		window.location.assign(router.resolve(to).href)
 		return false
 	})
 

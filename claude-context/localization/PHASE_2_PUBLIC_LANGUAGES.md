@@ -1,6 +1,6 @@
 # Phase 2: per-language public site
 
-Status: **not started**. Read `README.md` (this folder) first. Issue trainpaths/cms#45. Starts after PR #46 merged.
+Status: **implemented** (PR pending, see #45). Read `README.md` (this folder) first. Issue trainpaths/cms#45.
 
 ## Goal
 On a localized site every public page and customer screen exists once per language: `/about` (default language),
