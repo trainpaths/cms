@@ -6,7 +6,7 @@ import EditorHeader from './EditorHeader.vue'
 import EditorLayout from './EditorLayout.vue'
 import { useEditorStore } from '../../../stores/editor'
 import { useKeyboardNav } from '../composables/useKeyboardNav'
-import { Loading } from '@trainpaths/nb-ui'
+import { CloseButton, Loading } from '@trainpaths/nb-ui'
 import { registerAllBlocks } from '../core/blockTypes'
 import { DEFAULT_LANGUAGE, languageLabel } from '../../../i18n/languages'
 
@@ -69,13 +69,10 @@ watch(
 			class="flex items-center gap-12 rounded-md border border-red-200 bg-red-50 px-16 py-8 text-sm text-red-700 shadow-lg"
 		>
 			<span>{{ store.errorMessage }}</span>
-			<button
-				class="cursor-pointer border-none bg-transparent text-red-400 hover:text-red-600"
-				:aria-label="$t('admin.dismiss')"
+			<CloseButton
+				:label="$t('admin.dismiss')"
 				@click="store.dismissError()"
-			>
-				&#10005;
-			</button>
+			/>
 		</div>
 	</div>
 

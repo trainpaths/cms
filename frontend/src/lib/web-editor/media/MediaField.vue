@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Button } from '@trainpaths/nb-ui'
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { BlockInstance } from '../core/types'
@@ -69,13 +70,15 @@ async function saveAlt() {
 				@change="saveAlt"
 			/>
 		</label>
-		<button
+		<Button
 			v-if="src || missing"
-			type="button"
-			class="self-start cursor-pointer border-none bg-transparent p-0 text-xs text-red-600 hover:underline"
+			variant="ghost"
+			text="danger"
+			size="sm"
+			class="self-start"
 			@click="assignMedia(block.id, '')"
 		>
 			{{ $t('editor.media.remove') }}
-		</button>
+		</Button>
 	</div>
 </template>

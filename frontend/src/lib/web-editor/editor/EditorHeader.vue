@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { Icon } from '@trainpaths/nb-ui'
+import { Button, Icon } from '@trainpaths/nb-ui'
 import { useEditorStore } from '../../../stores/editor'
 import { usePublishState } from '../composables/usePublishState'
 import { usePageText } from '../composables/usePageText'
@@ -108,9 +108,11 @@ function handleTitleBlur() {
 			>
 				<Icon name="eye" :size="18" />
 			</RouterLink>
-			<button
-				class="flex size-32 shrink-0 cursor-pointer items-center justify-center rounded border-none bg-primary md:size-36 text-white hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
-				:class="{ 'animate-pulse': store.saveStatus === 'saving' }"
+			<Button
+				bg="primary"
+				square
+				class="shrink-0"
+				:loading="store.saveStatus === 'saving'"
 				:title="
 					store.saveStatus === 'saving'
 						? $t('common.saving')
@@ -120,21 +122,23 @@ function handleTitleBlur() {
 				"
 				:aria-label="$t('common.save')"
 				data-testid="page-save"
-				:disabled="!store.isDirty || store.saveStatus === 'saving'"
+				:disabled="!store.isDirty"
 				@click="store.savePage()"
 			>
 				<Icon name="save" :size="18" />
-			</button>
+			</Button>
 			<!-- md+: text button; < md: globe icon (same rules) -->
-			<button
-				class="cursor-pointer rounded border border-gray-300 bg-white px-12 py-6 text-sm whitespace-nowrap text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white max-md:hidden"
+			<Button
+				variant="outline"
+				text="primary"
+				class="whitespace-nowrap max-md:hidden"
 				:title="publishHint"
 				:disabled="!canPublish"
 				data-testid="page-publish"
 				@click="publish"
 			>
 				{{ publishLabel }}
-			</button>
+			</Button>
 			<!-- wrappers: .header-icon-btn's display would beat a hidden utility on the button itself -->
 			<span class="contents md:hidden">
 				<button
@@ -152,9 +156,12 @@ function handleTitleBlur() {
 				</button>
 			</span>
 			<!-- < md: hidden, the Page tab has it -->
-			<button
+			<Button
 				v-if="isPublished"
-				class="flex cursor-pointer items-center gap-6 rounded border border-gray-300 bg-white px-12 py-6 text-sm whitespace-nowrap text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white max-md:hidden"
+				variant="outline"
+				text="secondary"
+				border="secondary"
+				class="whitespace-nowrap max-md:hidden"
 				:disabled="store.publishing"
 				data-testid="page-unpublish"
 				@click="unpublish"
@@ -164,7 +171,7 @@ function handleTitleBlur() {
 					:size="16"
 				/>
 				{{ $t('editor.publish.unpublish') }}
-			</button>
+			</Button>
 			<button
 				class="header-icon-btn"
 				:class="{ 'header-icon-btn--active': store.showSettingsPanel }"

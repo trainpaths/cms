@@ -423,7 +423,6 @@
 		"deepl": {
 			"missing": "Translate missing fields",
 			"missingAndOutdated": "Translate missing and outdated fields",
-			"running": "Translating…",
 			"retranslate": "Re-translate all",
 			"retranslateTitle": "Re-translate all fields?",
 			"retranslateMessage": "Every translated text in this language is replaced by a new DeepL translation.",
