@@ -62,6 +62,8 @@ Phase 3: `Block.translations` + `Page.Translations/PublishedTranslations`, `Page
 `translatable` attributes, `store.editLang` / `pageTranslations` / `updateBlockTranslation` / `setPageText`,
 `useBlockAttribute` per language + `useAttributeFallback`, `usePageText`, `core/translatable.ts` (`textFields`: the
 list Phase 4 sends to DeepL), `core/localize.ts`, `EditLanguageSelect.vue`, page export v2.
+Phase 4: `POST /api/translate` (`TranslateController`, `ITranslator` → `DeepLTranslator`, `TranslationOptions` from
+`DEEPL_API_KEY`), `InstanceConfig.machineTranslation`, editor `useMachineTranslation` + `store.applyTranslations`.
 API (`api-backend/`): `Services/Cms/CmsConfig.cs` `CmsSiteLang { Default, Localization, Tags, IsLocalized, CodeOf(tag) }`
 (read from a string or the object by `CmsSiteLangConverter`), `CmsConfigLoader.ValidateLang` (tags, unique codes, no
 code equal to a `PageService.ReservedSlugs` entry or a configured page slug). The API doesn't use the languages for

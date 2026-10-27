@@ -417,6 +417,16 @@
 			"backToDefault": "Torna a {language}",
 			"hint": "I testi (titolo, metadati e testi dei blocchi) si traducono per lingua; i campi vuoti mostrano la lingua predefinita.",
 			"canvasHint": "Stai modificando {language}: layout, immagini e colori valgono per tutte le lingue."
+		},
+		"deepl": {
+			"missing": "Traduci i campi mancanti",
+			"running": "Traduzione…",
+			"retranslate": "Ritraduci tutto",
+			"retranslateTitle": "Ritradurre tutti i campi?",
+			"retranslateMessage": "Ogni testo tradotto in questa lingua viene sostituito da una nuova traduzione DeepL.",
+			"done": "{n} campo tradotto da DeepL, da verificare | {n} campi tradotti da DeepL, da verificare",
+			"nothing": "Niente da tradurre",
+			"failed": "Traduzione non riuscita"
 		}
 	},
 	"blocks": {

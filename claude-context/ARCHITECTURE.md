@@ -339,7 +339,16 @@ remaining phases (one PR each): `claude-context/localization/` (README first).
   attributes, `usePageText` for title/meta; the admin preview localizes the working copy client-side
   (`core/localize.ts`, mirror of `Localize`). Page title/meta translations are not in the undo history (like the title).
   Rejected: a block tree per language (layouts drift apart, every image change done N times).
-  Phase 4: DeepL pre-fill of missing fields (`DEEPL_API_KEY`).
+- **Machine translation** (Phase 4, optional): with `DEEPL_API_KEY` set, the editor offers "Translate missing fields"
+  (and "Re-translate all", behind a confirm) for the edited language: `core/translatable.ts` `textFields` collects the
+  default-language text of every untranslated translatable field (+ title/meta), one `POST /api/translate` (staff,
+  ≤500 texts, ≤10 000 chars each, source = default language), results land in the working copy as one change and one
+  undo step (`applyTranslations`). Nothing is saved or published by itself: the owner reviews, saves, publishes.
+  `ITranslator` seam → `DeepLTranslator` (free keys `:fx` → api-free.deepl.com; batches of 50; `EN-US`/`EN-GB`,
+  `PT-PT`/`PT-BR` targets; no Swiss German at DeepL → `ß` replaced by `ss` for `de-CH`; empty texts never sent).
+  **Privacy**: page text leaves the server to DeepL. The Pro API doesn't keep texts; the free API may use them to
+  improve its models. Site owners must know before a key is set. Cost = characters translated (only missing fields by
+  default).
 - nb-ui has no message hook: its built-in texts are English (`UnsavedChangesDialog` → our `components/UnsavedDialog.vue`;
   aria-labels like "Close" stay English) and its `Popover` touches `document` in setup, so `LanguageDropdown` server-renders
   only its trigger.

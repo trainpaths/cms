@@ -51,6 +51,7 @@ e2e/tests/backups/backups.spec.ts     serial: schedule + back up + download, res
                                       super_admin (registers an editor via the API). The restore re-renders every public page.
 e2e/tests/site/meta.spec.ts           meta title/description + firm name → rendered <head> (clears the firm name again)
 e2e/tests/editor/translations.spec.ts  German paragraph + title in the editor → /de/<slug>, /fr falls back, undo, unpublished changes
+e2e/tests/editor/deepl.spec.ts        "Translate missing fields" with /api/public/instance + /api/translate stubbed (page.route), undo
 e2e/tests/site/languages.spec.ts      footer language switch → /de/…, cms_lang redirect, German screens, per-language HTML
                                       (the only spec that sets cms_lang; its own browser context)
 ```

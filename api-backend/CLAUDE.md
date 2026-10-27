@@ -157,6 +157,20 @@ PublicMenusController  /api/public/menus     [AllowAnonymous], rate limit "pages
   becomes a folder when labeled, else its children move up; folders without children are dropped.
 - Errors reuse `PageResult<T>`/`PageError` (`SlugTaken` = handle taken).
 
+## Machine translation (`Services/Translation/`)
+```
+TranslateController    /api/translate        [Authorize(StaffOnly)], rate limit "pages", 512 KB
+  POST   /                     TranslateRequest(target code, texts[]) → TranslateResponse(texts[], same order) | 404 off
+                                 (no key) | 400 target not a configured non-default code, > 500 texts, a text > 10 000
+                                 chars, DeepL can't do the language | 502 DeepL failed (detail = TranslationException message)
+```
+- `ITranslator` (seam) → `DeepLTranslator` (typed HttpClient, 30 s): host by key (`:fx` → api-free.deepl.com),
+  `Authorization: DeepL-Auth-Key`, batches of 50, empty texts skipped, source = default code upper-case, target
+  `EN-US`/`EN-GB`, `PT-PT`/`PT-BR`, else the code; `de-CH` results get `ß` → `ss`; 403/429/456/5xx/network →
+  `TranslationException` with a user-facing message.
+- `TranslationOptions` (`Translation:DeepL:ApiKey`, `Enabled`); `InstanceConfig.MachineTranslation` tells the admin
+  (the key never leaves the API).
+
 ## Public HTML (pre-rendered pages)
 Why + full flow: `claude-context/ARCHITECTURE.md` → Public pages.
 ```
@@ -318,6 +332,7 @@ SiteConfigService       Scoped      site config: get / replace, field + media va
 RenderQueue/IRenderQueue, RenderStatus  Singleton  public-page render jobs + freshness state
 PublicCache           Singleton   public menus + site config (invalidated by Refresh()/All() + menu writes)
 IRendererClient       Typed HttpClient  HttpRendererClient → Node renderer (Renderer:BaseUrl)
+ITranslator           Typed HttpClient  DeepLTranslator (Translation:DeepL:ApiKey; TranslateController 404s without it)
 RenderWorker          Hosted      renders published pages to rendered_pages
 MenuService           Scoped      menus: CRUD, item validation, public resolution, main-menu seed
 IBlobStorage          Singleton   S3BlobStorage (tests: InMemoryBlobStorage)
@@ -408,6 +423,7 @@ Renderer:CheckIntervalSeconds       # 60
 Backup:Directory                    # "/backups" (Development: "backups", relative to the content root)
 Backup:HostPath                     # display only: host side of the mount  ← BACKUP_DIR
 Backup:MaxUploadMegabytes           # 2048 (nginx /api/backups allows 2g)
+Translation:DeepL:ApiKey            # editor machine translation; empty = off ← DEEPL_API_KEY
 Cms:Version                         # "dev"; release images: the tag (Dockerfile ARG CMS_VERSION), in backup manifests
 Cms:ConfigPath                      # instance config file, relative to the content root (default cms.config.json)
 ```
@@ -434,7 +450,8 @@ UpdatePageRequest           Title?, Slug?, Blocks?, MetaTitle?(≤70), MetaDescr
 PageTextTranslation         Title, MetaTitle, MetaDescription   ("" = untranslated)
 PublicStateResponse         Page?, Menu?, Config
 PublicPage                  Title, Slug, Blocks, Media, PublishedAt, Template?, MetaTitle, MetaDescription (live snapshot, localized, no translations)
-InstanceConfig              PublicAuth, ExcludedBlocks, SiteConfig (SiteConfigSchema: fields[], groups[])
+InstanceConfig              PublicAuth, ExcludedBlocks, SiteConfig (SiteConfigSchema: fields[], groups[]), MachineTranslation
+TranslateRequest            Target (code), Texts[]   TranslateResponse  Texts[]
 TagUsage                    Name, PageCount
 MenuDetail                  Id, Handle, Items, CreatedAt, UpdatedAt
 CreateMenuRequest           Handle(≤50)   UpdateMenuRequest  Items
@@ -502,7 +519,8 @@ The "Authorize" button in `/swagger` accepts a JWT. Paste an access token to cal
 ## Testing (`Tests/`)
 xUnit v3 + AwesomeAssertions + Testcontainers.PostgreSql (`Tests/Tests.csproj`, net10.0).
 ```
-Unit/Services/        JwtTokenService, PasswordHashService, Customer/StaffAuthService, PageService, CmsConfigLoader, BackupSchedule
+Unit/Services/        JwtTokenService, PasswordHashService, Customer/StaffAuthService, PageService, CmsConfigLoader, BackupSchedule,
+                      DeepLTranslator (fake HttpMessageHandler)
                       (EF InMemory via Unit/TestDbContextFactory.cs; ExecuteUpdate-based
                       flows such as refresh rotation are covered by integration tests)
 Integration/          ApiFactory.cs (WebApplicationFactory + Testcontainers PostgreSQL),
@@ -514,6 +532,8 @@ Integration/          ApiFactory.cs (WebApplicationFactory + Testcontainers Post
                       RenderingTests.Languages.cs: localized config, routing/cookie/Vary, rows per language),
                       QueryBudgetTests (QueryCounter: DbCommandInterceptor in ApiFactory counting commands of requests
                       with the X-Count-Queries header; public cache invalidation, BlockCount),
+                      TranslationsTests (Phase 3 content translations), TranslateTests (fake ITranslator: auth, off,
+                      targets, limits, 502),
                       BackupsTests (auth, settings, names, busy 409, 503 gate, invalid uploads, newer schema refused),
                       BackupRoundTripTests (real pg tools, own DB: backup → change → restore → undo, download/upload,
                       scheduled run + retention; skipped without pg_dump)

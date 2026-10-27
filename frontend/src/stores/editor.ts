@@ -216,6 +216,23 @@ export const useEditorStore = defineStore('editor', () => {
 		else delete block.translations
 	}
 
+	/**
+	 * Machine-translated text into language `code` as **one** undo step and one change: block attributes by
+	 * (blockId, key), page title/meta (`blockId` null; like typing them, not in the undo history).
+	 */
+	function applyTranslations(code: string, entries: { blockId: string | null; key: string; text: string }[]): void {
+		const page: Partial<PageTextTranslation> = {}
+		for (const { blockId, key, text } of entries) {
+			if (blockId === null) page[key as keyof PageTextTranslation] = text
+			else {
+				const block = findBlockById(blockId)
+				if (block) setTranslation(block, code, { [key]: text })
+			}
+		}
+		if (Object.keys(page).length) setPageText(code, page)
+		trackChange()
+	}
+
 	/** Title/meta of a non-default language (working copy, saved with the page; empty = untranslated). */
 	function setPageText(code: string, patch: Partial<PageTextTranslation>): void {
 		const current = pageTranslations.value[code] ?? { title: '', metaTitle: '', metaDescription: '' }
@@ -526,6 +543,7 @@ export const useEditorStore = defineStore('editor', () => {
 		duplicateBlock,
 		updateBlockAttributes,
 		updateBlockTranslation,
+		applyTranslations,
 		setPageText,
 		setBlocks,
 		selectBlock,

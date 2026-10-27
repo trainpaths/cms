@@ -110,6 +110,8 @@ S3_ACCESS_KEY/S3_SECRET_KEY (required), S3_BUCKET   SeaweedFS admin identity →
 BACKUP_DIR                             host folder for backup archives (→ /backups in the api; empty = ./backups)
 SMTP_*, EMAIL_FROM, EMAIL_FROM_NAME, APP_BASE_URL   email (empty SMTP_HOST → console sender); APP_BASE_URL is also
                                        the public origin in canonical/OG tags (→ Renderer:PublicBaseUrl)
+DEEPL_API_KEY                          editor "Translate missing fields" (→ Translation:DeepL:ApiKey; empty = off; page
+                                       text is sent to DeepL, see ARCHITECTURE.md → Localization)
 VITE_API_BASE_URL                      Vite dev proxy target only (http://127.0.0.1:API_PORT; the port is IPv4-only)
 ```
 

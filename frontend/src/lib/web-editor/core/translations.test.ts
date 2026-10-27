@@ -120,6 +120,22 @@ describe('editing a language', () => {
 		expect(store.findBlockById('h')!.translations!.it).toBeUndefined()
 	})
 
+	it('applyTranslations: every field in one undo step, page text in the translations', () => {
+		const store = load()
+		store.updateBlockAttributes('h', { level: 2 }) // history baseline
+		store.applyTranslations('it', [
+			{ blockId: null, key: 'title', text: 'Chi siamo' },
+			{ blockId: 'c', key: 'title', text: 'Scheda' },
+			{ blockId: 'l', key: 'label', text: 'Vai' },
+		])
+		expect(store.pageTranslations.it!.title).toBe('Chi siamo')
+		expect(store.findBlockById('c')!.translations!.it).toEqual({ title: 'Scheda' })
+		expect(store.findBlockById('l')!.translations!.it).toEqual({ label: 'Vai' })
+		store.undo()
+		expect(store.findBlockById('c')!.translations).toBeUndefined()
+		expect(store.findBlockById('l')!.translations).toBeUndefined()
+	})
+
 	it('page title/meta per language', () => {
 		const store = load()
 		store.pageTitle = 'About'

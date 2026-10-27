@@ -13,6 +13,7 @@ import { pageExportFileName, toPageExport } from '../../pageExport'
 import { saveJson } from '../../download'
 import { usePageText } from '../composables/usePageText'
 import { useMissingTranslations } from '../composables/useMissingTranslations'
+import { useMachineTranslation } from '../composables/useMachineTranslation'
 import { DEFAULT_LANGUAGE, IS_LOCALIZED, LANGUAGES, languageLabel } from '../../../i18n/languages'
 import { localePath } from '../../../public/locale'
 
@@ -31,6 +32,7 @@ const title = usePageText('title')
 const metaTitle = usePageText('metaTitle')
 const metaDescription = usePageText('metaDescription')
 const missing = useMissingTranslations()
+const deepl = useMachineTranslation()
 const translationRows = computed(() =>
 	LANGUAGES.filter(({ code }) => code !== DEFAULT_LANGUAGE.code).map(({ code }) => ({
 		code,
@@ -193,6 +195,27 @@ async function commitSlug() {
 					</button>
 				</li>
 			</ul>
+			<div
+				v-if="deepl.available.value"
+				class="mt-8 flex flex-wrap items-center gap-8"
+			>
+				<button
+					class="cursor-pointer rounded border-none bg-primary px-12 py-4 text-xs text-white hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
+					:disabled="deepl.running.value"
+					data-testid="deepl-missing"
+					@click="deepl.translateMissing()"
+				>
+					{{ deepl.running.value ? $t('editor.deepl.running') : $t('editor.deepl.missing') }}
+				</button>
+				<button
+					class="cursor-pointer rounded border border-gray-300 bg-white px-12 py-4 text-xs text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+					:disabled="deepl.running.value"
+					data-testid="deepl-all"
+					@click="deepl.retranslateAll()"
+				>
+					{{ $t('editor.deepl.retranslate') }}
+				</button>
+			</div>
 			<button
 				v-if="store.editLang !== DEFAULT_LANGUAGE.code"
 				class="mt-8 cursor-pointer border-none bg-transparent p-0 text-xs text-gray-500 underline hover:text-gray-800"

@@ -268,7 +268,8 @@ their server-rendered `<head>` (`headTags()` in `src/public/head.ts`, falls back
   `pageHasUnpublishedChanges` from every PUT/GET; `updateSlug` / `updateTags` send `{slug}` / `{tags}`.
 - `src/stores/siteConfig.ts` — `useSiteConfigStore`: public site `config`, `load()` once (single-flight, never throws),
   `refresh()` (refetch, keeps the current value on failure; `data-refresh` pages), `set()` after the admin form saves.
-- `src/stores/instance.ts` — `useInstanceStore`: `config` = `InstanceConfig` (publicAuth, excludedBlocks, siteConfig) +
+- `src/stores/instance.ts` — `useInstanceStore`: `config` = `InstanceConfig` (publicAuth, excludedBlocks, siteConfig,
+  machineTranslation) +
   `isOffered(blockName)` (not in excludedBlocks), from
   `/api/public/instance`, `load()` once in `createAdmin()` (failure keeps the API defaults: auth off, nothing hidden).
 - `src/stores/tags.ts` — `useTagsStore`: tags in use + page counts (`names`, `popular` = top 3); `load()` once per

@@ -189,7 +189,12 @@ goes into `<html lang>` and date/number formats (`de-CH`: 27.10.2026, 1’000), 
   and block text; untranslated text falls back to the default language) with `hreflang` alternates.
 - **Content**: the owner picks a language in the editor header (or the Page tab's "Translations", with untranslated
   counts) and types that language's text into the same blocks; structure, images and colours are shared. Menu labels,
-  site config values, media alt text and slugs stay single-language. The switch loads the same page in the
+  site config values, media alt text and slugs stay single-language.
+- **DeepL pre-fill** (optional): set `DEEPL_API_KEY` for the api container (compose: `Translation__DeepL__ApiKey:
+  ${DEEPL_API_KEY:-}` in its `environment`; keys ending in `:fx` use the free API). The editor then offers "Translate
+  missing fields" for the language being edited; the owner reviews and publishes as usual. **Privacy**: the page text
+  is sent to DeepL. The Pro API doesn't store it; the free API may use it to train. Tell the site owner before you
+  set a key. Billing is per translated character. The switch loads the same page in the
   chosen language and remembers it; unprefixed URLs then redirect to that language. Router links (`RouterLink`,
   `router.push`) get the prefix automatically; code that builds hrefs itself must use `localePath(path, code)`
   (`@trainpaths/cms/site`). Language codes can't be page slugs on a localized site (`/de` is the home).
