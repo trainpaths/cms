@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using api_backend.Models.Dto;
+using api_backend.Services.Cms;
 using api_backend.Services.Menus;
 using api_backend.Services.Site;
 
@@ -7,7 +8,8 @@ namespace api_backend.Services.Rendering;
 
 /// <summary>
 /// In-memory cache of what every public page shows around its body: resolved public menus (by handle) and the site
-/// config, per language code (page titles in them are translated). Hot on shell loads, <c>data-refresh</c> refetches and every render batch, but only changed by writes that
+/// config, per language code (page titles in them are translated; a miss loads every language at once). Hot on shell
+/// loads, <c>data-refresh</c> refetches and every render batch, but only changed by writes that
 /// already call <see cref="IRenderQueue.Refresh"/>/<see cref="IRenderQueue.All"/> (which invalidate it) or by the
 /// menus controller. Assumes one API instance, like <see cref="RenderStatus"/>.
 /// <para>
@@ -16,7 +18,7 @@ namespace api_backend.Services.Rendering;
 /// them as immutable (they are only serialized).
 /// </para>
 /// </summary>
-public sealed class PublicCache
+public sealed class PublicCache(CmsConfig cms)
 {
 	private long _generation;
 	private readonly ConcurrentDictionary<string, (long Generation, object Value)> _entries = new();
@@ -30,22 +32,31 @@ public sealed class PublicCache
 
 	/// <summary><c>null</c> (unknown handle) isn't cached, so random handles can't grow the cache.</summary>
 	/// <param name="code">a configured language code (<c>CmsSiteLang.Resolve</c>): keys stay bounded</param>
-	public Task<PublicMenu?> MenuAsync(MenuService menus, string handle, string code, CancellationToken ct) =>
-		GetAsync($"menu:{code}:{handle.ToLowerInvariant()}", () => menus.GetPublicAsync(handle, code, ct));
+	public Task<PublicMenu?> MenuAsync(MenuService menus, string handle, string code, CancellationToken ct)
+	{
+		var normalized = handle.ToLowerInvariant();
+		return GetAsync(code, c => $"menu:{c}:{normalized}", codes => menus.GetPublicAsync(normalized, codes, ct));
+	}
 
 	/// <param name="code">a configured language code (<c>CmsSiteLang.Resolve</c>)</param>
 	public async Task<SiteConfigResponse> SiteConfigAsync(SiteConfigService siteConfig, string code, CancellationToken ct) =>
-		(await GetAsync<SiteConfigResponse>($"config:{code}", async () => await siteConfig.GetAsync(ct, code)))!;
+		(await GetAsync(code, c => $"config:{c}", async codes => (Dictionary<string, SiteConfigResponse>?)
+			await siteConfig.GetAsync(codes, ct)))!;
 
-	private async Task<T?> GetAsync<T>(string key, Func<Task<T?>> load) where T : class
+	/// <summary>The entry of <paramref name="code"/>; a miss loads and stores every configured language.</summary>
+	private async Task<T?> GetAsync<T>(string code, Func<string, string> key,
+		Func<IReadOnlyList<string>, Task<Dictionary<string, T>?>> load) where T : class
 	{
-		// read before loading: an invalidation during the load leaves this entry outdated
+		// read before loading: an invalidation during the load leaves these entries outdated
 		var generation = Interlocked.Read(ref _generation);
-		if (_entries.TryGetValue(key, out var entry) && entry.Generation == generation)
+		if (_entries.TryGetValue(key(code), out var entry) && entry.Generation == generation)
 			return (T)entry.Value;
-		var value = await load();
-		if (value is not null)
-			_entries[key] = (generation, value);
-		return value;
+		var codes = cms.Site.Lang.Codes;
+		var values = await load(codes.Contains(code) ? codes : [code]);
+		if (values is null)
+			return null;
+		foreach (var (c, value) in values)
+			_entries[key(c)] = (generation, value);
+		return values[code];
 	}
 }

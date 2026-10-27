@@ -95,11 +95,12 @@ public partial class MenuService(AppDbContext db, CmsConfig cms)
 	}
 
 	/// <summary>
-	/// The menu for the public site. Page links get the page's current slug (and title when unlabeled);
-	/// a link to an unpublished/deleted page becomes a folder when labeled, otherwise its children move up
-	/// a level. Folders left without children are dropped. Page titles in <paramref name="code"/>.
+	/// The menu for the public site, in each of <paramref name="codes"/> (one load: only page titles differ). Page links
+	/// get the page's current slug (and title when unlabeled); a link to an unpublished/deleted page becomes a folder
+	/// when labeled, otherwise its children move up a level. Folders left without children are dropped.
 	/// </summary>
-	public async Task<PublicMenu?> GetPublicAsync(string handle, string code, CancellationToken ct)
+	public async Task<Dictionary<string, PublicMenu>?> GetPublicAsync(string handle, IReadOnlyList<string> codes,
+		CancellationToken ct)
 	{
 		var normalized = handle.ToLowerInvariant();
 		var menu = await db.Menus.AsNoTracking().FirstOrDefaultAsync(m => m.Handle == normalized, ct);
@@ -113,14 +114,14 @@ public partial class MenuService(AppDbContext db, CmsConfig cms)
 			.ToDictionaryAsync(p => p.Id, ct);
 		var defaultCode = cms.Site.Lang.DefaultCode;
 
-		return new PublicMenu(menu.Handle, Resolve(menu.Items));
+		return codes.ToDictionary(code => code, code => new PublicMenu(menu.Handle, Resolve(menu.Items, code)));
 
-		List<PublicMenuItem> Resolve(List<MenuItem> items)
+		List<PublicMenuItem> Resolve(List<MenuItem> items, string code)
 		{
 			var result = new List<PublicMenuItem>();
 			foreach (var item in items)
 			{
-				var children = Resolve(item.Children);
+				var children = Resolve(item.Children, code);
 				if (item.Url is not null)
 					result.Add(new PublicMenuItem(item.Label, null, item.Url, children));
 				else if (item.PageId is { } pageId && pages.TryGetValue(pageId, out var page))

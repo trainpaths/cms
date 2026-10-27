@@ -196,7 +196,8 @@ PublicHtmlController   /api/public/html      [AllowAnonymous], rate limit "pages
   by `RenderedScreens.Key(code, path)` = `de:user/profile`, render start, version; rendered with every full render, only with public auth), change timestamps → `IsFresh`,
   refresh marker → `NeedsRefresh`: `PublicHtmlController` adds `data-refresh` to `#__STATE__` and an `-r` ETag suffix,
   the public client then refetches the main menu + site config),
-  `PublicCache` (singleton: resolved public menus by (code, handle) + `SiteConfigResponse` per code, generation-checked; invalidated by
+  `PublicCache` (singleton: resolved public menus by (code, handle) + `SiteConfigResponse` per code, generation-checked; a miss loads all
+  languages at once via `MenuService.GetPublicAsync(handle, codes)` / `SiteConfigService.GetAsync(codes)`; invalidated by
   `RenderQueue.Refresh()/All()` and every `MenusController` write; readers: public menu/site-config endpoints, the
   worker, `PublicStateController`; tests writing the DB directly must `Invalidate()`),
   `HttpRendererClient` (`IRendererClient`, typed HttpClient to the Node renderer; `RenderState` mirrors

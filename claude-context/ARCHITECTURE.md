@@ -249,7 +249,7 @@ staff save ─► API IRenderQueue ─► RenderWorker ─POST /render─► ren
   - `All()` (restore only) marks everything stale: `rendered_pages` isn't in backups, but a render in flight during
     the restore could store pre-restore HTML afterwards.
 - **Public cache** (`PublicCache`, in memory, same one-instance assumption): resolved public menus by handle + the
-  site config, read by the public menu/site-config endpoints and every render batch. `Refresh()`/`All()` invalidate it
+  site config, per language; a miss loads every language in one go (same queries, only page titles differ), read by the public menu/site-config endpoints and every render batch. `Refresh()`/`All()` invalidate it
   (they already fire on every write that changes the main menu, the site config, a page title/slug, publish state or
   media), `MenusController` on any menu write (other menus don't go through `Refresh()`). Entries carry a generation, so
   a load racing an invalidation is never served. Stored HTML/page JSON is deliberately **not** cached: the stored-HTML
@@ -261,7 +261,8 @@ staff save ─► API IRenderQueue ─► RenderWorker ─POST /render─► ren
 - **Languages:** `rendered_pages` is keyed `(PageId, Lang)` (code); every page, the not-found page and the screens
   render once per configured language (`RenderState.lang`), all languages of a page go stale together (freshness and
   the refresh marker are per page). The widen check compares the default language's row only. A full render deletes
-  rows of languages no longer configured; a language added to the config counts as missing HTML (version check).
+  rows of languages no longer configured; a language added to the config counts as missing HTML (version check: current
+  rows in configured languages < published pages × languages, two counts).
 - **Deploys:** stored HTML names hashed asset files of its build. The renderer reports a version (hash of
   template + SSR bundle); only HTML of the current version is served, and a version change re-renders everything
   (periodic check, 60 s; also on API start). The not-found page lives in memory (re-rendered with everything).
