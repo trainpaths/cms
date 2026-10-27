@@ -2267,6 +2267,66 @@
           }
         }
       }
+    },
+    "/api/translate": {
+      "post": {
+        "tags": [
+          "Translate"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/TranslateRequest"
+                  }
+                ]
+              }
+            },
+            "text/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/TranslateRequest"
+                  }
+                ]
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/TranslateRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslateResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslateResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslateResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2832,6 +2892,7 @@
       "InstanceConfig": {
         "required": [
           "excludedBlocks",
+          "machineTranslation",
           "publicAuth",
           "siteConfig"
         ],
@@ -2852,6 +2913,9 @@
                 "$ref": "#/components/schemas/SiteConfigSchema"
               }
             ]
+          },
+          "machineTranslation": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -3528,6 +3592,40 @@
         },
         "additionalProperties": false
       },
+      "TranslateRequest": {
+        "required": [
+          "target",
+          "texts"
+        ],
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "texts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "TranslateResponse": {
+        "required": [
+          "texts"
+        ],
+        "type": "object",
+        "properties": {
+          "texts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
       "UpdateBackupSettingsRequest": {
         "required": [
           "dayOfMonth",
@@ -3784,6 +3882,9 @@
     },
     {
       "name": "Tags"
+    },
+    {
+      "name": "Translate"
     }
   ]
 }

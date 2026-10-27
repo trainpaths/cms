@@ -151,6 +151,7 @@ export type InstanceConfig = {
     publicAuth: boolean;
     excludedBlocks: Array<string>;
     siteConfig: SiteConfigSchema;
+    machineTranslation: boolean;
 };
 
 export type LoginRequest = {
@@ -321,6 +322,15 @@ export type StaffRegisterRequest = {
 export type TagUsage = {
     name: string;
     pageCount: number;
+};
+
+export type TranslateRequest = {
+    target: string;
+    texts: Array<string>;
+};
+
+export type TranslateResponse = {
+    texts: Array<string>;
 };
 
 export type UpdateBackupSettingsRequest = {
@@ -1259,3 +1269,19 @@ export type GetApiTagsResponses = {
 };
 
 export type GetApiTagsResponse = GetApiTagsResponses[keyof GetApiTagsResponses];
+
+export type PostApiTranslateData = {
+    body?: TranslateRequest;
+    path?: never;
+    query?: never;
+    url: '/api/translate';
+};
+
+export type PostApiTranslateResponses = {
+    /**
+     * OK
+     */
+    200: TranslateResponse;
+};
+
+export type PostApiTranslateResponse = PostApiTranslateResponses[keyof PostApiTranslateResponses];
