@@ -423,7 +423,6 @@
 		"deepl": {
 			"missing": "Fehlende Felder übersetzen",
 			"missingAndOutdated": "Fehlende und veraltete Felder übersetzen",
-			"running": "Übersetzt…",
 			"retranslate": "Alles neu übersetzen",
 			"retranslateTitle": "Alle Felder neu übersetzen?",
 			"retranslateMessage": "Jeder übersetzte Text in dieser Sprache wird durch eine neue DeepL-Übersetzung ersetzt.",

@@ -423,7 +423,6 @@
 		"deepl": {
 			"missing": "Traduci i campi mancanti",
 			"missingAndOutdated": "Traduci i campi mancanti e obsoleti",
-			"running": "Traduzione…",
 			"retranslate": "Ritraduci tutto",
 			"retranslateTitle": "Ritradurre tutti i campi?",
 			"retranslateMessage": "Ogni testo tradotto in questa lingua viene sostituito da una nuova traduzione DeepL.",

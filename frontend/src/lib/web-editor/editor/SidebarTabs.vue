@@ -1,4 +1,5 @@
 <script setup lang="ts" generic="T extends string">
+import { CloseButton } from '@trainpaths/nb-ui'
 /** Sidebar top row: tab bar + close X (both editor sidebars). Tab testids: `sidebar-tab-{id}`. */
 defineProps<{
 	/** label = message key */
@@ -37,15 +38,12 @@ const emit = defineEmits<{
 				{{ $t(tab.label) }}
 			</button>
 		</div>
-		<button
-			type="button"
-			class="shrink-0 cursor-pointer border-none bg-transparent px-12 text-lg text-gray-500 hover:text-gray-800"
+		<CloseButton
+			class="mx-10 text-gray-500"
 			:title="$t('common.close')"
-			:aria-label="$t('editor.closeSidebar')"
+			:label="$t('editor.closeSidebar')"
 			:data-testid="closeTestid"
 			@click="emit('close')"
-		>
-			&#10005;
-		</button>
+		/>
 	</div>
 </template>

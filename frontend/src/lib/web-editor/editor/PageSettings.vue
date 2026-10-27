@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { I18nT, useI18n } from 'vue-i18n'
 import SettingsSection from './SettingsSection.vue'
-import { TagInput } from '@trainpaths/nb-ui'
+import { Badge, Button, TagInput } from '@trainpaths/nb-ui'
 import { META_DESCRIPTION_MAX, META_TITLE_MAX, TAG_MAX_LENGTH, TAGS_PER_PAGE, normalizeTag } from '../limits'
 import { documentTitle } from '../../../public/head'
 import { useEditorStore } from '../../../stores/editor'
@@ -197,15 +197,17 @@ async function commitSlug() {
 								? 'border-primary bg-primary/10 text-primary'
 								: 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
 						"
+						:aria-pressed="store.editLang === row.code"
 						:data-testid="`translation-${row.code}`"
 						@click="store.editLang = row.code"
 					>
 						<span>{{ row.name }}</span>
-						<span
-							class="text-xs"
-							:class="row.missing || row.outdated ? 'text-amber-700' : 'text-green-700'"
-							>{{ rowStatus(row) }}</span
+						<Badge
+							size="sm"
+							:color="row.missing || row.outdated ? 'warning' : 'success'"
 						>
+							{{ rowStatus(row) }}
+						</Badge>
 					</button>
 				</li>
 			</ul>
@@ -213,36 +215,36 @@ async function commitSlug() {
 				v-if="deepl.available.value"
 				class="mt-8 flex flex-wrap items-center gap-8"
 			>
-				<button
-					class="cursor-pointer rounded border-none bg-primary px-12 py-4 text-xs text-white hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
-					:disabled="deepl.running.value"
+				<Button
+					bg="primary"
+					size="sm"
+					:loading="deepl.running.value"
 					data-testid="deepl-missing"
 					@click="deepl.translateMissing()"
 				>
-					{{
-						deepl.running.value
-							? $t('editor.deepl.running')
-							: editedStatus?.outdated
-								? $t('editor.deepl.missingAndOutdated')
-								: $t('editor.deepl.missing')
-					}}
-				</button>
-				<button
-					class="cursor-pointer rounded border border-gray-300 bg-white px-12 py-4 text-xs text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+					{{ editedStatus?.outdated ? $t('editor.deepl.missingAndOutdated') : $t('editor.deepl.missing') }}
+				</Button>
+				<Button
+					variant="outline"
+					text="primary"
+					size="sm"
 					:disabled="deepl.running.value"
 					data-testid="deepl-all"
 					@click="deepl.retranslateAll()"
 				>
 					{{ $t('editor.deepl.retranslate') }}
-				</button>
+				</Button>
 			</div>
-			<button
+			<Button
 				v-if="store.editLang !== DEFAULT_LANGUAGE.code"
-				class="mt-8 cursor-pointer border-none bg-transparent p-0 text-xs text-gray-500 underline hover:text-gray-800"
+				variant="ghost"
+				text="secondary"
+				size="sm"
+				class="mt-8"
 				@click="store.editLang = DEFAULT_LANGUAGE.code"
 			>
 				{{ $t('editor.translations.backToDefault', { language: languageLabel(DEFAULT_LANGUAGE.code) }) }}
-			</button>
+			</Button>
 			<p class="mt-8 mb-0 text-xs text-gray-400">{{ $t('editor.translations.hint') }}</p>
 		</SettingsSection>
 		<SettingsSection :title="$t('admin.pages.tags')">
@@ -267,35 +269,41 @@ async function commitSlug() {
 				{{ statusText }}
 			</p>
 			<div class="flex flex-wrap items-center gap-8">
-				<button
-					class="cursor-pointer rounded border-none bg-primary px-12 py-4 text-xs text-white hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-primary"
+				<Button
+					bg="primary"
+					size="sm"
 					:title="publishHint"
 					:disabled="!canPublish"
 					data-testid="settings-publish"
 					@click="publish"
 				>
 					{{ publishLabel }}
-				</button>
-				<button
+				</Button>
+				<Button
 					v-if="published"
-					class="cursor-pointer rounded border border-gray-300 bg-white px-12 py-4 text-xs text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+					variant="outline"
+					text="secondary"
+					border="secondary"
+					size="sm"
 					:disabled="store.publishing"
 					data-testid="settings-unpublish"
 					@click="unpublish"
 				>
 					{{ $t('editor.publish.unpublish') }}
-				</button>
+				</Button>
 			</div>
 			<p class="mt-8 mb-0 text-xs text-gray-400">{{ $t('editor.page.statusHint') }}</p>
 		</SettingsSection>
 		<SettingsSection :title="$t('admin.pages.export')">
-			<button
-				class="cursor-pointer rounded border border-gray-300 bg-white px-12 py-4 text-xs text-gray-700 hover:bg-gray-50"
+			<Button
+				variant="outline"
+				text="primary"
+				size="sm"
 				data-testid="page-download-json"
 				@click="downloadJson"
 			>
 				{{ $t('editor.page.downloadJson') }}
-			</button>
+			</Button>
 			<p class="mt-8 mb-0 text-xs text-gray-400">
 				{{ $t('editor.page.exportHint') }}
 			</p>

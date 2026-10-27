@@ -4,7 +4,7 @@ import type { MediaItem } from '../core/types'
 import MediaGrid from './MediaGrid.vue'
 import MediaUploadButton from './MediaUploadButton.vue'
 import { useMediaStore } from '../../../stores/media'
-import { Loading } from '@trainpaths/nb-ui'
+import { CloseButton, Loading } from '@trainpaths/nb-ui'
 import { useI18n } from 'vue-i18n'
 
 const emit = defineEmits<{ select: [item: MediaItem]; close: [] }>()
@@ -59,14 +59,11 @@ function pick(item: MediaItem) {
 							@uploaded="pick"
 							@error="error = $event"
 						/>
-						<button
-							type="button"
-							class="cursor-pointer rounded border-none bg-transparent px-8 py-4 text-gray-400 hover:text-gray-700"
-							:aria-label="$t('common.close')"
+						<CloseButton
+							class="text-gray-500"
+							:label="$t('common.close')"
 							@click="emit('close')"
-						>
-							&#10005;
-						</button>
+						/>
 					</div>
 				</div>
 				<p

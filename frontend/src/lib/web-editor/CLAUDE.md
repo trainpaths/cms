@@ -136,6 +136,13 @@ loadPage/savePage (working copy only, skips clean)/updateSlug/publish/unpublish/
   `src/locales/admin/<code>.json`, see frontend/CLAUDE.md → Localization). Block titles/descriptions render through
   `useBlockLabels()` (`i18n/siteConfigLabels.ts`), never `blockType.title` directly. Option lists keep message keys
   (`blocks/paragraph/align.ts`, SidebarTabs `tabs[].label`) and translate where they render.
+- Editor chrome uses nb-ui: action buttons = `Button` (main action `bg="primary"`, secondary `variant="outline"
+  text="primary"`, unpublish `outline` + `secondary`, `size="sm"` in sidebars, `loading` instead of "…ing" labels),
+  status chips = `Badge`, close/dismiss X = `CloseButton`. Hand-rolled on purpose: header icon toggles + undo/redo
+  (`.header-icon-btn`/`.toolbar-btn`, pressed state), segmented pickers (width, heading level, list type), colour
+  swatches, tree/inserter/outline rows, collapsible section headers, the language rows (selection list), and
+  everything rendered on the canvas (`MediaActions`, `MediaUploadButton`: inside `.site-theme` nb-ui's `primary` would
+  take the instance's colour; `MediaUploadButton` also has a public `buttonClass` prop).
 - Mutate blocks only through store actions (`updateBlockAttributes`, `addBlock`, ...): they push history
   and count towards autosave (every 4 changes). Saves are serialized in `savePage`.
 - The editor store is a singleton: `Editor.vue` calls `loadPage` on mount / id change and `closePage` on back.
