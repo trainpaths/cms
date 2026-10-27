@@ -97,15 +97,16 @@ src/blocks/callout/
   CalloutIcon.vue   inline SVG, stroke="currentColor"
   CalloutSettings.vue   optional right-sidebar panel
 ```
-- Edit side imports from **`@trainpaths/cms/editor`** (`defineBlock`, `useBlockAttribute`, `useSelection`,
+- Edit side imports from **`@trainpaths/cms/editor`** (`defineBlock`, `useBlockAttribute`, `useBlockText`, `useSelection`,
   `InlineToolbar`, `ToolbarDropdown`, `SettingsSection`, `BlockList`, `MediaActions`, `MediaField`, `useAutoResize`,
   types). The View imports from **`@trainpaths/cms/site`** only: it is server-rendered and shipped to visitors, the
   editor barrel would drag the editor into the public bundle.
 - Write attributes only through `useBlockAttribute` (undo history and autosave depend on it).
 - Text visitors read: mark it `translatable: true` in `attributes` (`text: { type: 'string', default: '', translatable:
-  true }`). On a localized site the editor then edits it per language through the same `useBlockAttribute`; show the
-  default's text while translating with `:placeholder="original || '…'"`, `const original =
-  useAttributeFallback(() => props.block, 'text')`. Views and templates get plain, already localized `attributes` and
+  true }`) and edit it with `const { value: text, original } = useBlockText(() => props.block, 'text')`: on a localized
+  site `text` is the edited language's value, `original` the default's while translating (`:placeholder="original ||
+  '…'"`). Stored translations of attributes that aren't `translatable` are dropped on the next save. Views and
+  templates get plain, already localized `attributes` and
   `page` (title/meta in the page's language).
 - Attribute values: string, number or boolean (the API rejects anything else). Repeating content = inner blocks
   (`allowedBlocks` + `<BlockList>` / `<ViewBlockList>`). Images: the `mediaId` attribute (one per block), rendered with
@@ -303,3 +304,8 @@ paragraph. Link-preview image: the page's first image, else the share image from
 3. `pnpm build`; fix type errors (your overrides/blocks are checked against the new package source).
 4. Back up first (Profile → Backups → Back up now, then download it): the API applies its migrations on start, there
    is no downgrade, and an older CMS refuses to restore a newer backup.
+
+Changes to the block authoring API that need an edit in your blocks (released as minor versions):
+- **`useAttributeFallback` → `useBlockText`** (removed; see the release notes for the version): replace
+  `const text = useBlockAttribute(() => props.block, 'text', '')` + `const original = useAttributeFallback(() => props.block, 'text')`
+  with `const { value: text, original } = useBlockText(() => props.block, 'text')`.

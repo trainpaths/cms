@@ -4,7 +4,7 @@ import BlockList from '../../editor/BlockList.vue'
 import MediaActions from '../../media/MediaActions.vue'
 import type { BlockInstance } from '../../core/types'
 import { useSelection } from '../../composables/useSelection'
-import { useAttributeFallback, useBlockAttribute } from '../../composables/useBlockAttribute'
+import { useBlockText } from '../../composables/useBlockAttribute'
 import { useAutoResize } from '../../composables/useAutoResize'
 import { useMediaImage } from '../../media/useMediaImage'
 import { assignMedia } from '../../media/assignMedia'
@@ -14,10 +14,8 @@ const { isSelected } = useSelection()
 
 const selected = computed(() => isSelected(props.block.id))
 
-const title = useBlockAttribute(() => props.block, 'title', '')
-const description = useBlockAttribute(() => props.block, 'description', '')
-const originalTitle = useAttributeFallback(() => props.block, 'title')
-const originalDescription = useAttributeFallback(() => props.block, 'description')
+const { value: title, original: originalTitle } = useBlockText(() => props.block, 'title')
+const { value: description, original: originalDescription } = useBlockText(() => props.block, 'description')
 const { src: imageSrc, alt: imageAlt, missing } = useMediaImage(() => props.block)
 
 function choose(mediaId: string) {

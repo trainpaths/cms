@@ -6,7 +6,7 @@ import ToolbarDropdown from '../../editor/ToolbarDropdown.vue'
 import AlignIcon from './AlignIcon.vue'
 import type { BlockInstance } from '../../core/types'
 import { useSelection } from '../../composables/useSelection'
-import { useAttributeFallback, useBlockAttribute } from '../../composables/useBlockAttribute'
+import { useBlockAttribute, useBlockText } from '../../composables/useBlockAttribute'
 import { useAutoResize } from '../../composables/useAutoResize'
 import { alignOptions, type Align } from './align'
 
@@ -17,8 +17,7 @@ const options = computed(() => alignOptions.map((o) => ({ ...o, label: t(o.label
 
 const selected = computed(() => isSelected(props.block.id))
 
-const text = useBlockAttribute(() => props.block, 'text', '')
-const original = useAttributeFallback(() => props.block, 'text')
+const { value: text, original } = useBlockText(() => props.block, 'text')
 const alignment = useBlockAttribute(() => props.block, 'alignment', 'left')
 const alignClasses: Record<string, string> = { left: 'text-left', center: 'text-center', right: 'text-right' }
 // default colour only when none chosen, else inherit from wrapper's inline colour

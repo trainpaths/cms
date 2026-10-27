@@ -4,8 +4,8 @@ import {
 	InlineToolbar,
 	ToolbarDropdown,
 	useAutoResize,
-	useAttributeFallback,
 	useBlockAttribute,
+	useBlockText,
 	useSelection,
 	type BlockInstance,
 } from '@trainpaths/cms/editor'
@@ -15,8 +15,7 @@ const props = defineProps<{ block: BlockInstance }>()
 
 const { isSelected } = useSelection()
 const selected = computed(() => isSelected(props.block.id))
-const text = useBlockAttribute(() => props.block, 'text', '')
-const original = useAttributeFallback(() => props.block, 'text')
+const { value: text, original } = useBlockText(() => props.block, 'text')
 const tone = useBlockAttribute(() => props.block, 'tone', 'info')
 const textarea = ref<HTMLTextAreaElement | null>(null)
 useAutoResize(textarea, text)
