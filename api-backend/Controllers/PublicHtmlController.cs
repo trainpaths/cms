@@ -5,6 +5,7 @@ using api_backend.Services.Pages;
 using api_backend.Services.Rendering;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,7 +26,7 @@ namespace api_backend.Controllers;
 [AllowAnonymous]
 [EnableRateLimiting(RateLimitPolicies.Pages)]
 [ApiExplorerSettings(IgnoreApi = true)]
-public class PublicHtmlController(AppDbContext db, RenderStatus status, CmsConfig cms) : ControllerBase
+public class PublicHtmlController(AppDbContext db, RenderStatus status, CmsConfig cms) : ControllerBase, IActionFilter
 {
 	public const string SpaShell = "/index.html";
 	public const string PublicShell = "/public.html";
@@ -53,7 +54,6 @@ public class PublicHtmlController(AppDbContext db, RenderStatus status, CmsConfi
 	public async Task<IActionResult> BySlug(string slug, CancellationToken ct)
 	{
 		slug = slug.ToLowerInvariant();
-		Vary();
 		if (Lang.IsPrefix(slug))
 			return await ServeAsync("home", slug, ct);
 		if (Lang.IsLocalized && slug == Lang.DefaultCode)
@@ -81,7 +81,6 @@ public class PublicHtmlController(AppDbContext db, RenderStatus status, CmsConfi
 	{
 		lang = lang.ToLowerInvariant();
 		slug = slug.ToLowerInvariant();
-		Vary();
 		if (Lang.IsLocalized && lang == Lang.DefaultCode)
 			return Permanent($"/{slug}");
 		if (!Lang.IsPrefix(lang))
@@ -100,7 +99,6 @@ public class PublicHtmlController(AppDbContext db, RenderStatus status, CmsConfi
 	public IActionResult PrefixedAccount(string lang, string name)
 	{
 		lang = lang.ToLowerInvariant();
-		Vary();
 		var path = $"user/{name.ToLowerInvariant()}";
 		if (Lang.IsLocalized && lang == Lang.DefaultCode)
 			return Permanent($"/{path}");
@@ -113,17 +111,23 @@ public class PublicHtmlController(AppDbContext db, RenderStatus status, CmsConfi
 	/// </summary>
 	private IActionResult? RememberedLanguage(string path)
 	{
-		Vary();
 		if (!Lang.IsLocalized || Request.Cookies[LangCookie] is not { } code || !Lang.IsPrefix(code))
 			return null;
 		return Redirect((path.Length == 0 ? $"/{code}" : $"/{code}/{path}") + Request.QueryString);
 	}
 
-	// stored HTML is no-cache already; this keeps shared caches from serving one language for every cookie
-	private void Vary()
+	// every response (redirects, 404s too): stored HTML is no-cache already; this keeps shared caches from serving one
+	// language for every cookie
+	[NonAction]
+	public void OnActionExecuting(ActionExecutingContext context)
 	{
 		if (Lang.IsLocalized)
 			Response.Headers.Vary = "Cookie";
+	}
+
+	[NonAction]
+	public void OnActionExecuted(ActionExecutedContext context)
+	{
 	}
 
 	private RedirectResult Permanent(string path) => RedirectPermanent(path + Request.QueryString);
