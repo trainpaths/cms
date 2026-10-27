@@ -51,6 +51,11 @@ export type Block = {
             [key: string]: unknown;
         };
     } | null;
+    translationSources?: {
+        [key: string]: {
+            [key: string]: string;
+        };
+    } | null;
     innerBlocks: Array<Block>;
 };
 
@@ -229,10 +234,17 @@ export type PageSummary = {
     locked: boolean;
 };
 
+export type PageTextSources = {
+    title: string;
+    metaTitle: string;
+    metaDescription: string;
+};
+
 export type PageTextTranslation = {
     title: string;
     metaTitle: string;
     metaDescription: string;
+    sources?: PageTextSources | null;
 };
 
 export type ProblemDetails = {

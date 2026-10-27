@@ -2517,6 +2517,16 @@
             },
             "nullable": true
           },
+          "translationSources": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "nullable": true
+          },
           "innerBlocks": {
             "type": "array",
             "items": {
@@ -3229,6 +3239,26 @@
         },
         "additionalProperties": false
       },
+      "PageTextSources": {
+        "required": [
+          "metaDescription",
+          "metaTitle",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "metaTitle": {
+            "type": "string"
+          },
+          "metaDescription": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "PageTextTranslation": {
         "required": [
           "metaDescription",
@@ -3245,6 +3275,14 @@
           },
           "metaDescription": {
             "type": "string"
+          },
+          "sources": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PageTextSources"
+              }
+            ],
+            "nullable": true
           }
         },
         "additionalProperties": false

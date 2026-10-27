@@ -9,6 +9,8 @@ namespace api_backend.Models.Pages;
 /// <see cref="Name"/> is opaque and <see cref="Attributes"/> only holds primitive values.
 /// <see cref="Translations"/>: attribute values per language code (<c>{ "de": { "text": "Hallo" } }</c>) overlaying
 /// <see cref="Attributes"/> (the default language) on public reads; null = none (omitted from JSON).
+/// <see cref="TranslationSources"/>: same shape, an editor hash of the default text each translation was made from
+/// (opaque here; the editor flags a translation outdated when the default text changed). Never public.
 /// </summary>
 public class Block
 {
@@ -18,6 +20,9 @@ public class Block
 
 	[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 	public Dictionary<string, Dictionary<string, JsonElement>>? Translations { get; set; }
+
+	[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+	public Dictionary<string, Dictionary<string, string>>? TranslationSources { get; set; }
 
 	public List<Block> InnerBlocks { get; set; } = new();
 }
