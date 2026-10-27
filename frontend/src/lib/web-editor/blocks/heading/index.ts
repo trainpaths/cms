@@ -8,7 +8,7 @@ import HeadingSettings from './HeadingSettings.vue'
 export default defineBlock(meta, {
 	icon: HeadingIcon,
 	attributes: {
-		text: { type: 'string', default: '' },
+		text: { type: 'string', default: '', translatable: true },
 		level: { type: 'number', default: 2 },
 		blockWidth: { type: 'string', default: 'default' },
 		backgroundColor: { type: 'string', default: '' },

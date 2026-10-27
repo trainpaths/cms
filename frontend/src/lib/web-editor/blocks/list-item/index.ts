@@ -7,7 +7,7 @@ import ListItemIcon from './ListItemIcon.vue'
 export default defineBlock(meta, {
 	icon: ListItemIcon,
 	attributes: {
-		text: { type: 'string', default: '' },
+		text: { type: 'string', default: '', translatable: true },
 	},
 	edit: ListItemEdit,
 })

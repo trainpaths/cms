@@ -11,6 +11,10 @@ import { useTagsStore } from '../../../stores/tags'
 import { usePublishState } from '../composables/usePublishState'
 import { pageExportFileName, toPageExport } from '../../pageExport'
 import { saveJson } from '../../download'
+import { usePageText } from '../composables/usePageText'
+import { useMissingTranslations } from '../composables/useMissingTranslations'
+import { DEFAULT_LANGUAGE, IS_LOCALIZED, LANGUAGES, languageLabel } from '../../../i18n/languages'
+import { localePath } from '../../../public/locale'
 
 const store = useEditorStore()
 const { t } = useI18n()
@@ -22,10 +26,26 @@ onMounted(() => {
 	siteConfig.load()
 })
 
+// in the editor's language (translations: the default's value as placeholder, used while empty)
+const title = usePageText('title')
+const metaTitle = usePageText('metaTitle')
+const metaDescription = usePageText('metaDescription')
+const missing = useMissingTranslations()
+const translationRows = computed(() =>
+	LANGUAGES.filter(({ code }) => code !== DEFAULT_LANGUAGE.code).map(({ code }) => ({
+		code,
+		name: languageLabel(code),
+		missing: missing.value[code]!.length,
+	})),
+)
+
 // what the public page's browser tab will show (firm name from the site config)
 const tabTitle = computed(() =>
 	documentTitle(
-		{ title: store.pageTitle, metaTitle: store.pageMetaTitle },
+		{
+			title: title.value.value || title.original.value,
+			metaTitle: metaTitle.value.value || metaTitle.original.value,
+		},
 		siteConfig.config,
 		t('site.notFound.title'),
 	),
@@ -45,6 +65,7 @@ function downloadJson() {
 			slug: store.pageSlug,
 			metaTitle: store.pageMetaTitle,
 			metaDescription: store.pageMetaDescription,
+			translations: store.pageTranslations,
 			tags: store.pageTags,
 			blocks: store.blocks,
 		}),
@@ -69,7 +90,8 @@ async function commitSlug() {
 			<label class="field-label mb-12 sm:hidden">
 				{{ $t('editor.page.title') }}
 				<input
-					v-model="store.pageTitle"
+					v-model="title.value.value"
+					:placeholder="title.original.value"
 					data-testid="page-title-mobile"
 					class="input-field mt-4"
 					@blur="store.pageTitle.trim() && store.savePage()"
@@ -99,7 +121,7 @@ async function commitSlug() {
 					scope="global"
 				>
 					<template #path>
-						<span class="font-mono">/{{ store.pageSlug }}</span>
+						<span class="font-mono">{{ localePath(`/${store.pageSlug}`, store.editLang) }}</span>
 					</template>
 				</I18nT>
 			</p>
@@ -108,7 +130,8 @@ async function commitSlug() {
 			<label class="field-label">
 				{{ $t('editor.page.metaTitle') }}
 				<input
-					v-model="store.pageMetaTitle"
+					v-model="metaTitle.value.value"
+					:placeholder="metaTitle.original.value"
 					:maxlength="META_TITLE_MAX"
 					data-testid="page-meta-title"
 					class="input-field mt-4"
@@ -123,12 +146,13 @@ async function commitSlug() {
 					:title="tabTitle"
 					>{{ $t('editor.page.tab', { title: tabTitle }) }}</span
 				>
-				<span class="shrink-0">{{ store.pageMetaTitle.length }}/{{ META_TITLE_MAX }}</span>
+				<span class="shrink-0">{{ metaTitle.value.value.length }}/{{ META_TITLE_MAX }}</span>
 			</p>
 			<label class="field-label">
 				{{ $t('editor.page.metaDescription') }}
 				<textarea
-					v-model="store.pageMetaDescription"
+					v-model="metaDescription.value.value"
+					:placeholder="metaDescription.original.value"
 					:maxlength="META_DESCRIPTION_MAX"
 					rows="3"
 					data-testid="page-meta-description"
@@ -138,8 +162,45 @@ async function commitSlug() {
 			</label>
 			<p class="mt-4 mb-0 flex justify-between gap-8 text-xs text-gray-400">
 				<span>{{ $t('editor.page.metaDescriptionHint') }}</span>
-				<span class="shrink-0">{{ store.pageMetaDescription.length }}/{{ META_DESCRIPTION_MAX }}</span>
+				<span class="shrink-0">{{ metaDescription.value.value.length }}/{{ META_DESCRIPTION_MAX }}</span>
 			</p>
+		</SettingsSection>
+		<SettingsSection
+			v-if="IS_LOCALIZED"
+			:title="$t('editor.translations.section')"
+		>
+			<ul class="m-0 flex list-none flex-col gap-4 p-0">
+				<li
+					v-for="row in translationRows"
+					:key="row.code"
+				>
+					<button
+						class="flex w-full cursor-pointer items-center justify-between gap-8 rounded border px-8 py-4 text-left text-sm"
+						:class="
+							store.editLang === row.code
+								? 'border-primary bg-primary/10 text-primary'
+								: 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+						"
+						:data-testid="`translation-${row.code}`"
+						@click="store.editLang = row.code"
+					>
+						<span>{{ row.name }}</span>
+						<span
+							class="text-xs"
+							:class="row.missing ? 'text-amber-700' : 'text-green-700'"
+							>{{ row.missing ? $t('editor.translations.missing', row.missing) : $t('editor.translations.complete') }}</span
+						>
+					</button>
+				</li>
+			</ul>
+			<button
+				v-if="store.editLang !== DEFAULT_LANGUAGE.code"
+				class="mt-8 cursor-pointer border-none bg-transparent p-0 text-xs text-gray-500 underline hover:text-gray-800"
+				@click="store.editLang = DEFAULT_LANGUAGE.code"
+			>
+				{{ $t('editor.translations.backToDefault', { language: languageLabel(DEFAULT_LANGUAGE.code) }) }}
+			</button>
+			<p class="mt-8 mb-0 text-xs text-gray-400">{{ $t('editor.translations.hint') }}</p>
 		</SettingsSection>
 		<SettingsSection :title="$t('admin.pages.tags')">
 			<TagInput

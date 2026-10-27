@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import type { BlockInstance } from '../../core/types'
 import { useEditorStore } from '../../../../stores/editor'
 import { useSelection } from '../../composables/useSelection'
+import { useAttributeFallback, useBlockAttribute } from '../../composables/useBlockAttribute'
 
 const props = defineProps<{ block: BlockInstance }>()
 const store = useEditorStore()
@@ -10,10 +11,8 @@ const { isSelected } = useSelection()
 
 const selected = computed(() => isSelected(props.block.id))
 
-const text = computed({
-	get: () => (props.block.attributes.text as string) || '',
-	set: (value: string) => store.updateBlockAttributes(props.block.id, { text: value }),
-})
+const text = useBlockAttribute(() => props.block, 'text', '')
+const original = useAttributeFallback(() => props.block, 'text')
 
 const context = computed(() => store.getBlockContext(props.block.id))
 const parentBlock = computed(() => {
@@ -33,14 +32,14 @@ const marker = computed(() => (isOrdered.value ? `${itemIndex.value}.` : '\u2022
 			class="mt-2 flex-1 rounded border border-transparent px-8 py-4 text-gray-700"
 			:class="{ 'text-gray-400 italic': !text }"
 		>
-			{{ text || $t('editor.listItem.empty') }}
+			{{ text || original || $t('editor.listItem.empty') }}
 		</span>
 		<input
 			v-else
 			v-model="text"
 			type="text"
 			class="input-field flex-1"
-			:placeholder="$t('editor.listItem.placeholder')"
+			:placeholder="original || $t('editor.listItem.placeholder')"
 		/>
 	</div>
 </template>

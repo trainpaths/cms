@@ -1,7 +1,7 @@
 // Block authoring, edit side: an instance's src/blocks/<name>/index.ts, *Edit.vue, *Settings.vue.
 // Pulls in editor code: block views, templates and overrides import from `@trainpaths/cms/site` instead.
 export { defineBlock } from './lib/web-editor/core/defineBlock'
-export { useBlockAttribute } from './lib/web-editor/composables/useBlockAttribute'
+export { useBlockAttribute, useAttributeFallback } from './lib/web-editor/composables/useBlockAttribute'
 export { useAutoResize } from './lib/web-editor/composables/useAutoResize'
 export { useSelection } from './lib/web-editor/composables/useSelection'
 export { default as InlineToolbar } from './lib/web-editor/editor/InlineToolbar.vue'

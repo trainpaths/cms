@@ -4,6 +4,10 @@ import { RouterLink } from 'vue-router'
 import { Icon } from '@trainpaths/nb-ui'
 import { useEditorStore } from '../../../stores/editor'
 import { usePublishState } from '../composables/usePublishState'
+import { usePageText } from '../composables/usePageText'
+import EditLanguageSelect from './EditLanguageSelect.vue'
+import { DEFAULT_LANGUAGE } from '../../../i18n/languages'
+import { localePath } from '../../../public/locale'
 
 const props = defineProps<{
 	publicBase: string
@@ -17,10 +21,17 @@ const emit = defineEmits<{
 const store = useEditorStore()
 const { published: isPublished, canPublish, publishLabel, publishHint, publish, unpublish } = usePublishState()
 
-const viewHref = computed(() =>
-	isPublished.value ? `${props.publicBase}/${store.pageSlug}` : (props.previewPath ?? ''),
-)
+// in the language being edited
+const viewHref = computed(() => {
+	const translating = store.editLang !== DEFAULT_LANGUAGE.code
+	if (isPublished.value) return `${props.publicBase}${localePath(`/${store.pageSlug}`, store.editLang)}`
+	if (!props.previewPath) return ''
+	return translating ? `${props.previewPath}?lang=${store.editLang}` : props.previewPath
+})
 
+const { value: title, original: originalTitle } = usePageText('title')
+
+// the default title is required; a translation may be empty (= untranslated)
 function handleTitleBlur() {
 	if (store.pageTitle.trim()) {
 		store.savePage()
@@ -54,7 +65,8 @@ function handleTitleBlur() {
 			</button>
 			<!-- < sm: hidden, no room (title + publish live in the Page tab there) -->
 			<input
-				v-model="store.pageTitle"
+				v-model="title"
+				:placeholder="originalTitle"
 				:aria-label="$t('editor.page.title')"
 				data-testid="page-title"
 				class="m-0 min-w-0 flex-1 truncate border-none bg-transparent text-xl font-semibold text-gray-900 outline-hidden focus:ring-1 focus:ring-primary max-sm:hidden"
@@ -62,6 +74,7 @@ function handleTitleBlur() {
 			/>
 		</div>
 		<div class="flex shrink-0 items-center gap-4 md:gap-8">
+			<EditLanguageSelect />
 			<button
 				class="toolbar-btn"
 				:title="$t('editor.header.undo')"

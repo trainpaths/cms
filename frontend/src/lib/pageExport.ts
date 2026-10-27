@@ -1,5 +1,5 @@
 import type { ImportPageRequest } from '../api/types.gen'
-import type { BlockInstance } from './web-editor/core/types'
+import type { BlockInstance, PageTextTranslation } from './web-editor/core/types'
 
 /**
  * Page export file: one page's content as JSON, to keep a copy or move it to another page/site.
@@ -7,13 +7,15 @@ import type { BlockInstance } from './web-editor/core/types'
  * so images resolve on the same site and are reported missing elsewhere.
  */
 export const PAGE_EXPORT_FORMAT = 'cms-page'
-export const PAGE_EXPORT_VERSION = 1
+/** 2: + `translations` (title/meta per language; block translations ride inside `blocks` in both). 1 still imports. */
+export const PAGE_EXPORT_VERSION = 2
 
 export interface PageExportContent {
 	title: string
 	slug: string
 	metaTitle: string
 	metaDescription: string
+	translations: Record<string, PageTextTranslation>
 	tags: string[]
 	blocks: BlockInstance[]
 }
@@ -26,12 +28,12 @@ export interface PageExport {
 }
 
 export function toPageExport(page: PageExportContent, now = new Date()): PageExport {
-	const { title, slug, metaTitle, metaDescription, tags, blocks } = page
+	const { title, slug, metaTitle, metaDescription, translations, tags, blocks } = page
 	return {
 		format: PAGE_EXPORT_FORMAT,
 		version: PAGE_EXPORT_VERSION,
 		exportedAt: now.toISOString(),
-		page: { title, slug, metaTitle, metaDescription, tags: [...tags], blocks },
+		page: { title, slug, metaTitle, metaDescription, translations, tags: [...tags], blocks },
 	}
 }
 
@@ -78,6 +80,10 @@ export function parsePageExport(text: string): ImportPageRequest {
 		metaDescription: optionalString(page.metaDescription),
 		tags,
 		blocks: page.blocks,
+		// v1: none; shape checked by the API
+		...(isObject(page.translations) && {
+			translations: page.translations as Record<string, PageTextTranslation>,
+		}),
 	}
 }
 

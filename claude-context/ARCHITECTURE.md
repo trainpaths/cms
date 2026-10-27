@@ -154,8 +154,12 @@ so autocomplete only offers tags in use. Setting tags doesn't bump `UpdatedAt` (
 
 ## Block contract (frontend ⇄ API ⇄ DB)
 ```json
-{ "id": "nanoid", "name": "card", "attributes": { "title": "Hi", "level": 2, "open": true }, "innerBlocks": [] }
+{ "id": "nanoid", "name": "card", "attributes": { "title": "Hi", "level": 2, "open": true },
+  "translations": { "de": { "title": "Hallo" } }, "innerBlocks": [] }
 ```
+- `translations` (optional, omitted when empty): per language code (`^[a-z]{2,3}$`), primitive values like
+  attributes. Empty languages are dropped on write; codes need not be configured (removing a language from the config
+  and adding it back keeps its text). Public reads never contain it (`PageService.Localize`).
 - The backend does **not** know block types. It validates structure only (`PageService.ValidateBlocks`):
   non-empty `id` (≤64), `name` matches `^[a-z0-9-]+$`, attribute values are string/number/boolean,
   depth ≤ 10, ≤ 2000 blocks. Explicit JSON nulls for `attributes`/`innerBlocks` are normalized to empty.
@@ -163,9 +167,10 @@ so autocomplete only offers tags in use. Setting tags doesn't bump `UpdatedAt` (
 
 ## Draft vs live (save ≠ publish)
 Owners must be able to keep working on a published page without exposing half-done edits, so a page has two copies
-of its **content** (title, meta title, meta description, blocks): the **working copy** (`Title`, `MetaTitle`,
-`MetaDescription`, `Blocks`) that every save writes, and the **published snapshot** (`PublishedTitle`,
-`PublishedMetaTitle`, `PublishedMetaDescription`, `PublishedBlocks`; null title/blocks = never published).
+of its **content** (title, meta title, meta description, blocks, title/meta translations): the **working copy**
+(`Title`, `MetaTitle`, `MetaDescription`, `Blocks`, `Translations`) that every save writes, and the **published
+snapshot** (`PublishedTitle`, `PublishedMetaTitle`, `PublishedMetaDescription`, `PublishedBlocks`,
+`PublishedTranslations`; null title/blocks = never published).
 - Slug and tags have no snapshot: routing/organisation, live right away (a slug change on a published page re-renders).
 - Save (`PUT` with content) never touches the snapshot. Publish (`status: published`, also on an already published page
   = "publish changes") copies working copy → snapshot, sets `PublishedAt`, re-renders. Unpublish (`status: draft`) only
@@ -173,7 +178,8 @@ of its **content** (title, meta title, meta description, blocks): the **working 
 - Everything public reads the snapshot: `PageService.Live` (public page/state endpoints, renderer input), menu labels
   and footer links (`PublishedTitle`), the render worker's title check. The editor and the admin preview read the working copy.
 - `HasUnpublishedChanges` (stored bool, in `PageSummary`/`PageDetail`): published and the working copy differs from the
-  snapshot (block trees compared as JSON); recomputed on every content/status write, so lists don't compare trees.
+  snapshot (block trees compared as JSON, translations per language); recomputed on every content/status write, so
+  lists don't compare trees. A translation-only edit counts.
   Saving the live content back clears it.
 - Page states in the editor: **Unsaved** (client-side dirty), **Draft**, **Published**, **Published · unpublished
   changes**. Publishing always publishes the *saved* state: the controls are disabled while there are unsaved edits.
@@ -323,9 +329,17 @@ remaining phases (one PR each): `claude-context/localization/` (README first).
   page load: stored HTML + head of that language). Rejected: same URL by cookie/`Accept-Language` (crawlers and
   link previews only ever see one language) and client-side text swapping (wrong language flashes, no SEO, hydration
   mismatches). Storage: a few KB per page and language; a full re-render takes N× longer.
-- **Content (planned, Phase 3)**: per-field translations on one shared block tree (`translations: { code: { attr } }`
-  per block, opt-in `translatable` attributes, page title/meta per language), resolved by the API for public reads;
-  layout, images and colours stay shared. Phase 4: DeepL pre-fill of missing fields (`DEEPL_API_KEY`).
+- **Content** (Phase 3): per-field translations on one shared block tree (`translations: { code: { attr } }` per
+  block, opt-in `translatable` attributes, page title/meta per language in `pages.Translations` jsonb, published with
+  the rest), resolved by the API for public reads (`PageService.Localize`: overlay of non-empty values, else the default;
+  `translations` stripped). Layout, images and colours stay shared; add/move/delete of blocks affects every language.
+  Menus and footer links show the translated live title (`PageService.LiveTitle`; `PublicCache` keyed per language; a
+  translated title change re-renders other pages like a rename). Editor: `store.editLang` (header select + Page tab
+  "Translations" with untranslated counts); `useBlockAttribute` reads/writes the edited language for translatable
+  attributes, `usePageText` for title/meta; the admin preview localizes the working copy client-side
+  (`core/localize.ts`, mirror of `Localize`). Page title/meta translations are not in the undo history (like the title).
+  Rejected: a block tree per language (layouts drift apart, every image change done N times).
+  Phase 4: DeepL pre-fill of missing fields (`DEEPL_API_KEY`).
 - nb-ui has no message hook: its built-in texts are English (`UnsavedChangesDialog` → our `components/UnsavedDialog.vue`;
   aria-labels like "Close" stay English) and its `Popover` touches `document` in setup, so `LanguageDropdown` server-renders
   only its trigger.
@@ -342,7 +356,7 @@ remaining phases (one PR each): `claude-context/localization/` (README first).
 - Undo/redo: snapshot history (max 50); every mutation pushes a snapshot.
 - Autosave after 4 changes; saves are **serialized** (a save requested mid-flight re-runs after) so an
   older snapshot can't overwrite a newer one. Leaving the editor flushes pending changes. Saves only write the working
-  copy (Draft vs live). Dirty tracking: `isDirty` = the content (title, meta, blocks) differs from the last saved JSON
+  copy (Draft vs live). Dirty tracking: `isDirty` = the content (title, meta, translations, blocks) differs from the last saved JSON
   (undo back to it = clean); Save is disabled when clean and `savePage` skips clean pages. `publish()`/`unpublish()`
   send `{status}` alone, after any save in flight; the rules for the buttons (header + Page tab) live in one composable
   (`lib/web-editor/composables/usePublishState.ts`).

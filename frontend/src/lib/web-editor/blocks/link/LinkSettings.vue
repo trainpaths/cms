@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import SettingsSection from '../../editor/SettingsSection.vue'
 import type { BlockInstance } from '../../core/types'
-import { useBlockAttribute } from '../../composables/useBlockAttribute'
+import { useAttributeFallback, useBlockAttribute } from '../../composables/useBlockAttribute'
 
 const props = defineProps<{ block: BlockInstance }>()
 
 const url = useBlockAttribute(() => props.block, 'url', '')
+const originalUrl = useAttributeFallback(() => props.block, 'url')
 </script>
 
 <template>
@@ -16,7 +17,7 @@ const url = useBlockAttribute(() => props.block, 'url', '')
 				v-model="url"
 				type="url"
 				class="input-field"
-				placeholder="https://..."
+				:placeholder="originalUrl || 'https://...'"
 			/>
 		</label>
 	</SettingsSection>

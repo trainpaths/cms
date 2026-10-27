@@ -57,6 +57,11 @@ Phase 2 (API): `rendered_pages` keyed `(PageId, Lang)`, `RenderState.Lang`, `Ren
 `PublicHtmlController` prefixed routes + `cms_lang` redirect + `Vary: Cookie`, `?lang=` on `/api/public/pages/{slug}` and
 `/api/public/state` (`PageService.GetPublishedBySlugAsync(slug, lang)` ignores it until Phase 3), `CmsSiteLang.Codes /
 DefaultCode / IsPrefix / Resolve`, language codes reserved as slugs.
+Phase 3: `Block.translations` + `Page.Translations/PublishedTranslations`, `PageService.Localize` / `LiveTitle`,
+`GetPublishedByIdsAsync(ids, codes)`, `PublicCache` per code, `?lang=` on public menus/site-config; frontend
+`translatable` attributes, `store.editLang` / `pageTranslations` / `updateBlockTranslation` / `setPageText`,
+`useBlockAttribute` per language + `useAttributeFallback`, `usePageText`, `core/translatable.ts` (`textFields`: the
+list Phase 4 sends to DeepL), `core/localize.ts`, `EditLanguageSelect.vue`, page export v2.
 API (`api-backend/`): `Services/Cms/CmsConfig.cs` `CmsSiteLang { Default, Localization, Tags, IsLocalized, CodeOf(tag) }`
 (read from a string or the object by `CmsSiteLangConverter`), `CmsConfigLoader.ValidateLang` (tags, unique codes, no
 code equal to a `PageService.ReservedSlugs` entry or a configured page slug). The API doesn't use the languages for

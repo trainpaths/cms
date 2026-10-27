@@ -407,6 +407,16 @@
 			"tags": "Impossibile salvare i tag",
 			"publish": "Impossibile pubblicare la pagina",
 			"unpublish": "Impossibile ritirare la pubblicazione della pagina"
+		},
+		"translations": {
+			"editLanguage": "Lingua di modifica",
+			"previewLanguage": "Lingua dell’anteprima",
+			"section": "Traduzioni",
+			"missing": "{n} non tradotto | {n} non tradotti",
+			"complete": "Completo",
+			"backToDefault": "Torna a {language}",
+			"hint": "I testi (titolo, metadati e testi dei blocchi) si traducono per lingua; i campi vuoti mostrano la lingua predefinita.",
+			"canvasHint": "Stai modificando {language}: layout, immagini e colori valgono per tutte le lingue."
 		}
 	},
 	"blocks": {

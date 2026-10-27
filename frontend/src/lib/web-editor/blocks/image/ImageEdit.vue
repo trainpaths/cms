@@ -4,7 +4,7 @@ import InlineToolbar from '../../editor/InlineToolbar.vue'
 import MediaActions from '../../media/MediaActions.vue'
 import type { BlockInstance } from '../../core/types'
 import { useSelection } from '../../composables/useSelection'
-import { useBlockAttribute } from '../../composables/useBlockAttribute'
+import { useAttributeFallback, useBlockAttribute } from '../../composables/useBlockAttribute'
 import { useMediaImage } from '../../media/useMediaImage'
 import { assignMedia } from '../../media/assignMedia'
 import { useImageWidth } from './width'
@@ -16,6 +16,7 @@ const selected = computed(() => isSelected(props.block.id))
 
 const { src, alt, missing } = useMediaImage(() => props.block)
 const caption = useBlockAttribute(() => props.block, 'caption', '')
+const originalCaption = useAttributeFallback(() => props.block, 'caption')
 const width = useImageWidth(() => props.block)
 
 const imgError = ref(false)
@@ -82,7 +83,7 @@ function choose(mediaId: string) {
 				v-model="caption"
 				type="text"
 				class="mt-8 w-full border-none bg-transparent p-0 text-center text-sm text-gray-500 outline-hidden placeholder:italic placeholder:text-gray-400 focus:ring-0"
-				:placeholder="$t('editor.image.caption')"
+				:placeholder="originalCaption || $t('editor.image.caption')"
 			/>
 		</figure>
 	</div>

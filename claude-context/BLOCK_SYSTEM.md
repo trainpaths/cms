@@ -19,9 +19,13 @@ interface BlockInstance {
 	id: string
 	name: string                                            // registered BlockType.name
 	attributes: Record<string, unknown>                     // string/number/boolean only (API validates)
+	translations?: Record<code, Record<string, unknown>>    // localized sites: { de: { text: 'Hallo' } }
 	innerBlocks: BlockInstance[]                            // always an array
 }
 ```
+**Translations** (localized sites): one shared tree; attributes marked `translatable: true` in the block type get a
+value per language in `translations[code]` (`attributes` = the default language's). Missing or empty → the default's.
+The API resolves them for public reads (`PageService.Localize`), so views only ever see plain `attributes`.
 
 **Attributes vs inner blocks:** attributes are simple values that belong to the block (a card's `title`);
 inner blocks are structured, repeatable children with their own editing (a card's links).
@@ -62,8 +66,10 @@ inner blocks are structured, repeatable children with their own editing (a card'
 ## Adding a block type (checklist)
 1. `blocks/<name>/block.json` — name, title, category, description, supports (+ `parent` for child-only blocks).
 2. `blocks/<name>/<Name>Edit.vue` — props `{ block: BlockInstance }`; bind attributes with
-   `useBlockAttribute(() => props.block, 'key', fallback)` (writes go through `store.updateBlockAttributes`;
-   never mutate directly — history/autosave depend on it). Multi-line text: `<textarea>` + `useAutoResize`. Inline toolbar controls go in `<InlineToolbar :show="selected" :block-id="block.id">`.
+   `useBlockAttribute(() => props.block, 'key', fallback)` (writes go through `store.updateBlockAttributes`, or
+   `updateBlockTranslation` for a translatable attribute while another language is edited;
+   never mutate directly — history/autosave depend on it). Translatable text inputs: placeholder
+   `useAttributeFallback(() => props.block, 'key').value || <normal placeholder>` (shows the default's text). Multi-line text: `<textarea>` + `useAutoResize`. Inline toolbar controls go in `<InlineToolbar :show="selected" :block-id="block.id">`.
    Containers render `<BlockList :blocks="block.innerBlocks" :parent-id="block.id" />`.
 3. `blocks/<name>/<Name>View.vue` — read-only render; containers use `<ViewBlockList :blocks="block.innerBlocks" />`.
    Pad the root yourself (wrappers don't), with the same padding class as the Edit root.
@@ -76,6 +82,7 @@ inner blocks are structured, repeatable children with their own editing (a card'
 6. Child-only blocks (like `list-item`): `"parent": ["list"]` in `block.json` hides them from the sidebar and
    blocks drops outside those parents.
 7. Attribute values must stay string/number/boolean — the API rejects anything else.
+7a. Text the visitor reads (not media ids, layout, colours): `translatable: true` in its attribute definition.
 7b. Images: store the media id in the `mediaId` attribute (the only attribute the API resolves into the
    page's `media[]`; one image per block). Use `media/useMediaImage` (src + alt from the media store, alt → `"image"`),
    `media/MediaActions` (Upload / Choose existing) in the block and `media/MediaField` in the settings

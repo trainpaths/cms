@@ -8,8 +8,8 @@ import CardSettings from './CardSettings.vue'
 export default defineBlock(meta, {
 	icon: CardIcon,
 	attributes: {
-		title: { type: 'string', default: '' },
-		description: { type: 'string', default: '' },
+		title: { type: 'string', default: '', translatable: true },
+		description: { type: 'string', default: '', translatable: true },
 		mediaId: { type: 'string', default: '' },
 		blockWidth: { type: 'string', default: 'default' },
 		backgroundColor: { type: 'string', default: '' },

@@ -4,25 +4,18 @@ import { useI18n } from 'vue-i18n'
 import InlineToolbar from '../../editor/InlineToolbar.vue'
 import ToolbarDropdown from '../../editor/ToolbarDropdown.vue'
 import type { BlockInstance } from '../../core/types'
-import { useEditorStore } from '../../../../stores/editor'
 import { useSelection } from '../../composables/useSelection'
+import { useAttributeFallback, useBlockAttribute } from '../../composables/useBlockAttribute'
 
 const props = defineProps<{ block: BlockInstance }>()
-const store = useEditorStore()
 const { t } = useI18n()
 const { isSelected } = useSelection()
 
 const selected = computed(() => isSelected(props.block.id))
 
-const text = computed({
-	get: () => props.block.attributes.text as string,
-	set: (value: string) => store.updateBlockAttributes(props.block.id, { text: value }),
-})
-
-const level = computed({
-	get: () => (props.block.attributes.level as number) || 2,
-	set: (value: number) => store.updateBlockAttributes(props.block.id, { level: value }),
-})
+const text = useBlockAttribute(() => props.block, 'text', '')
+const original = useAttributeFallback(() => props.block, 'text')
+const level = useBlockAttribute(() => props.block, 'level', 2)
 
 const levelOptions = computed(() => [1, 2, 3, 4, 5, 6].map((n) => ({ value: n, label: t('editor.heading.level', { n }) })))
 
@@ -57,7 +50,7 @@ const colorClass = computed(() => (props.block.attributes.textColor ? '' : 'text
 			type="text"
 			class="m-0 w-full border-none bg-transparent p-0 font-bold outline-hidden placeholder:font-normal placeholder:italic placeholder:text-gray-400 focus:ring-0"
 			:class="[headingSizes[level], colorClass]"
-			:placeholder="$t('editor.heading.placeholder')"
+			:placeholder="original || $t('editor.heading.placeholder')"
 		/>
 	</div>
 </template>

@@ -3,7 +3,14 @@ import type { Component } from 'vue'
 export interface AttributeDefinition {
 	type: 'string' | 'number' | 'boolean'
 	default: string | number | boolean
+	/**
+	 * Text that differs per language (a value per language in `BlockInstance.translations`, the default language's in
+	 * `attributes`). Everything else (media, layout, colours) is shared by all languages.
+	 */
+	translatable?: boolean
 }
+
+export type TranslationValue = string | number | boolean
 
 export interface BlockSupports {
 	width?: boolean
@@ -35,6 +42,8 @@ export interface BlockInstance {
 	id: string
 	name: string
 	attributes: Record<string, unknown>
+	/** Translatable attribute values per language code: `{ de: { text: 'Hallo' } }` (missing = default's). */
+	translations?: Record<string, Record<string, unknown>> | null
 	innerBlocks: BlockInstance[]
 }
 
@@ -51,6 +60,7 @@ export type {
 	PageSummary,
 	PageDetail,
 	PublicPage,
+	PageTextTranslation,
 	MediaRef,
 	MediaItem,
 	ConfigAddress,

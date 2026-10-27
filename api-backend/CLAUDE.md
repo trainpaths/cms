@@ -67,11 +67,17 @@ TagsController         /api/tags             [Authorize(StaffOnly)], rate limit 
   working copy; `PublishedTitle`/`PublishedMetaTitle`/`PublishedMetaDescription`/`PublishedBlocks` = live snapshot (null
   title/blocks = never published; slug + tags are live). Public readers go through `PageService.Live` (projection, never
   loads the working tree), menus/footer/render worker use `PublishedTitle`; `GetAsync` (editor) projects without
-  `PublishedBlocks`. `HasUnpublishedChanges` (stored) = published && working ≠ snapshot (`MatchesSnapshot`: block JSON),
+  `PublishedBlocks`. Translations: `Translations`/`PublishedTranslations` (jsonb `{code: PageTextTranslation(title,
+  metaTitle, metaDescription)}`, empty = untranslated, normalized by `NormalizeTranslations`: code `^[a-z]{2,3}$`,
+  trimmed, field limits, empty entries dropped) + per-block `Block.Translations` (see Block validation); public reads go
+  through `PageService.Localize(live, code, defaultCode)` (overlay + fallback, strips `translations`) and
+  `LiveTitle` (menus, footer links); `GetPublishedByIdsAsync(ids, codes)` returns every language from one query.
+  `HasUnpublishedChanges` (stored) = published && working ≠ snapshot (`MatchesSnapshot`: block JSON + translations),
   recomputed when content or status is written. Tests that publish via the DB must set `PublishedTitle`/`PublishedBlocks`.
 - `Models/Pages/Page.cs` (entity, `PageStatus` Draft|Published stored as string, `BlockCount` = `PageService.CountBlocks`
   of `Blocks`, set on every blocks write + by the seeder, so `GET /api/pages` never reads `Blocks`), `Models/Pages/Block.cs`
-  (recursive: `Id`, `Name`, `Dictionary<string, JsonElement> Attributes`, `List<Block> InnerBlocks`).
+  (recursive: `Id`, `Name`, `Dictionary<string, JsonElement> Attributes`, `Translations?` (code → attributes, omitted
+  when null), `List<Block> InnerBlocks`).
 - `Services/Pages/PageService.cs` returns `PageResult<T>` (`PageError`: NotFound | SlugTaken | Invalid);
   the controller maps errors to ProblemDetails. Status is exposed as lowercase `"draft"|"published"`.
 - Slugs: kebab-case, ≤100, generated from title when omitted (dedup `-2`, `-3`), `ReservedSlugs` rejected
@@ -80,6 +86,7 @@ TagsController         /api/tags             [Authorize(StaffOnly)], rate limit 
   Localized site: the language codes too (`SlugError`; generated ones get `-page`; `PageSeeder` warns about existing
   pages whose slug became a code).
 - Block validation (`ValidateBlocks`): id non-empty ≤64, name `^[a-z0-9-]+$`, attributes primitive only,
+  translations: codes `^[a-z]{2,3}$`, values primitive, empty languages dropped (none left → null; unknown codes kept),
   depth ≤10, ≤2000 blocks; null attributes/innerBlocks normalized to empty. No knowledge of block types.
 - `AppDbContext` maps `Blocks` via a System.Text.Json value converter (camelCase) + ValueComparer, column type `jsonb`.
 - `Services/Pages/PageSeeder.cs`: on startup (after `StaffBootstrapper`) seeds the config's pages, published: **all**
@@ -90,7 +97,7 @@ TagsController         /api/tags             [Authorize(StaffOnly)], rate limit 
   `attributes` (`blocks/*/index.ts`).
 - Render triggers of `PUT` (`PageUpdate(Summary, StatusChanged, LiveChanged, LiveRenamed)`): status changed →
   `Page(id)` + `Refresh()`; else live changed (publish changes, slug of a published page) → `Page(id)` (+ `Refresh()` when
-  the live title/slug changed); saves of the working copy and tags → nothing.
+  the live title in any language or the slug changed); saves of the working copy and tags → nothing.
 - Import (`PageService.ImportAsync`, page export files of `frontend/src/lib/pageExport.ts`): same validation as create +
   meta + tags (validated before anything is written); slug = the given one (or the title) through `UniqueSlugFromAsync`,
   so taken/reserved/invalid slugs get a free variant instead of 409. Shares `CreateDraftAsync` with `DuplicateAsync`. `missingMediaIds` = `mediaId`s
@@ -134,7 +141,7 @@ MenusController        /api/menus            [Authorize(StaffOnly)], rate limit 
   PUT    /{id}                 UpdateMenuRequest(items) — full replace, 512 KB → MenuDetail | 400 | 404
   DELETE /{id}                 → 204 | 400 (main) | 404
 PublicMenusController  /api/public/menus     [AllowAnonymous], rate limit "pages"
-  GET    /{handle}             → PublicMenu (resolved) | 404
+  GET    /{handle}?lang=       → PublicMenu (resolved, page titles in that language) | 404
 ```
 - `Models/Menus/Menu.cs`: `menus` (unique kebab `Handle` = the only identifier, no separate name; `Items` jsonb via
   the value-converter pattern). The handle is normalized on create (`MenuService.NormalizeHandle`: "Footer Links" →
@@ -175,7 +182,7 @@ PublicHtmlController   /api/public/html      [AllowAnonymous], rate limit "pages
   by `RenderedScreens.Key(code, path)` = `de:user/profile`, render start, version; rendered with every full render, only with public auth), change timestamps → `IsFresh`,
   refresh marker → `NeedsRefresh`: `PublicHtmlController` adds `data-refresh` to `#__STATE__` and an `-r` ETag suffix,
   the public client then refetches the main menu + site config),
-  `PublicCache` (singleton: resolved public menus by handle + `SiteConfigResponse`, generation-checked; invalidated by
+  `PublicCache` (singleton: resolved public menus by (code, handle) + `SiteConfigResponse` per code, generation-checked; invalidated by
   `RenderQueue.Refresh()/All()` and every `MenusController` write; readers: public menu/site-config endpoints, the
   worker, `PublicStateController`; tests writing the DB directly must `Invalidate()`),
   `HttpRendererClient` (`IRendererClient`, typed HttpClient to the Node renderer; `RenderState` mirrors
@@ -226,7 +233,7 @@ SiteConfigController        /api/site-config         [Authorize(StaffOnly)], rat
   GET    /                     → SiteConfigResponse
   PUT    /                     UpdateSiteConfigRequest(fields{}, groups{}, logoMediaId?, iconMediaId?) — full replace → SiteConfigResponse | 400
 PublicSiteConfigController  /api/public/site-config  [AllowAnonymous], rate limit "pages"
-  GET    /                     → SiteConfigResponse (footer, templates, favicon of the public site)
+  GET    /?lang=               → SiteConfigResponse (footer, templates, favicon of the public site; footer link titles in that language)
 ```
 - Stored: `Values` jsonb `SiteConfigValues { Fields: {key: string}, Groups: {key: ConfigEntryValue[]} }` (value
   converter like `Page.Blocks`), `LogoMediaId`/`IconMediaId`/`ShareImageMediaId` (og:image fallback) → `media_assets`
@@ -420,12 +427,13 @@ ConfirmEmailRequest         Token
 ForgotPasswordRequest       Email
 ResetPasswordRequest        Token, NewPassword(min8)
 PageSummary / PageDetail    Id, Title, Slug, Status, Tags, BlockCount | Blocks + Media (working copy), CreatedAt, UpdatedAt,
-                            PublishedAt, HasUnpublishedChanges, Locked (summary) | Template?, Locked, Editable (detail; from the instance config), MetaTitle, MetaDescription
+                            PublishedAt, HasUnpublishedChanges, Locked (summary) | Template?, Locked, Editable (detail; from the instance config), MetaTitle, MetaDescription, Translations
 CreatePageRequest           Title(≤200), Slug?(≤100), Blocks?
-ImportPageRequest           Title, Slug?, Blocks, MetaTitle?, MetaDescription?, Tags?   ImportPageResult  Page, MissingMediaIds
-UpdatePageRequest           Title?, Slug?, Blocks?, MetaTitle?(≤70), MetaDescription?(≤200), Status?, Tags?(≤20)   (partial)
+ImportPageRequest           Title, Slug?, Blocks, MetaTitle?, MetaDescription?, Tags?, Translations?   ImportPageResult  Page, MissingMediaIds
+UpdatePageRequest           Title?, Slug?, Blocks?, MetaTitle?(≤70), MetaDescription?(≤200), Status?, Tags?(≤20), Translations? (full replace)   (partial)
+PageTextTranslation         Title, MetaTitle, MetaDescription   ("" = untranslated)
 PublicStateResponse         Page?, Menu?, Config
-PublicPage                  Title, Slug, Blocks, Media, PublishedAt, Template?, MetaTitle, MetaDescription (live snapshot)
+PublicPage                  Title, Slug, Blocks, Media, PublishedAt, Template?, MetaTitle, MetaDescription (live snapshot, localized, no translations)
 InstanceConfig              PublicAuth, ExcludedBlocks, SiteConfig (SiteConfigSchema: fields[], groups[])
 TagUsage                    Name, PageCount
 MenuDetail                  Id, Handle, Items, CreatedAt, UpdatedAt

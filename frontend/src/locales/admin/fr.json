@@ -407,6 +407,16 @@
 			"tags": "Impossible d’enregistrer les tags",
 			"publish": "Impossible de publier la page",
 			"unpublish": "Impossible de dépublier la page"
+		},
+		"translations": {
+			"editLanguage": "Langue de modification",
+			"previewLanguage": "Langue de l’aperçu",
+			"section": "Traductions",
+			"missing": "{n} non traduit | {n} non traduits",
+			"complete": "Complet",
+			"backToDefault": "Revenir à {language}",
+			"hint": "Les textes (titre, métadonnées et textes des blocs) sont traduits par langue ; les champs vides affichent la langue par défaut.",
+			"canvasHint": "Modification en {language} : la mise en page, les images et les couleurs s’appliquent à toutes les langues."
 		}
 	},
 	"blocks": {
