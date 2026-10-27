@@ -1,4 +1,16 @@
-import { setHtmlLang } from './site-lang.js'
+// self-contained: renderer images copy only this file + render-server.js (Dockerfile, instance Dockerfiles)
+
+/**
+ * Sets `lang` on the `<html>` tag, replacing the template's own (any quoting).
+ * @param {string} html
+ * @param {string} lang validated tag (letters, digits, hyphens: no escaping needed)
+ */
+export const setHtmlLang = (html, lang) =>
+	html.replace(
+		/<html\b([^>]*)>/i,
+		(_, /** @type {string} */ attrs) =>
+			`<html${attrs.replace(/\slang=("[^"]*"|'[^']*'|[^\s>]*)/i, '')} lang="${lang}">`,
+	)
 
 /**
  * Fills the `public.html` placeholders and sets `<html lang>` to the render's language (the template carries the

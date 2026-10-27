@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import templateSource from '../../server/template.js?raw'
 import { render } from './entry-server'
 import { description, documentTitle } from './head'
 import type { PublicState } from './state'
@@ -208,6 +209,10 @@ describe('description', () => {
 })
 
 describe('splice', () => {
+	it('template.js imports nothing (renderer images copy only it + render-server.js)', () => {
+		expect(templateSource).not.toMatch(/^\s*(import|export .* from)\b/m)
+	})
+
 	it('keeps $ patterns in content literally', () => {
 		const out = splice('<!--app-head--><!--app-html--><!--app-state-->', { head: '$&', html: "$'", state: '$1', tag: 'en' })
 		expect(out).toBe("$&$'$1")
