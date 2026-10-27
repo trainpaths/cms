@@ -3,6 +3,7 @@ using api_backend.Models.Dto;
 using api_backend.Models.Pages;
 using api_backend.Models.Site;
 using api_backend.Services.Cms;
+using api_backend.Services.Pages;
 using api_backend.Services.Media;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,7 +22,8 @@ public record SiteConfigResult(SiteConfigResponse? Value, string? Error = null)
 /// </summary>
 public class SiteConfigService(AppDbContext db, CmsConfig cms)
 {
-	public async Task<SiteConfigResponse> GetAsync(CancellationToken ct)
+	/// <param name="code">language of the footer link titles (null → default)</param>
+	public async Task<SiteConfigResponse> GetAsync(CancellationToken ct, string? code = null)
 	{
 		var config = await db.SiteConfig.AsNoTracking()
 			.Include(m => m.Logo)
@@ -30,19 +32,23 @@ public class SiteConfigService(AppDbContext db, CmsConfig cms)
 			.FirstOrDefaultAsync(m => m.Id == SiteConfig.SingletonId, ct);
 		var (fields, groups) = Resolve(cms.SiteConfigSchema(), config?.Values ?? new SiteConfigValues());
 		return new SiteConfigResponse(fields, groups, ToRef(config?.Logo), ToRef(config?.Icon), ToRef(config?.ShareImage),
-			config?.UpdatedAt, await FooterLinksAsync(ct));
+			config?.UpdatedAt, await FooterLinksAsync(code, ct));
 	}
 
-	/// <summary>Published pages marked <c>footer</c> in the instance config, in config order.</summary>
-	private async Task<List<FooterLink>> FooterLinksAsync(CancellationToken ct)
+	/// <summary>Published pages marked <c>footer</c> in the instance config, in config order, titles in <paramref name="code"/>.</summary>
+	private async Task<List<FooterLink>> FooterLinksAsync(string? code, CancellationToken ct)
 	{
 		var slugs = cms.Pages.Where(p => p.Footer).Select(p => p.Slug).ToList();
 		if (slugs.Count == 0) return [];
+		var lang = cms.Site.Lang;
 		var pages = await db.Pages.AsNoTracking()
 			.Where(p => slugs.Contains(p.Slug) && p.Status == PageStatus.Published)
-			.Select(p => new FooterLink(p.PublishedTitle!, p.Slug))
+			.Select(p => new { Title = p.PublishedTitle!, p.PublishedTranslations, p.Slug })
 			.ToListAsync(ct);
-		return pages.OrderBy(l => slugs.IndexOf(l.Slug)).ToList();
+		return pages
+			.Select(p => new FooterLink(
+				PageService.LiveTitle(p.Title, p.PublishedTranslations, lang.Resolve(code), lang.DefaultCode), p.Slug))
+			.OrderBy(l => slugs.IndexOf(l.Slug)).ToList();
 	}
 
 	/// <summary>
@@ -118,7 +124,7 @@ public class SiteConfigService(AppDbContext db, CmsConfig cms)
 		// built from what was just written, not re-read
 		var (fields, groups) = Resolve(schema, values!);
 		return SiteConfigResult.Ok(new SiteConfigResponse(fields, groups, RefOf(req.LogoMediaId), RefOf(req.IconMediaId),
-			RefOf(req.ShareImageMediaId), config.UpdatedAt, await FooterLinksAsync(ct)));
+			RefOf(req.ShareImageMediaId), config.UpdatedAt, await FooterLinksAsync(null, ct)));
 
 		MediaRef? RefOf(Guid? id) => id is { } mediaId ? media[mediaId] : null;
 	}

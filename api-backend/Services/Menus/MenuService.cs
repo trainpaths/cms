@@ -13,7 +13,7 @@ namespace api_backend.Services.Menus;
 /// Menus: CRUD for the admin view, validation of the item tree, and the public (resolved) form.
 /// Errors reuse <see cref="PageResult{T}"/>: <see cref="PageError.SlugTaken"/> = handle taken.
 /// </summary>
-public partial class MenuService(AppDbContext db)
+public partial class MenuService(AppDbContext db, CmsConfig cms)
 {
 	[GeneratedRegex("^[a-z0-9]+(?:-[a-z0-9]+)*$")]
 	private static partial Regex HandlePattern();
@@ -97,9 +97,9 @@ public partial class MenuService(AppDbContext db)
 	/// <summary>
 	/// The menu for the public site. Page links get the page's current slug (and title when unlabeled);
 	/// a link to an unpublished/deleted page becomes a folder when labeled, otherwise its children move up
-	/// a level. Folders left without children are dropped.
+	/// a level. Folders left without children are dropped. Page titles in <paramref name="code"/>.
 	/// </summary>
-	public async Task<PublicMenu?> GetPublicAsync(string handle, CancellationToken ct)
+	public async Task<PublicMenu?> GetPublicAsync(string handle, string code, CancellationToken ct)
 	{
 		var normalized = handle.ToLowerInvariant();
 		var menu = await db.Menus.AsNoTracking().FirstOrDefaultAsync(m => m.Handle == normalized, ct);
@@ -109,8 +109,9 @@ public partial class MenuService(AppDbContext db)
 		var ids = PageIds(menu.Items);
 		var pages = await db.Pages.AsNoTracking()
 			.Where(p => ids.Contains(p.Id) && p.Status == PageStatus.Published)
-			.Select(p => new { p.Id, Title = p.PublishedTitle!, p.Slug })
+			.Select(p => new { p.Id, Title = p.PublishedTitle!, p.PublishedTranslations, p.Slug })
 			.ToDictionaryAsync(p => p.Id, ct);
+		var defaultCode = cms.Site.Lang.DefaultCode;
 
 		return new PublicMenu(menu.Handle, Resolve(menu.Items));
 
@@ -123,7 +124,9 @@ public partial class MenuService(AppDbContext db)
 				if (item.Url is not null)
 					result.Add(new PublicMenuItem(item.Label, null, item.Url, children));
 				else if (item.PageId is { } pageId && pages.TryGetValue(pageId, out var page))
-					result.Add(new PublicMenuItem(item.Label.Length > 0 ? item.Label : page.Title, page.Slug, null, children));
+					result.Add(new PublicMenuItem(item.Label.Length > 0
+						? item.Label
+						: PageService.LiveTitle(page.Title, page.PublishedTranslations, code, defaultCode), page.Slug, null, children));
 				else if (item.Label.Length == 0)
 					result.AddRange(children);
 				else if (children.Count > 0)

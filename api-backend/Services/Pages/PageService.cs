@@ -64,6 +64,10 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 	[GeneratedRegex("[^a-z0-9]+")]
 	private static partial Regex NonSlugChars();
 
+	/// <summary>Language code (primary subtag): keys of block and page translations.</summary>
+	[GeneratedRegex("^[a-z]{2,3}$")]
+	private static partial Regex LangCodePattern();
+
 	public async Task<List<PageSummary>> ListAsync(CancellationToken ct)
 	{
 		// no Blocks (up to 2 MB each): the stored BlockCount instead
@@ -98,6 +102,7 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 					MetaTitle = p.MetaTitle,
 					MetaDescription = p.MetaDescription,
 					Blocks = p.Blocks,
+					Translations = p.Translations,
 					CreatedAt = p.CreatedAt,
 					UpdatedAt = p.UpdatedAt,
 					PublishedAt = p.PublishedAt,
@@ -112,27 +117,32 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 	private static List<string> SplitTags(string? joined) =>
 		(joined ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries).Order(StringComparer.Ordinal).ToList();
 
-	// the live snapshot of a published page (never the working copy)
-	private record LivePage(Guid Id, string Slug, string Title, string MetaTitle, string MetaDescription,
-		List<Block> Blocks, DateTimeOffset? PublishedAt);
+	/// <summary>The live snapshot of a published page (never the working copy), all languages.</summary>
+	public record LivePage(Guid Id, string Slug, string Title, string MetaTitle, string MetaDescription,
+		List<Block> Blocks, Dictionary<string, PageTextTranslation> Translations, DateTimeOffset? PublishedAt);
 
 	private IQueryable<LivePage> Live(IQueryable<Page> pages) => pages
 		.Where(p => p.Status == PageStatus.Published)
 		.Select(p => new LivePage(p.Id, p.Slug, p.PublishedTitle!, p.PublishedMetaTitle, p.PublishedMetaDescription,
-			p.PublishedBlocks!, p.PublishedAt));
+			p.PublishedBlocks!, p.PublishedTranslations, p.PublishedAt));
 
-	/// <param name="lang">
-	/// language code (unknown/null → default). Page content isn't translated yet: every language reads the same page.
-	/// </param>
+	/// <param name="lang">language code (unknown/null → default)</param>
 	public async Task<PublicPage?> GetPublishedBySlugAsync(string slug, string? lang, CancellationToken ct)
 	{
 		var normalized = slug.ToLowerInvariant();
 		var page = await Live(db.Pages.AsNoTracking().Where(p => p.Slug == normalized)).FirstOrDefaultAsync(ct);
-		return page is null ? null : ToPublic(page, await MediaService.ResolveRefsAsync(db, page.Blocks, ct));
+		return page is null
+			? null
+			: ToPublic(Localize(page, cms.Site.Lang.Resolve(lang), cms.Site.Lang.DefaultCode),
+				await MediaService.ResolveRefsAsync(db, page.Blocks, ct));
 	}
 
-	/// <summary>Published pages among <paramref name="ids"/> (others absent): two queries, media refs shared.</summary>
-	public async Task<Dictionary<Guid, PublicPage>> GetPublishedByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct)
+	/// <summary>
+	/// Published pages among <paramref name="ids"/> (others absent), in each of <paramref name="codes"/>: two queries,
+	/// media refs shared.
+	/// </summary>
+	public async Task<Dictionary<Guid, Dictionary<string, PublicPage>>> GetPublishedByIdsAsync(
+		IReadOnlyCollection<Guid> ids, IReadOnlyList<string> codes, CancellationToken ct)
 	{
 		var list = await Live(db.Pages.AsNoTracking().Where(p => ids.Contains(p.Id))).ToListAsync(ct);
 		var mediaIds = list.SelectMany(p => MediaService.CollectIds(p.Blocks)).ToHashSet();
@@ -141,13 +151,54 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 			: await db.MediaAssets.AsNoTracking()
 				.Where(m => mediaIds.Contains(m.Id))
 				.ToDictionaryAsync(m => m.Id, MediaService.ToRef, ct);
-		return list.ToDictionary(p => p.Id, p => ToPublic(p,
-			MediaService.CollectIds(p.Blocks).Where(media.ContainsKey).Select(id => media[id]).ToList()));
+		var defaultCode = cms.Site.Lang.DefaultCode;
+		return list.ToDictionary(p => p.Id, p =>
+		{
+			var refs = MediaService.CollectIds(p.Blocks).Where(media.ContainsKey).Select(id => media[id]).ToList();
+			return codes.ToDictionary(code => code, code => ToPublic(Localize(p, code, defaultCode), refs));
+		});
 	}
 
 	private PublicPage ToPublic(LivePage page, List<MediaRef> media) =>
 		new(page.Title, page.Slug, page.Blocks, media, page.PublishedAt, cms.Page(page.Slug)?.Template,
 			page.MetaTitle, page.MetaDescription);
+
+	/// <summary>
+	/// <paramref name="page"/> in language <paramref name="code"/>: block attributes overlaid with that language's
+	/// translations (non-empty strings, any other primitive), title/meta from its page translation where non-empty, the
+	/// default language's everywhere else. Every block's <c>translations</c> is removed (visitors never get other
+	/// languages' text); the default (or an unknown) code just strips them.
+	/// </summary>
+	public static LivePage Localize(LivePage page, string code, string defaultCode)
+	{
+		var overlay = code != defaultCode;
+		var text = overlay ? page.Translations.GetValueOrDefault(code) : null;
+		static string Pick(string? translated, string fallback) =>
+			string.IsNullOrEmpty(translated) ? fallback : translated;
+		return page with
+		{
+			Title = Pick(text?.Title, page.Title),
+			MetaTitle = Pick(text?.MetaTitle, page.MetaTitle),
+			MetaDescription = Pick(text?.MetaDescription, page.MetaDescription),
+			Blocks = Blocks(page.Blocks),
+			Translations = [],
+		};
+
+		List<Block> Blocks(List<Block> blocks) => blocks.Select(b =>
+		{
+			var attributes = new Dictionary<string, JsonElement>(b.Attributes);
+			if (overlay && b.Translations?.GetValueOrDefault(code) is { } values)
+				foreach (var (key, value) in values)
+					if (value.ValueKind != JsonValueKind.String || value.GetString()!.Length > 0)
+						attributes[key] = value;
+			return new Block { Id = b.Id, Name = b.Name, Attributes = attributes, InnerBlocks = Blocks(b.InnerBlocks) };
+		}).ToList();
+	}
+
+	/// <summary>The live title in <paramref name="code"/> (menus, footer links): its translation, else the default.</summary>
+	public static string LiveTitle(string title, Dictionary<string, PageTextTranslation> translations, string code,
+		string defaultCode) =>
+		code != defaultCode && translations.GetValueOrDefault(code)?.Title is { Length: > 0 } translated ? translated : title;
 
 	public async Task<PageResult<PageDetail>> CreateAsync(CreatePageRequest req, Guid staffId, CancellationToken ct)
 	{
@@ -204,15 +255,18 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		var (tagNames, tagError) = NormalizeTags(req.Tags ?? []);
 		if (tagError is not null)
 			return PageResult<ImportPageResult>.Fail(PageError.Invalid, tagError);
+		var (translations, translationError) = NormalizeTranslations(req.Translations ?? []);
+		if (translationError is not null)
+			return PageResult<ImportPageResult>.Fail(PageError.Invalid, translationError);
 
 		var detail = await CreateDraftAsync(title, string.IsNullOrWhiteSpace(req.Slug) ? title : req.Slug, req.Blocks,
-			req.MetaTitle?.Trim() ?? "", req.MetaDescription?.Trim() ?? "", tagNames, staffId, ct);
+			req.MetaTitle?.Trim() ?? "", req.MetaDescription?.Trim() ?? "", translations, tagNames, staffId, ct);
 		var found = detail.Media.Select(m => m.Id).ToHashSet();
 		var missing = MediaService.CollectIds(req.Blocks).Where(id => !found.Contains(id)).ToList();
 		return PageResult<ImportPageResult>.Ok(new ImportPageResult(detail, missing));
 	}
 
-	/// <summary>A draft copy: "{title} (copy)", a free variant of the slug, same blocks, meta and tags.</summary>
+	/// <summary>A draft copy: "{title} (copy)", a free variant of the slug, same blocks, meta, translations and tags.</summary>
 	public async Task<PageResult<PageDetail>> DuplicateAsync(Guid id, Guid staffId, CancellationToken ct)
 	{
 		var source = await db.Pages.AsNoTracking()
@@ -226,18 +280,20 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		if (title.Length > MaxTitleLength)
 			title = page.Title[..(MaxTitleLength - 7)].TrimEnd() + " (copy)";
 		return PageResult<PageDetail>.Ok(await CreateDraftAsync(title, page.Slug, page.Blocks, page.MetaTitle,
-			page.MetaDescription, SplitTags(source.Tags), staffId, ct));
+			page.MetaDescription, page.Translations, SplitTags(source.Tags), staffId, ct));
 	}
 
 	/// <summary>Import + duplicate: inputs already validated; the slug is a free variant of <paramref name="slugSource"/>.</summary>
 	private async Task<PageDetail> CreateDraftAsync(string title, string slugSource, List<Block> blocks, string metaTitle,
-		string metaDescription, List<string> tagNames, Guid staffId, CancellationToken ct)
+		string metaDescription, Dictionary<string, PageTextTranslation> translations, List<string> tagNames, Guid staffId,
+		CancellationToken ct)
 	{
 		var page = new Page
 		{
 			Title = title,
 			Slug = await UniqueSlugFromAsync(slugSource, ct),
 			Blocks = blocks,
+			Translations = translations,
 			BlockCount = CountBlocks(blocks),
 			MetaTitle = metaTitle,
 			MetaDescription = metaDescription,
@@ -293,6 +349,14 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 				return PageResult<PageUpdate>.Fail(PageError.Invalid, blockError);
 		}
 
+		Dictionary<string, PageTextTranslation>? translations = null;
+		if (req.Translations is not null)
+		{
+			(translations, var translationError) = NormalizeTranslations(req.Translations);
+			if (translationError is not null)
+				return PageResult<PageUpdate>.Fail(PageError.Invalid, translationError);
+		}
+
 		List<string>? tagNames = null;
 		if (req.Tags is not null)
 		{
@@ -302,10 +366,12 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		}
 
 		var (wasPublished, oldLiveTitle, oldSlug) = (page.Status == PageStatus.Published, page.PublishedTitle, page.Slug);
+		var oldLiveTitles = LiveTitles(page.PublishedTranslations);
 		if (title is not null) page.Title = title;
 		if (slug is not null) page.Slug = slug;
 		if (req.MetaTitle is not null) page.MetaTitle = req.MetaTitle.Trim();
 		if (req.MetaDescription is not null) page.MetaDescription = req.MetaDescription.Trim();
+		if (translations is not null) page.Translations = translations;
 		if (req.Blocks is not null)
 		{
 			page.Blocks = req.Blocks;
@@ -320,6 +386,7 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 			page.PublishedMetaTitle = page.MetaTitle;
 			page.PublishedMetaDescription = page.MetaDescription;
 			page.PublishedBlocks = CloneBlocks(page.Blocks);
+			page.PublishedTranslations = new(page.Translations);
 			page.Status = PageStatus.Published;
 			page.PublishedAt = DateTimeOffset.UtcNow;
 		}
@@ -330,7 +397,7 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		}
 
 		var contentSent = req.Title is not null || req.Blocks is not null || req.MetaTitle is not null
-			|| req.MetaDescription is not null;
+			|| req.MetaDescription is not null || req.Translations is not null;
 		if (contentSent || publish || unpublish)
 			page.HasUnpublishedChanges = page.Status == PageStatus.Published && !MatchesSnapshot(page);
 		if (contentSent || req.Slug is not null || publish || unpublish)
@@ -358,7 +425,9 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		var tags = (tagNames ?? pageTags.Select(pt => pt.Tag.Name).ToList()).Order(StringComparer.Ordinal).ToList();
 		var live = page.Status == PageStatus.Published;
 		var statusChanged = live != wasPublished;
-		var liveRenamed = live && (page.PublishedTitle != oldLiveTitle || page.Slug != oldSlug);
+		// a translated title shows in other pages' menus/footers too
+		var liveRenamed = live && (page.PublishedTitle != oldLiveTitle || page.Slug != oldSlug
+			|| LiveTitles(page.PublishedTranslations) != oldLiveTitles);
 		return PageResult<PageUpdate>.Ok(new PageUpdate(ToSummary(page, tags), statusChanged,
 			live && (publish || page.Slug != oldSlug), liveRenamed));
 	}
@@ -368,11 +437,47 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 	private static List<Block> CloneBlocks(List<Block> blocks) =>
 		JsonSerializer.Deserialize<List<Block>>(JsonSerializer.Serialize(blocks, BlockJson), BlockJson)!;
 
-	/// <summary>Working copy = live snapshot (block trees compared as JSON: attribute order counts).</summary>
+	/// <summary>
+	/// Working copy = live snapshot (block trees compared as JSON: attribute order counts; page translations by
+	/// language, order-independent).
+	/// </summary>
 	private static bool MatchesSnapshot(Page p) =>
 		p.PublishedBlocks is not null && p.Title == p.PublishedTitle && p.MetaTitle == p.PublishedMetaTitle
 		&& p.MetaDescription == p.PublishedMetaDescription
+		&& p.Translations.Count == p.PublishedTranslations.Count
+		&& p.Translations.All(t => p.PublishedTranslations.GetValueOrDefault(t.Key) == t.Value)
 		&& JsonSerializer.Serialize(p.Blocks, BlockJson) == JsonSerializer.Serialize(p.PublishedBlocks, BlockJson);
+
+	// "de=Titel|fr=Titre": compared as a whole (any language's live title changed)
+	private static string LiveTitles(Dictionary<string, PageTextTranslation> translations) =>
+		string.Join('|', translations.Where(t => t.Value.Title.Length > 0).OrderBy(t => t.Key, StringComparer.Ordinal)
+			.Select(t => $"{t.Key}={t.Value.Title}"));
+
+	/// <summary>
+	/// Trimmed title/meta translations, entries without any text dropped, or the first error (code not a language
+	/// code, text over the default fields' limits). Codes need not be configured: removing a language from the config
+	/// and adding it back keeps its text.
+	/// </summary>
+	private static (Dictionary<string, PageTextTranslation> Value, string? Error) NormalizeTranslations(
+		Dictionary<string, PageTextTranslation> raw)
+	{
+		var result = new Dictionary<string, PageTextTranslation>();
+		foreach (var (code, value) in raw)
+		{
+			if (!LangCodePattern().IsMatch(code))
+				return (result, $"'{code}' is not a language code.");
+			var text = new PageTextTranslation(value?.Title?.Trim() ?? "", value?.MetaTitle?.Trim() ?? "",
+				value?.MetaDescription?.Trim() ?? "");
+			if (text.Title.Length > MaxTitleLength)
+				return (result, $"Title ({code}) must be at most {MaxTitleLength} characters.");
+			if ((MetaError(text.MetaTitle, MaxMetaTitleLength, $"Meta title ({code})")
+				?? MetaError(text.MetaDescription, MaxMetaDescriptionLength, $"Meta description ({code})")) is { } error)
+				return (result, error);
+			if (text != new PageTextTranslation())
+				result[code] = text;
+		}
+		return (result, null);
+	}
 
 	// null = not sent (unchanged); empty clears
 	private static string? MetaError(string? value, int max, string label) =>
@@ -491,8 +596,26 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 				block.InnerBlocks ??= [];
 				foreach (var (key, value) in block.Attributes)
 				{
-					if (value.ValueKind is not (JsonValueKind.String or JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False))
+					if (!IsPrimitive(value))
 						return $"Attribute '{key}' of block '{block.Id}' must be a string, number or boolean.";
+				}
+				if (block.Translations is not null)
+				{
+					foreach (var (code, values) in block.Translations)
+					{
+						if (!LangCodePattern().IsMatch(code))
+							return $"Block '{block.Id}': '{code}' is not a language code.";
+						if (values is null)
+							return $"Block '{block.Id}': translations of '{code}' must be an object.";
+						foreach (var (key, value) in values)
+							if (!IsPrimitive(value))
+								return $"Translation '{code}.{key}' of block '{block.Id}' must be a string, number or boolean.";
+					}
+					// stored without empty languages; none left = no translations key
+					foreach (var code in block.Translations.Where(t => t.Value.Count == 0).Select(t => t.Key).ToList())
+						block.Translations.Remove(code);
+					if (block.Translations.Count == 0)
+						block.Translations = null;
 				}
 				if (Walk(block.InnerBlocks, depth + 1) is { } error)
 					return error;
@@ -500,6 +623,9 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 			return null;
 		}
 	}
+
+	private static bool IsPrimitive(JsonElement value) =>
+		value.ValueKind is JsonValueKind.String or JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False;
 
 	/// <summary>"Hello Wörld!" → "hello-world".</summary>
 	public static string Slugify(string text)
@@ -551,6 +677,7 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		var config = cms.Page(p.Slug);
 		return new(p.Id, p.Title, p.Slug, p.Status, tags,
 			p.Blocks, await MediaService.ResolveRefsAsync(db, p.Blocks, ct), p.CreatedAt, p.UpdatedAt, p.PublishedAt,
-			p.HasUnpublishedChanges, config?.Template, config?.IsLocked ?? false, config?.Editable ?? true, p.MetaTitle, p.MetaDescription);
+			p.HasUnpublishedChanges, config?.Template, config?.IsLocked ?? false, config?.Editable ?? true, p.MetaTitle, p.MetaDescription,
+			p.Translations);
 	}
 }

@@ -1649,6 +1649,13 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1725,6 +1732,15 @@
       "get": {
         "tags": [
           "PublicSiteConfig"
+        ],
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
           "200": {
@@ -2433,6 +2449,14 @@
             "type": "object",
             "additionalProperties": { }
           },
+          "translations": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": { }
+            },
+            "nullable": true
+          },
           "innerBlocks": {
             "type": "array",
             "items": {
@@ -2770,6 +2794,13 @@
               "type": "string"
             },
             "nullable": true
+          },
+          "translations": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PageTextTranslation"
+            },
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -2982,6 +3013,7 @@
           "status",
           "tags",
           "title",
+          "translations",
           "updatedAt"
         ],
         "type": "object",
@@ -3052,6 +3084,12 @@
           },
           "metaDescription": {
             "type": "string"
+          },
+          "translations": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PageTextTranslation"
+            }
           }
         },
         "additionalProperties": false
@@ -3123,6 +3161,26 @@
           },
           "locked": {
             "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PageTextTranslation": {
+        "required": [
+          "metaDescription",
+          "metaTitle",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "metaTitle": {
+            "type": "string"
+          },
+          "metaDescription": {
+            "type": "string"
           }
         },
         "additionalProperties": false
@@ -3572,6 +3630,13 @@
             "type": "array",
             "items": {
               "type": "string"
+            },
+            "nullable": true
+          },
+          "translations": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PageTextTranslation"
             },
             "nullable": true
           }

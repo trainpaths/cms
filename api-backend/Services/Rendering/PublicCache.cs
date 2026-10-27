@@ -7,7 +7,7 @@ namespace api_backend.Services.Rendering;
 
 /// <summary>
 /// In-memory cache of what every public page shows around its body: resolved public menus (by handle) and the site
-/// config. Hot on shell loads, <c>data-refresh</c> refetches and every render batch, but only changed by writes that
+/// config, per language code (page titles in them are translated). Hot on shell loads, <c>data-refresh</c> refetches and every render batch, but only changed by writes that
 /// already call <see cref="IRenderQueue.Refresh"/>/<see cref="IRenderQueue.All"/> (which invalidate it) or by the
 /// menus controller. Assumes one API instance, like <see cref="RenderStatus"/>.
 /// <para>
@@ -18,8 +18,6 @@ namespace api_backend.Services.Rendering;
 /// </summary>
 public sealed class PublicCache
 {
-	private const string ConfigKey = "config";
-
 	private long _generation;
 	private readonly ConcurrentDictionary<string, (long Generation, object Value)> _entries = new();
 
@@ -31,11 +29,13 @@ public sealed class PublicCache
 	}
 
 	/// <summary><c>null</c> (unknown handle) isn't cached, so random handles can't grow the cache.</summary>
-	public Task<PublicMenu?> MenuAsync(MenuService menus, string handle, CancellationToken ct) =>
-		GetAsync("menu:" + handle.ToLowerInvariant(), () => menus.GetPublicAsync(handle, ct));
+	/// <param name="code">a configured language code (<c>CmsSiteLang.Resolve</c>): keys stay bounded</param>
+	public Task<PublicMenu?> MenuAsync(MenuService menus, string handle, string code, CancellationToken ct) =>
+		GetAsync($"menu:{code}:{handle.ToLowerInvariant()}", () => menus.GetPublicAsync(handle, code, ct));
 
-	public async Task<SiteConfigResponse> SiteConfigAsync(SiteConfigService siteConfig, CancellationToken ct) =>
-		(await GetAsync<SiteConfigResponse>(ConfigKey, async () => await siteConfig.GetAsync(ct)))!;
+	/// <param name="code">a configured language code (<c>CmsSiteLang.Resolve</c>)</param>
+	public async Task<SiteConfigResponse> SiteConfigAsync(SiteConfigService siteConfig, string code, CancellationToken ct) =>
+		(await GetAsync<SiteConfigResponse>($"config:{code}", async () => await siteConfig.GetAsync(ct, code)))!;
 
 	private async Task<T?> GetAsync<T>(string key, Func<Task<T?>> load) where T : class
 	{
