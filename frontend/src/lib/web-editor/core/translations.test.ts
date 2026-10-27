@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { localizeBlocks, localizeText } from './localize'
-import { textFields } from './translatable'
+import { missingCounts, pruneTranslations, textFields } from './translatable'
 import { registerAllBlocks } from './blockTypes'
 import type { BlockInstance } from './types'
 import { useEditorStore } from '../../../stores/editor'
-import { useAttributeFallback, useBlockAttribute } from '../composables/useBlockAttribute'
+import { putApiPagesById } from '../../../api/sdk.gen'
+import { useBlockAttribute, useBlockText } from '../composables/useBlockAttribute'
 import { usePageText } from '../composables/usePageText'
 
 vi.mock('../../../api/sdk.gen', () => ({ getApiPagesById: vi.fn(), putApiPagesById: vi.fn() }))
@@ -75,6 +76,31 @@ describe('textFields', () => {
 	})
 })
 
+describe('missingCounts / pruneTranslations', () => {
+	it('missingCounts matches textFields per language', () => {
+		const page = { title: 'About', metaTitle: '', metaDescription: 'Desc' }
+		const translations = { de: { title: 'Über uns', metaTitle: '', metaDescription: '' } }
+		const counts = missingCounts(tree(), page, translations, ['de', 'fr'])
+		expect(counts).toEqual({
+			de: textFields(tree(), page, translations, 'de').length,
+			fr: textFields(tree(), page, translations, 'fr').length,
+		})
+	})
+
+	it('drops non-translatable keys, keeps unknown block types as they are', () => {
+		const blocks: BlockInstance[] = [
+			...tree(),
+			{ id: 'x', name: 'gone', attributes: {}, translations: { de: { any: 'thing' } }, innerBlocks: [] },
+			{ id: 'i', name: 'image', attributes: { mediaId: 'm' }, translations: { de: { mediaId: 'n' } }, innerBlocks: [] },
+		]
+		const pruned = pruneTranslations(blocks)
+		expect(pruned[0]!.translations).toEqual({ de: { text: 'Hallo' }, fr: { text: '' } })
+		expect(pruned[2]!.translations).toEqual({ de: { any: 'thing' } })
+		expect(pruned[3]).not.toHaveProperty('translations')
+		expect(blocks[0]!.translations!.de).toHaveProperty('level') // input untouched
+	})
+})
+
 describe('editing a language', () => {
 	beforeEach(() => setActivePinia(createPinia()))
 
@@ -88,9 +114,8 @@ describe('editing a language', () => {
 	it('useBlockAttribute reads/writes the edited language for translatable attributes only', () => {
 		const store = load()
 		const heading = () => store.findBlockById('h')!
-		const text = useBlockAttribute(heading, 'text', '')
+		const { value: text, original } = useBlockText(heading, 'text')
 		const level = useBlockAttribute(heading, 'level', 2)
-		const original = useAttributeFallback(heading, 'text')
 		expect(text.value).toBe('Hello')
 		expect(original.value).toBe('')
 
@@ -132,6 +157,38 @@ describe('editing a language', () => {
 		store.undo()
 		expect(store.findBlockById('c')!.translations).toBeUndefined()
 		expect(store.findBlockById('l')!.translations).toBeUndefined()
+		expect(store.pageTranslations.it).toBeUndefined()
+		store.redo()
+		expect(store.pageTranslations.it!.title).toBe('Chi siamo')
+		expect(store.findBlockById('c')!.translations!.it).toEqual({ title: 'Scheda' })
+	})
+
+	it('undo of a block change keeps page text typed since', () => {
+		const store = load()
+		store.updateBlockAttributes('h', { level: 2 })
+		store.updateBlockAttributes('h', { level: 3 })
+		store.setPageText('de', { title: 'Über uns' })
+		store.undo()
+		expect(store.pageTranslations.de!.title).toBe('Über uns')
+	})
+
+	it('missingTranslations: counts per non-default language', () => {
+		const store = load()
+		store.pageTitle = 'About'
+		const fields = (code: string) =>
+			textFields(store.blocks, { title: 'About', metaTitle: '', metaDescription: '' }, {}, code).length
+		expect(store.missingTranslations).toEqual({ de: fields('de'), fr: fields('fr'), it: fields('it') })
+		expect(store.missingTranslations.de).toBe(fields('fr') - 1) // heading translated in German
+	})
+
+	it('a save drops translations of attributes that are not translatable', async () => {
+		const store = load()
+		store.pageTitle = 'About'
+		vi.mocked(putApiPagesById).mockRejectedValueOnce(new Error('stop'))
+		store.updateBlockAttributes('h', { level: 2 })
+		await store.savePage()
+		const sent = vi.mocked(putApiPagesById).mock.calls[0]![0]!.body!.blocks!
+		expect(sent[0]!.translations).toEqual({ de: { text: 'Hallo' }, fr: { text: '' } })
 	})
 
 	it('page title/meta per language', () => {

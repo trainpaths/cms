@@ -30,7 +30,8 @@ core/colors.ts      block colours: `themeColors` (palette from `__CMS_THEME_COLO
                     blockColorStyle (both wrappers)
 core/translatable.ts  isTranslatable(blockName, key) (`translatable: true` in the block type), textFields(blocks, page,
                     translations, missingIn?) = translatable fields with a default value (page title/meta first), only
-                    the untranslated ones of a language with `missingIn` (counts; DeepL pre-fill)
+                    the untranslated ones of a language with `missingIn` (DeepL pre-fill), missingCounts (the same per language in one
+                    walk: store.missingTranslations), pruneTranslations (drops non-translatable keys; what a save sends)
 core/localize.ts    localizeBlocks / localizeText: mirror of the API's PageService.Localize (admin preview)
 core/serializer.ts  serialize/parse helpers (unused by the store, kept for import/export)
 blocks/<name>/      block.json (name, title, category, description, supports, parent?) + index.ts (`export default defineBlock(meta, {icon,
@@ -97,8 +98,8 @@ composables/        usePublishState (publish rules shared by header + Page tab: 
                     undo Ctrl/Cmd+Z, redo Ctrl/Cmd+Shift+Z or Ctrl+Y, save Ctrl/Cmd+S (also in inputs); ignores keys
                     from inside `[role=dialog|alertdialog]`), useToolbarPosition,
                     useBlockAttribute (writable computed over one attribute; translatable ones in store.editLang) +
-                    useAttributeFallback (default's text while translating, for placeholders), usePageText (title/meta
-                    in store.editLang + original), useMissingTranslations (textFields per language), useMachineTranslation
+                    useBlockText(block, key) → {value, original} (text inputs: value + the default's text while
+                    translating, for placeholders), usePageText (title/meta in store.editLang + original), useMachineTranslation
                     (DeepL: available = instance machineTranslation + non-default editLang; translateMissing /
                     retranslateAll (confirm) → POST /api/translate → store.applyTranslations; toast; errors → banner), useAutoResize (textarea grow),
                     useBlockDrag (shared dragged-block + dropTarget state, one indicator app-wide; canDropInto:
@@ -121,7 +122,8 @@ web-editor.css       @apply component classes (.input-field, .field-label, .inne
 (pageId/Title/Slug/Status/HasUnpublishedChanges), `editLang` (reset on load), `pageTranslations` (title/meta per
 code; sent with a save only when changed) + `setPageText`, `updateBlockTranslation(id, code, patch)` (history +
 autosave; '' removes a key, empty languages/`translations` are removed), `applyTranslations(code, entries)` (DeepL
-results: one undo step + one change), `isDirty` (content ≠ last saved), `publishing`,
+results: one undo step + one change; the step also restores page title/meta translations), `missingTranslations`
+(untranslated count per non-default code), saves send `pruneTranslations(blocks)`, `isDirty` (content ≠ last saved), `publishing`,
 loadPage/savePage (working copy only, skips clean)/updateSlug/publish/unpublish/closePage. Imports the lib's
 `core/types` + `api.ts`; re-exported from the barrel.
 
