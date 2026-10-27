@@ -23,10 +23,11 @@ public class PublicStateController(PageService pages, MenuService menus, SiteCon
 	: ControllerBase
 {
 	/// <summary><c>Page</c> is null for an unknown or unpublished slug (and without a slug).</summary>
+	/// <param name="lang">language code (unknown or missing → the default language)</param>
 	[HttpGet, HttpGet("{slug}")]
-	public async Task<ActionResult<PublicStateResponse>> Get(string? slug, CancellationToken ct)
+	public async Task<ActionResult<PublicStateResponse>> Get(string? slug, [FromQuery] string? lang, CancellationToken ct)
 	{
-		var page = slug is null ? null : await pages.GetPublishedBySlugAsync(slug, ct);
+		var page = slug is null ? null : await pages.GetPublishedBySlugAsync(slug, lang, ct);
 		var menu = await cache.MenuAsync(menus, Menu.MainHandle, ct);
 		var config = await cache.SiteConfigAsync(siteConfig, ct);
 		return Ok(new PublicStateResponse(page, menu, config));

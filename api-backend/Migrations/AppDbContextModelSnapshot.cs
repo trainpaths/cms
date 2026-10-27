@@ -17,7 +17,7 @@ namespace api_backend.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -514,6 +514,10 @@ namespace api_backend.Migrations
                     b.Property<Guid>("PageId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Lang")
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
                     b.Property<string>("Html")
                         .IsRequired()
                         .HasColumnType("text");
@@ -536,7 +540,7 @@ namespace api_backend.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.HasKey("PageId");
+                    b.HasKey("PageId", "Lang");
 
                     b.ToTable("rendered_pages", (string)null);
                 });
@@ -690,8 +694,8 @@ namespace api_backend.Migrations
             modelBuilder.Entity("api_backend.Models.Rendering.RenderedPage", b =>
                 {
                     b.HasOne("api_backend.Models.Pages.Page", "Page")
-                        .WithOne()
-                        .HasForeignKey("api_backend.Models.Rendering.RenderedPage", "PageId")
+                        .WithMany()
+                        .HasForeignKey("PageId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

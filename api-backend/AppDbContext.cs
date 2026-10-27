@@ -263,12 +263,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 		b.Entity<RenderedPage>(e =>
 		{
 			e.ToTable("rendered_pages");
-			e.HasKey(x => x.PageId);
+			e.HasKey(x => new { x.PageId, x.Lang });
+			e.Property(x => x.Lang).HasMaxLength(3);
 			e.Property(x => x.Html).IsRequired();
 			e.Property(x => x.Title).HasMaxLength(200).IsRequired();
 			e.Property(x => x.Slug).HasMaxLength(100).IsRequired();
 			e.Property(x => x.RendererVersion).HasMaxLength(64).IsRequired();
-			e.HasOne(x => x.Page).WithOne().HasForeignKey<RenderedPage>(x => x.PageId).OnDelete(DeleteBehavior.Cascade);
+			e.HasOne(x => x.Page).WithMany().HasForeignKey(x => x.PageId).OnDelete(DeleteBehavior.Cascade);
 		});
 
 		b.Entity<BackupSettings>(e =>

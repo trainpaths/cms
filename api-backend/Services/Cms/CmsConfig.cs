@@ -77,6 +77,19 @@ public sealed record CmsSiteLang
 	[JsonIgnore]
 	public bool IsLocalized => Localization.Count > 0;
 
+	[JsonIgnore]
+	public string DefaultCode => CodeOf(Default);
+
+	/// <summary>Language codes, default first (single-language: just the default).</summary>
+	[JsonIgnore]
+	public IReadOnlyList<string> Codes => [.. Tags.Select(CodeOf)];
+
+	/// <summary>A configured non-default code: the URL prefix of that language.</summary>
+	public bool IsPrefix(string code) => IsLocalized && code != DefaultCode && Codes.Contains(code);
+
+	/// <summary>Configured code, else the default (unknown/missing <c>?lang=</c>).</summary>
+	public string Resolve(string? code) => code is not null && Codes.Contains(code) ? code : DefaultCode;
+
 	public static string CodeOf(string tag) => tag.Split('-')[0];
 }
 

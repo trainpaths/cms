@@ -59,6 +59,40 @@ public class PageServiceTests
 		result.Value!.Slug.Should().Be("login-page");
 	}
 
+	private static readonly CmsConfig Localized = CmsConfig.Default with
+	{
+		Site = new CmsSiteMeta { Lang = new CmsSiteLang { Default = "en-US", Localization = ["de-CH", "fr-CH"] } },
+	};
+
+	[Theory]
+	[InlineData("de")]
+	[InlineData("en")]
+	public async Task LanguageCodes_AreReservedSlugs_OnALocalizedSite(string code)
+	{
+		await using var db = TestDbContextFactory.Create();
+		var service = new PageService(db, Localized);
+
+		var create = await service.CreateAsync(new CreatePageRequest("x", code, null), StaffId, Ct);
+		create.Error.Should().Be(PageError.Invalid);
+		create.Detail.Should().Be($"Slug '{code}' is reserved.");
+
+		var page = await service.CreateAsync(new CreatePageRequest("Page", null, null), StaffId, Ct);
+		(await service.UpdateAsync(page.Value!.Id, new UpdatePageRequest(null, code, null), StaffId, Ct))
+			.Error.Should().Be(PageError.Invalid);
+		// generated from a title
+		(await service.CreateAsync(new CreatePageRequest(code.ToUpperInvariant(), null, null), StaffId, Ct))
+			.Value!.Slug.Should().Be($"{code}-page");
+	}
+
+	[Fact]
+	public async Task LanguageCodes_AreOrdinarySlugs_OnASingleLanguageSite()
+	{
+		await using var db = TestDbContextFactory.Create();
+		var result = await new PageService(db, CmsConfig.Default).CreateAsync(new CreatePageRequest("x", "de", null), StaffId, Ct);
+
+		result.Value!.Slug.Should().Be("de");
+	}
+
 	[Fact]
 	public async Task Create_WithTakenSlug_ReturnsSlugTaken()
 	{
@@ -103,16 +137,16 @@ public class PageServiceTests
 		var service = new PageService(db, CmsConfig.Default);
 		var page = (await service.CreateAsync(new CreatePageRequest("Visible", null, null), StaffId, Ct)).Value!;
 
-		(await service.GetPublishedBySlugAsync("visible", Ct)).Should().BeNull();
+		(await service.GetPublishedBySlugAsync("visible", null, Ct)).Should().BeNull();
 
 		var published = await service.UpdateAsync(page.Id, new UpdatePageRequest(null, null, null, Status: PageStatus.Published), StaffId, Ct);
 		published.Value!.StatusChanged.Should().BeTrue();
 		published.Value.Page.Status.Should().Be(PageStatus.Published);
 		published.Value.Page.PublishedAt.Should().NotBeNull();
-		(await service.GetPublishedBySlugAsync("visible", Ct)).Should().NotBeNull();
+		(await service.GetPublishedBySlugAsync("visible", null, Ct)).Should().NotBeNull();
 
 		await service.UpdateAsync(page.Id, new UpdatePageRequest(null, null, null, Status: PageStatus.Draft), StaffId, Ct);
-		(await service.GetPublishedBySlugAsync("visible", Ct)).Should().BeNull();
+		(await service.GetPublishedBySlugAsync("visible", null, Ct)).Should().BeNull();
 	}
 
 	[Fact]
@@ -128,7 +162,7 @@ public class PageServiceTests
 			new UpdatePageRequest("Edited", null, [paragraph, Block("heading")], MetaTitle: "Meta"), StaffId, Ct);
 		saved.Value!.Should().Be(saved.Value with { StatusChanged = false, LiveChanged = false, LiveRenamed = false });
 		saved.Value.Page.HasUnpublishedChanges.Should().BeTrue();
-		var live = (await service.GetPublishedBySlugAsync("live", Ct))!;
+		var live = (await service.GetPublishedBySlugAsync("live", null, Ct))!;
 		live.Title.Should().Be("Live");
 		live.MetaTitle.Should().BeEmpty();
 		live.Blocks.Should().ContainSingle();
@@ -143,7 +177,7 @@ public class PageServiceTests
 		var published = await service.UpdateAsync(page.Id, new UpdatePageRequest(null, null, null, Status: PageStatus.Published), StaffId, Ct);
 		published.Value!.Should().Be(published.Value with { StatusChanged = false, LiveChanged = true, LiveRenamed = true });
 		published.Value.Page.HasUnpublishedChanges.Should().BeFalse();
-		(await service.GetPublishedBySlugAsync("live", Ct))!.Title.Should().Be("Edited");
+		(await service.GetPublishedBySlugAsync("live", null, Ct))!.Title.Should().Be("Edited");
 	}
 
 	[Fact]
@@ -158,10 +192,10 @@ public class PageServiceTests
 		var unpublished = await service.UpdateAsync(page.Id, new UpdatePageRequest(null, null, null, Status: PageStatus.Draft), StaffId, Ct);
 		unpublished.Value!.StatusChanged.Should().BeTrue();
 		unpublished.Value.Page.HasUnpublishedChanges.Should().BeFalse();
-		(await service.GetPublishedBySlugAsync("page", Ct)).Should().BeNull();
+		(await service.GetPublishedBySlugAsync("page", null, Ct)).Should().BeNull();
 
 		await service.UpdateAsync(page.Id, new UpdatePageRequest(null, null, null, Status: PageStatus.Published), StaffId, Ct);
-		(await service.GetPublishedBySlugAsync("page", Ct))!.Title.Should().Be("Changed");
+		(await service.GetPublishedBySlugAsync("page", null, Ct))!.Title.Should().Be("Changed");
 	}
 
 	[Fact]
