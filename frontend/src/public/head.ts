@@ -2,6 +2,8 @@ import type { BlockInstance, PublicPage, SiteConfig } from '../lib/web-editor'
 import { firmName } from '../lib/siteConfig'
 import { pathOf, type PublicState } from './state'
 import { screenOf } from './screens'
+import { localePath } from './locale'
+import { IS_LOCALIZED, LANGUAGES, languageOf } from '../i18n/languages'
 
 const DESCRIPTION_MAX = 160
 /**
@@ -99,7 +101,8 @@ export function headTags(state: PublicState, t: Translate): string {
 		return tags.join('\n')
 	}
 
-	const url = state.baseUrl + pathOf(state.page.slug)
+	const path = pathOf(state.page.slug)
+	const url = state.baseUrl + localePath(path, state.lang)
 	const desc = state.page.metaDescription.trim() || description(state.page.blocks)
 	const image = previewImage(state)
 	const firm = firmName(state.config)
@@ -107,6 +110,14 @@ export function headTags(state: PublicState, t: Translate): string {
 		`<meta ${attr}="${key}" content="${escapeAttr(value)}">`
 
 	tags.push(`<link rel="canonical" href="${escapeAttr(url)}">`)
+	// every language of the page + x-default (unprefixed: the default language, or the visitor's remembered one)
+	if (IS_LOCALIZED) {
+		for (const language of LANGUAGES)
+			tags.push(
+				`<link rel="alternate" hreflang="${language.tag}" href="${escapeAttr(state.baseUrl + localePath(path, language.code))}">`,
+			)
+		tags.push(`<link rel="alternate" hreflang="x-default" href="${escapeAttr(state.baseUrl + path)}">`)
+	}
 	if (desc) tags.push(meta('name', 'description', desc), meta('property', 'og:description', desc))
 	tags.push(
 		meta('property', 'og:type', 'website'),
@@ -114,6 +125,13 @@ export function headTags(state: PublicState, t: Translate): string {
 		meta('property', 'og:url', url),
 	)
 	if (firm) tags.push(meta('property', 'og:site_name', firm))
+	if (IS_LOCALIZED) {
+		const ogLocale = (tag: string) => tag.replace('-', '_')
+		tags.push(meta('property', 'og:locale', ogLocale(languageOf(state.lang).tag)))
+		for (const language of LANGUAGES)
+			if (language.code !== languageOf(state.lang).code)
+				tags.push(meta('property', 'og:locale:alternate', ogLocale(language.tag)))
+	}
 	if (image) tags.push(meta('property', 'og:image', state.baseUrl + image))
 	tags.push(meta('name', 'twitter:card', image ? 'summary_large_image' : 'summary'))
 	return tags.join('\n')

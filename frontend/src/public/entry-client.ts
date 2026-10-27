@@ -7,6 +7,7 @@ import { headTags } from './head'
 import type { PublicState } from './state'
 import { refreshSurroundings } from './refresh'
 import { SCREENS } from './screens'
+import { localeBase, stripLocale } from './locale'
 
 function embeddedState(): PublicState | null {
 	try {
@@ -18,11 +19,13 @@ function embeddedState(): PublicState | null {
 
 /** Fallback shell (page not rendered yet, or dev without SSR): fetch what the server would have embedded, in one call. */
 async function fetchState(): Promise<PublicState> {
-	const slug = location.pathname.slice(1) || 'home'
+	const { code: lang, path } = stripLocale(location.pathname)
+	const slug = path.slice(1) || 'home'
 	// screens and deeper paths aren't pages (`user/profile`: no slash in the path parameter); menu + config only
 	const pageless = slug.includes('/') || SCREENS.some((screen) => screen.slug === slug)
+	const query = { lang }
 	// failed request → like a missing page (page null → not-found)
-	const fetched = await (pageless ? getApiPublicState() : getApiPublicStateBySlug({ path: { slug } })).then(
+	const fetched = await (pageless ? getApiPublicState({ query }) : getApiPublicStateBySlug({ path: { slug }, query })).then(
 		(r) => r.data,
 		() => null,
 	)
@@ -32,6 +35,7 @@ async function fetchState(): Promise<PublicState> {
 		menu: fetched?.menu ?? null,
 		config: fetched?.config ?? null,
 		baseUrl: location.origin,
+		lang,
 	}
 }
 
@@ -43,7 +47,7 @@ export async function hydratePublic(): Promise<void> {
 	client.setConfig({ baseUrl: '' })
 	const embedded = embeddedState()
 	const state = embedded ?? (await fetchState())
-	const { app, router, pinia, i18n } = createPublicApp(state, createWebHistory(), !!embedded)
+	const { app, router, pinia, i18n } = createPublicApp(state, createWebHistory(localeBase(state.lang)), !!embedded)
 	// the shell's <head> is empty; same tags the server render puts there
 	if (!embedded) document.head.insertAdjacentHTML('beforeend', headTags(state, i18n.global.t))
 	// bearer + refresh for the account screens, same ApiError as the admin. Session gone → customer login (staff

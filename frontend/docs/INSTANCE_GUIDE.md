@@ -176,11 +176,15 @@ goes into `<html lang>` and date/number formats (`de-CH`: 27.10.2026, 1’000), 
 - **Admin**: opens in the language of the `cms_lang` cookie, else the default; the language switch in the admin
   navigation and on the admin login changes it in place and remembers it.
 - **`<LanguageDropdown />`** (`@trainpaths/cms/site`, prop `align: 'start' | 'end'`): nb-ui dropdown of the site's
-  languages, each named in itself ("Deutsch", "Français"); renders nothing on a single-language site. Place it in a
-  `SiteFooter`/`SiteHeader` override or a template. `LANGUAGES`, `DEFAULT_LANGUAGE`, `IS_LOCALIZED`, `languageLabel`
+  languages, each named in itself ("Deutsch", "Français"); renders nothing on a single-language site. The default
+  `SiteFooter` shows it on a localized site; place it elsewhere in a `SiteFooter`/`SiteHeader` override or a template. `LANGUAGES`, `DEFAULT_LANGUAGE`, `IS_LOCALIZED`, `languageLabel`
   and `useLanguageSwitch()` (current language + `change(code)`) are exported too.
-- **Public site**: rendered in the default language for now. Language URLs (`/de/about`), one rendered page per
-  language and translated page content follow in the next releases (issue trainpaths/cms#45).
+- **Public site**: every page and customer screen exists once per language: `/about` (default), `/de/about`,
+  `/de` (German home), `/de/login`. Each is rendered in its language (UI strings; page content is shared until
+  translated content lands, issue trainpaths/cms#45) with `hreflang` alternates. The switch loads the same page in the
+  chosen language and remembers it; unprefixed URLs then redirect to that language. Router links (`RouterLink`,
+  `router.push`) get the prefix automatically; code that builds hrefs itself must use `localePath(path, code)`
+  (`@trainpaths/cms/site`). Language codes can't be page slugs on a localized site (`/de` is the home).
 
 **Your own strings**: `src/locales/<code>.json` (`en.json`, `de.json`...) is deep-merged over the CMS's messages:
 reword any CMS string by its key (see `node_modules/@trainpaths/cms/src/locales/{public,admin}/en.json`), add keys for
@@ -254,7 +258,8 @@ paragraph. Link-preview image: the page's first image, else the share image from
 - Dev: the API stack in Docker (postgres, seaweedfs, `cms-api` with your `cms.config.json` mounted at
   `/app/cms.config.json`) + `vite` (dev server renders public pages itself; `/api` proxied to `VITE_API_BASE_URL`).
 - Images (see the starter's Dockerfile): **frontend** (nginx with `node_modules/@trainpaths/cms/nginx.conf` + your
-  `dist/`; it sends `/`, single-segment paths and `/user/*` to the API's HTML endpoint: keep that in a custom config), **renderer** (Node: `server/render-server.js` + `template.js` from the package, `dist/public.html`,
+  `dist/`; it sends `/`, single-segment paths, `/user/*` and their language-prefixed forms (`/de/about`) to the API's
+  HTML endpoint: keep that in a custom config, and take the package's new `nginx.conf` when you upgrade), **renderer** (Node: `server/render-server.js` + `template.js` from the package, `dist/public.html`,
   `dist-ssr/`; run from that directory), **api** (`FROM ghcr.io/trainpaths/cms-api:<version>` +
   `COPY cms.config.json /app/`).
 - Environment: the CMS repo's `.env.example` lists every variable (DB, JWT key, S3 keys, SMTP, first admin).

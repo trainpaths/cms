@@ -49,10 +49,14 @@ src/locales/public/*.json  strings of the public app (also loaded by the admin);
 src/components/LanguageDropdown.vue  nb-ui Dropdown over useLanguageSwitch(); nothing when < 2 languages; the server
                            render shows only the trigger (nb-ui Popover touches `document` in setup)
 src/main.ts                admin: language = cms_lang cookie else default; switch = swap strings in place + cookie
-src/public/createPublicApp.ts  public app: ALWAYS the default language today; provides a switch with only that
-                           language, so the dropdown renders nothing on public pages yet  ← Phase 2 changes this
-src/public/head.ts         headTags(state, t), documentTitle(page, config, notFound)
+src/public/createPublicApp.ts  public app in state.lang; switch = cookie + full page load (Phase 2)
+src/public/locale.ts       localeBase / localePath / stripLocale (Phase 2); router history base = language prefix
+src/public/head.ts         headTags(state, t) (canonical per language, hreflang, og:locale), documentTitle(...)
 ```
+Phase 2 (API): `rendered_pages` keyed `(PageId, Lang)`, `RenderState.Lang`, `RenderWorker` renders every language,
+`PublicHtmlController` prefixed routes + `cms_lang` redirect + `Vary: Cookie`, `?lang=` on `/api/public/pages/{slug}` and
+`/api/public/state` (`PageService.GetPublishedBySlugAsync(slug, lang)` ignores it until Phase 3), `CmsSiteLang.Codes /
+DefaultCode / IsPrefix / Resolve`, language codes reserved as slugs.
 API (`api-backend/`): `Services/Cms/CmsConfig.cs` `CmsSiteLang { Default, Localization, Tags, IsLocalized, CodeOf(tag) }`
 (read from a string or the object by `CmsSiteLangConverter`), `CmsConfigLoader.ValidateLang` (tags, unique codes, no
 code equal to a `PageService.ReservedSlugs` entry or a configured page slug). The API doesn't use the languages for

@@ -204,6 +204,9 @@ of its **content** (title, meta title, meta description, blocks): the **working 
 - `ReservedSlugs` also routes requests: nginx sends every single-segment path to the API's HTML endpoint, which
   answers customer screens itself and the other reserved ones with the admin SPA (see Public pages). A frontend route
   missing from the list gets a 404.
+- On a localized site the language codes are reserved too (`PageService.SlugError`: `/de` is the German home); a
+  title that slugifies to one gets `-page`. A page that already had a newly configured code as slug is unreachable:
+  logged as a warning on startup, never renamed automatically.
 
 ## Public pages: rendered when content changes (Vue SSR, no Nuxt)
 Why: an SPA shows nothing until JS boots and the page is fetched (~2–3 extra round trips, LCP ~2–3.5 s on
@@ -245,10 +248,14 @@ staff save ─► API IRenderQueue ─► RenderWorker ─POST /render─► ren
   media), `MenusController` on any menu write (other menus don't go through `Refresh()`). Entries carry a generation, so
   a load racing an invalidation is never served. Stored HTML/page JSON is deliberately **not** cached: the stored-HTML
   lookup is one indexed query (page + current `rendered_pages` row joined).
-- **Batched writes:** the worker processes pages in chunks of 20: pages + media refs in two queries, existing row ids in
-  one (rows are updated without reading the old HTML), one `POST /render` per page (Node renders one at a time; a batch endpoint would hit the 4 MB body limit), one
+- **Batched writes:** the worker processes pages in chunks of 20: pages + media refs in two queries, existing row keys in
+  one (rows are updated without reading the old HTML), one `POST /render` per page and language (Node renders one at a time; a batch endpoint would hit the 4 MB body limit), one
   commit per chunk (a page is fresh once its chunk commits). An FK violation (page deleted mid-render) falls back to
-  row-by-row for that chunk. The log line `Rendered {n} public page(s) in {ms} ms` shows what a full render costs.
+  row-by-row for that chunk. The log line `Rendered {n} public page(s) in {k} language(s) in {ms} ms` shows what a full render costs.
+- **Languages:** `rendered_pages` is keyed `(PageId, Lang)` (code); every page, the not-found page and the screens
+  render once per configured language (`RenderState.lang`), all languages of a page go stale together (freshness and
+  the refresh marker are per page). The widen check compares the default language's row only. A full render deletes
+  rows of languages no longer configured; a language added to the config counts as missing HTML (version check).
 - **Deploys:** stored HTML names hashed asset files of its build. The renderer reports a version (hash of
   template + SSR bundle); only HTML of the current version is served, and a version change re-renders everything
   (periodic check, 60 s; also on API start). The not-found page lives in memory (re-rendered with everything).
@@ -269,16 +276,26 @@ staff save ─► API IRenderQueue ─► RenderWorker ─POST /render─► ren
   client-side link to `/login` the owner adds to a menu shows a form whose API answers 404.) One list of screen slugs in three
   places, kept in sync: `src/public/screens/index.ts` (Vitest checks it against `server/screens.js`, read by dev SSR)
   and the API's `PublicScreens`.
-- **Routing:** nginx proxies `^/(user/)?[a-z0-9-]*$` (incl. `/`) to `GET /api/public/html/{slug}` (`user/{name}`).
+- **Routing:** nginx proxies `^/(?!api/)([a-z]{2,3}/)?(user/)?[a-z0-9-]*$` (incl. `/`) to `GET /api/public/html/…`
+  (`{slug}`, `user/{name}`, `{lang}/{slug}`, `{lang}/user/{name}`).
   Responses: stored HTML (ETag, `no-cache`), a customer screen (`no-cache`), 404 + rendered not-found page (unknown
   slug, unknown `user/*`, screens with public auth off), 301 `/home` → `/`, or `X-Accel-Redirect` to `/index.html`
   (other reserved slug → admin SPA) / `/public.html` (no fresh HTML). Admin-SPA links to `home`/`public-page` are full
   page loads; so are public-app links into `/admin`.
+- **Language routing** (localized site only): `/de` = German home, `/de/about`, `/de/user/profile`; the default
+  language's prefix 301s to the unprefixed path (`/en/about` → `/about`), an unknown prefix is a 404, `/de/admin` 301s
+  to `/admin`, `/de/home` to `/de`. An unprefixed page/screen/home path with a `cms_lang` cookie naming another
+  configured language 302s to that language's path (query kept; admin routes never redirect). Every response carries
+  `Vary: Cookie`. The public app's router history base is the prefix (`/de/`), so every router link (menus, footer,
+  screens) gets it for free; `src/public/locale.ts` (`localePath`, `stripLocale`) covers the code that builds URLs
+  itself (head tags, the shell's fetch, the language switch). The public JSON endpoints take `?lang=`.
 - No renderer configured (`Renderer:BaseUrl` empty, e.g. tests) → everything falls back to the shell.
 - **Site meta** (`src/public/head.ts`): document title "{page meta title} - {firm name}", the firm name alone without
   a meta title (no firm name: meta title, then page title); description = page meta description, else the first
   paragraph; og:site_name = firm name; og:image = first image, else the site's share image; `<html lang>` = the
-  default language of `site.lang`, written into index.html + public.html at build time by `cms()` (see Localization).
+  render's language tag (the template carries the default's from `cms()`; `splice` replaces it per render); on a
+  localized site canonical = the language's URL, `hreflang` alternates for every language + `x-default` (unprefixed),
+  `og:locale` + `og:locale:alternate`.
 - Dev: `pnpm dev` server-renders public pages and customer screens itself (`frontend/server/dev-ssr.js`, Vite `ssrLoadModule`), so
   hydration mismatches show up in development; the renderer container isn't needed.
 
@@ -291,7 +308,7 @@ remaining phases (one PR each): `claude-context/localization/` (README first).
   (`CmsConfigLoader`: tags, unique codes, codes not a reserved/configured slug) and `cms()` (`server/site-lang.js`).
 - **Languages reach the frontend at build time** (`__CMS_LANGUAGES__`, `src/i18n/languages.ts`) like the palette: the
   public SSR needs them without a request, and `<html lang>` was build-time already. The API still reads the same file
-  (Phase 2 routing/rendering), so both read one source.
+  (routing/rendering), so both read one source.
 - **UI strings**: vue-i18n (Composition API), messages per code in `src/locales/public/` (eager: both apps, the server
   render can't wait for a chunk) and `src/locales/admin/` (lazy chunk per language), English = source + fallback;
   the instance's `src/locales/<code>.json` is deep-merged over both. One i18n instance per app (per server render).
@@ -299,9 +316,11 @@ remaining phases (one PR each): `claude-context/localization/` (README first).
   renamed them (`i18n/siteConfigLabels.ts`). Pinia stores translate through `translate()`, registered by `createAdmin()`.
 - **Admin language** = the `cms_lang` cookie (written by `LanguageDropdown`, not HttpOnly) else the default; switching
   swaps the strings in place. One cookie for admin and public site ("same setting"): no DB column, no API call.
-- **Public site (planned, Phase 2)**: language prefix with the code, default unprefixed (`/about`, `/de/about`), one
+- **Public site** (Phase 2): language prefix with the code, default unprefixed (`/about`, `/de/about`), one
   stored HTML per page and language (`rendered_pages` key `(PageId, Lang)`), `hreflang` alternates; an unprefixed URL
-  with a `cms_lang` cookie for another language redirects. Rejected: same URL by cookie/`Accept-Language` (crawlers and
+  with a `cms_lang` cookie for another language redirects (see Public pages → Language routing). The public
+  `LanguageDropdown` (default footer) remembers the choice and loads the same page under the other language's URL (full
+  page load: stored HTML + head of that language). Rejected: same URL by cookie/`Accept-Language` (crawlers and
   link previews only ever see one language) and client-side text swapping (wrong language flashes, no SEO, hydration
   mismatches). Storage: a few KB per page and language; a full re-render takes N× longer.
 - **Content (planned, Phase 3)**: per-field translations on one shared block tree (`translations: { code: { attr } }`

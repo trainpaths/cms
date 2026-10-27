@@ -50,6 +50,8 @@ e2e/tests/instance/instance.spec.ts   callout block (SSR), NotFound override, im
 e2e/tests/backups/backups.spec.ts     serial: schedule + back up + download, restore (signs out; later pages gone), no tab without
                                       super_admin (registers an editor via the API). The restore re-renders every public page.
 e2e/tests/site/meta.spec.ts           meta title/description + firm name → rendered <head> (clears the firm name again)
+e2e/tests/site/languages.spec.ts      footer language switch → /de/…, cms_lang redirect, German screens, per-language HTML
+                                      (the only spec that sets cms_lang; its own browser context)
 ```
 Public auth off / `blocks.exclude` / `editable: false` aren't in the playground config: covered by the API tests
 (`InstanceConfigTests`); check the UI by editing `cms.config.json` + `docker compose restart api`.

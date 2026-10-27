@@ -14,6 +14,8 @@ export interface PublicState {
 	config: SiteConfig | null
 	/** Absolute site origin for canonical/OG URLs, e.g. `https://example.com` (no trailing slash). */
 	baseUrl: string
+	/** Language code it renders in (`de`); URL prefix unless the default. */
+	lang: string
 }
 
 /** Public path of a slug: `home` lives at `/`. */

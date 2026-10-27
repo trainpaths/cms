@@ -26,7 +26,7 @@ instance owns `index.html`, `public.html`, `vite.config.ts` (`plugins: [cms()]`)
                                               PageContent, useMediaImage, site config/menu stores, site config helpers
                                               from lib/siteConfig.ts + SiteConfigEntry, LanguageDropdown + LANGUAGES,
                                               DEFAULT_LANGUAGE, IS_LOCALIZED, languageLabel, useLanguageSwitch,
-                                              TemplateProps, types)
+                                              localePath, TemplateProps, types)
 ./style.css        src/style.css              the CMS stylesheet (Tailwind + nb-ui theme + editor CSS + cms-* tokens)
 ./cms.config.schema.json                      JSON schema of the instance config (`"$schema"` in cms.config.json)
 ./vite             vite-plugin.js (+ .d.ts)   cms(): see below
@@ -87,12 +87,13 @@ i18n/siteConfigLabels.ts  useConfiguredLabel(key, fallback) (message if it exist
 locales/public/<code>.json   common.*, site.*, screens.*, account.*, siteConfig.* (public app + admin)
 locales/admin/<code>.json    admin.*, editor.*, blocks.* (admin only); en/de/fr/it, same keys (i18n.test.ts checks)
 components/LanguageDropdown.vue  nb-ui Dropdown of useLanguageSwitch().languages (nothing when < 2); trigger only during
-                    SSR/hydration (Popover isn't SSR-safe); admin: AppNav (sidebar head + mobile bar), AdminLogin
+                    SSR/hydration (Popover isn't SSR-safe); admin: AppNav (sidebar head + mobile bar), AdminLogin;
+                    public: SiteFooter bottom row (localized sites)
 components/UnsavedDialog.vue     translated copy of nb-ui's UnsavedChangesDialog (Menus, Configuration)
 ```
 - Admin (`createAdmin`): language = `cms_lang` cookie else default, `<html lang>` set at runtime, switch = load the
-  admin chunk, set locale + cookie (no reload). Public app (`createPublicApp`): default language until Phase 2
-  (per-language URLs); its switch lists only that language, so the dropdown renders nothing there yet.
+  admin chunk, set locale + cookie (no reload). Public app (`createPublicApp`): language = `state.lang` (from the URL
+  prefix, never the cookie); switch = cookie + full page load of `localePath(current router path, code)`.
 - Writing UI text: `$t('key')` in templates, `const { t } = useI18n()` in setup, `<I18nT keypath scope="global">`
   for sentences with links/markup, `t(key, n)` with `'{n} one | {n} many'` plurals. Add the key to all four
   `locales/*/<code>.json` (Vitest fails otherwise); German is Swiss: "ss", never "ß". Keep English wording stable:
@@ -103,13 +104,16 @@ components/UnsavedDialog.vue     translated copy of nb-ui's UnsavedChangesDialog
 
 ## Public site (`src/public/`, `server/`)
 ```
-state.ts            PublicState {slug, page|null, menu, config, baseUrl}: what a page or screen renders from
-                    (API RenderState mirrors it)
+state.ts            PublicState {slug, page|null, menu, config, baseUrl, lang (code)}: what a page or screen renders
+                    from (API RenderState mirrors it)
+locale.ts           language prefixes (default unprefixed): localeBase(code) = router history base (`/de/`),
+                    localePath('/about', 'de') = `/de/about` ('/' → `/de`), stripLocale(pathname) → {code, path}.
+                    Router links get the prefix from the history base; this is for code building URLs itself
 createPublicApp.ts  app factory (SSR app or client app), seeds stores (publicPage, menus, siteConfig); returns app, router, pinia
 PublicApp.vue       .site-theme root: AdminBar (client-only) + SiteHeader + RouterView + SiteFooter
 PublicPage.vue      route component of pages: PageView (template or PageContent) of the store's page, else NotFound
 templates.ts        getTemplate(name): the instance's src/templates/*.vue; TemplatePage / TemplateProps types
-router.ts           routes `home` / `/home` redirect / customer screens (lazy) / `public-page` / catch-all; first
+router.ts           history base = language prefix (see locale.ts); routes `home` / `/home` redirect / customer screens (lazy) / `public-page` / catch-all; first
                     navigation keeps the server state (a screen path the server answered with not-found, i.e. public
                     auth off → catch-all, same URL), later ones load the page first; unknown page, admin route or
                     deeper path → full page load; leaving a page for login/register adds `?redirect=`
@@ -119,28 +123,34 @@ screens/            customer screens: index.ts SCREENS (slug, route name, title,
 session.ts          useGuestScreen (target() after login, carry(path) keeps redirect, signed-in → straight on),
                     useCustomerSession (account pages: ready once ensureSession() confirms a customer, else → login)
 redirect.ts         safeRedirect: same-site paths only, no guest screen, no /admin (+ redirect.test.ts)
-store.ts            usePublicPageStore: current slug + page, load(slug)
-head.ts             <head> tags: title via documentTitle ("{metaTitle} - {firmName}", firm name alone without a meta title;
+store.ts            usePublicPageStore: current slug + page + lang, load(slug) (`?lang=`)
+head.ts             <head> tags (canonical in the page's language; localized: hreflang per language + x-default,
+                    og:locale + alternates): title via documentTitle ("{metaTitle} - {firmName}", firm name alone without a meta title;
                     no firm name → meta title, then page title), description (metaDescription, else the first
                     paragraph), canonical, OG/Twitter (og:title = meta or page title, og:site_name = firm, og:image =
                     first image, else config.shareImage), icon; serializeState
-entry-server.ts     render(state) → {head, html, state}: page, screen (screenOf) or not-found (`vite build --ssr` → dist-ssr/)
-entry-client.ts     hydrates from #__STATE__; without it (shell) fetches page + menu + config in one
-                    `GET /api/public/state/{slug}` (screens/deeper paths: no slug), adds head tags; interceptors (401 →
+entry-server.ts     render(state) → {head, html, state, tag}: page, screen (screenOf) or not-found, memory history with the
+                    language base (`vite build --ssr` → dist-ssr/); `tag` → `<html lang>` (splice)
+entry-client.ts     hydrates from #__STATE__ (web history base = its language prefix); without it (shell) strips the
+                    prefix and fetches page + menu + config in one `GET /api/public/state/{slug}?lang=` (screens/deeper
+                    paths: no slug), adds head tags; interceptors (401 →
                     login with redirect); after mounting, a `data-refresh` on #__STATE__ (stored HTML older than a
                     menu/config change, set by the API during the quiet re-render) → refresh.ts
-refresh.ts          refreshSurroundings(pinia): one `GET /api/public/state` (no slug) → seeds menus.main + the site
+refresh.ts          refreshSurroundings(pinia): one `GET /api/public/state?lang=` (no slug) → seeds menus.main + the site
                     config store, keeps both on failure (not awaited, no hydration mismatch)
-render.test.ts      Vitest: render output, escaping, screens (vitest.config.ts: vue + nbUi only)
+render.test.ts      Vitest: render output, escaping, screens, languages (vitest.config.ts: vue + nbUi only; two projects:
+                    `localized` = en-US + de/fr/it like the playground, `single-language` = `*.single.test.ts`)
 server/render-server.js  renderer service: POST /render, GET /version (hash of template + SSR bundle), /health; reads
                          dist/public.html + dist-ssr/entry-server.js from the working directory (= instance app root)
-server/template.js       splice(): fills public.html placeholders (function replacers: content may contain `$&`); types in .d.ts
+server/template.js       splice(): fills public.html placeholders (function replacers: content may contain `$&`) + sets
+                         `<html lang>` to the render's tag; types in .d.ts
 server/site-lang.js      build time, part of cms(): parseConfig (JSONC), site.lang → language tags (validated like the
                          API: tags, unique codes) → <html lang> (default) + __CMS_LANGUAGES__
 server/theme.js          build time, part of cms(): theme.colors (validated like the API) → themeStyle <style> + palette
 server/dev-ssr.js        part of cms(): dev server-renders published pages + customer screens via the app's
-                         /src/entry-server.ts (one `/api/public/state[/{slug}]` fetch, screens also `/api/public/instance`
-                         for publicAuth; falls through to the SPA when neither a page nor a screen with public auth on)
+                         /src/entry-server.ts (one `/api/public/state[/{slug}]?lang=` fetch, screens also `/api/public/instance`
+                         for publicAuth; falls through to the SPA when neither a page nor a screen with public auth on);
+                         language prefixes + `cms_lang` redirect like the API
 server/screens.js        SCREEN_SLUGS (dev SSR; mirrors screens/index.ts and the API's PublicScreens)
 ```
 - Public code imports **directly** (`../lib/web-editor/view/ViewBlockList.vue`, `../stores/media`), type-only from the
@@ -231,7 +241,7 @@ the public site (`src/public/PublicApp.vue`) and `PagePreview.vue`. Both also re
 `main` menu from `usePublicMenusStore`, seeded on a fresh install with Home `/` + Login `/login` (`MenuService.EnsureMainAsync`; `site/SiteNavLink.vue` shows the `/login` item as "Account" → `/user/profile` for a signed-in customer, client-only); md+ row with hover/focus dropdowns, deeper levels indented inside; burger panel
 below md; pieces in `components/site/`) and `components/SiteFooter.vue` (logo + `config.fields.firmName` + filled
 `config.groups.contact` entries: address lines, mailto/tel/link by type; bottom row = `config.footerLinks`, the
-published config pages marked `footer`). Hidden only when all are empty. Other groups: instance overrides/templates.
+published config pages marked `footer`, + `LanguageDropdown` on a localized site). Hidden only when all are empty. Other groups: instance overrides/templates.
 `src/lib/siteConfig.ts`: pure helpers for reading the config (firmName, configEntry, filledEntries, hasValue,
 addressLines, entryHref, entryText, emptyAddress) and `components/SiteConfigEntry.vue` (one entry's value: address
 lines / mailto-tel-link / text; footer + templates), exported via `@trainpaths/cms/site`.
@@ -339,6 +349,6 @@ src/lib/pageExport.ts  page export file (`{format: "cms-page", version, exported
 src/lib/download.ts    saveBlob / saveJson (browser file download)
 src/lib/backupSchedule.ts  interval/weekday labels + scheduleSummary (panel + dashboard)
 src/lib/backupUpload.ts uploadBackup (XHR for progress; ensureSession + bearer itself) + formatBytes
-nginx.conf             `/` + `/{slug}` + `/user/{name}` → API HTML endpoint (X-Accel-Redirect to index.html/public.html), SPA fallback, /api proxy (64k; /api/pages 2m; /api/menus 512k; /api/media 11m; /api/backups 2g, unbuffered, 15 min timeouts; proxy headers set once at server level; real client IP from the host proxy's X-Forwarded-For, trusted from 172.16.0.0/12), CSP (img-src 'self' only: uploads are same-origin)
+nginx.conf             `/` + `/{slug}` + `/user/{name}` (optionally prefixed `/de/…`, never `/api/`) → API HTML endpoint (X-Accel-Redirect to index.html/public.html), SPA fallback, /api proxy (64k; /api/pages 2m; /api/menus 512k; /api/media 11m; /api/backups 2g, unbuffered, 15 min timeouts; proxy headers set once at server level; real client IP from the host proxy's X-Forwarded-For, trusted from 172.16.0.0/12), CSP (img-src 'self' only: uploads are same-origin)
 public/favicon.svg     CMS admin icon (emitted by cms() unless the instance has its own)
 ```
