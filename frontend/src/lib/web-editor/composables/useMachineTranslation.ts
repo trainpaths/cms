@@ -6,7 +6,7 @@ import { errorMessage } from '../../../api-error'
 import { useEditorStore } from '../../../stores/editor'
 import { useInstanceStore } from '../../../stores/instance'
 import { DEFAULT_LANGUAGE } from '../../../i18n/languages'
-import { textFields } from '../core/translatable'
+import { textFields, type PageText } from '../core/translatable'
 
 // one request at a time across the editor (header hint + Page tab)
 const running = ref(false)
@@ -28,9 +28,19 @@ export function useMachineTranslation() {
 		() => instance.config.machineTranslation && store.editLang !== DEFAULT_LANGUAGE.code && store.pageEditable,
 	)
 
+	// still untranslated now (the owner may have typed one while the request ran)
+	function stillMissing(code: string, blockId: string | null, key: string): boolean {
+		const current =
+			blockId === null
+				? store.pageTranslations[code]?.[key as keyof PageText]
+				: store.findBlockById(blockId)?.translations?.[code]?.[key]
+		return current === undefined || current === ''
+	}
+
 	async function run(missingOnly: boolean): Promise<void> {
 		if (running.value || !available.value) return
 		const code = store.editLang
+		const pageId = store.pageId
 		const page = { title: store.pageTitle, metaTitle: store.pageMetaTitle, metaDescription: store.pageMetaDescription }
 		const fields = textFields(store.blocks, page, store.pageTranslations, missingOnly ? code : undefined)
 		if (!fields.length) {
@@ -40,13 +50,13 @@ export function useMachineTranslation() {
 		running.value = true
 		try {
 			const { data } = await postApiTranslate({ body: { target: code, texts: fields.map((f) => f.source) } })
-			// the owner may have switched language or page meanwhile: apply to the one it was asked for
-			if (store.editLang !== code) return
-			store.applyTranslations(
-				code,
-				fields.map((field, i) => ({ blockId: field.blockId, key: field.key, text: data.texts[i] ?? '' })),
-			)
-			toast({ message: t('editor.deepl.done', fields.length), type: 'success' })
+			// the owner may have switched language or page meanwhile: apply only to the one it was asked for
+			if (store.editLang !== code || store.pageId !== pageId) return
+			const entries = fields
+				.map((field, i) => ({ blockId: field.blockId, key: field.key, text: data.texts[i] ?? '' }))
+				.filter((entry) => !missingOnly || stillMissing(code, entry.blockId, entry.key))
+			store.applyTranslations(code, entries)
+			toast({ message: t('editor.deepl.done', entries.length), type: 'success' })
 		} catch (err: unknown) {
 			store.errorMessage = errorMessage(err, t('editor.deepl.failed'))
 		} finally {
