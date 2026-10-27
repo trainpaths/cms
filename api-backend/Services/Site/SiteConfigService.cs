@@ -22,8 +22,14 @@ public record SiteConfigResult(SiteConfigResponse? Value, string? Error = null)
 /// </summary>
 public class SiteConfigService(AppDbContext db, CmsConfig cms)
 {
-	/// <param name="code">language of the footer link titles (null → default)</param>
-	public async Task<SiteConfigResponse> GetAsync(CancellationToken ct, string? code = null)
+	/// <summary>The site config with footer link titles in the default language (admin form).</summary>
+	public async Task<SiteConfigResponse> GetAsync(CancellationToken ct) =>
+		(await GetAsync([cms.Site.Lang.DefaultCode], ct)).Values.Single();
+
+	/// <summary>
+	/// The site config in each of <paramref name="codes"/>: loaded once, only the footer link titles differ.
+	/// </summary>
+	public async Task<Dictionary<string, SiteConfigResponse>> GetAsync(IReadOnlyList<string> codes, CancellationToken ct)
 	{
 		var config = await db.SiteConfig.AsNoTracking()
 			.Include(m => m.Logo)
@@ -31,24 +37,27 @@ public class SiteConfigService(AppDbContext db, CmsConfig cms)
 			.Include(m => m.ShareImage)
 			.FirstOrDefaultAsync(m => m.Id == SiteConfig.SingletonId, ct);
 		var (fields, groups) = Resolve(cms.SiteConfigSchema(), config?.Values ?? new SiteConfigValues());
-		return new SiteConfigResponse(fields, groups, ToRef(config?.Logo), ToRef(config?.Icon), ToRef(config?.ShareImage),
-			config?.UpdatedAt, await FooterLinksAsync(code, ct));
+		var footer = await FooterLinksAsync(codes, ct);
+		return codes.ToDictionary(code => code, code => new SiteConfigResponse(fields, groups, ToRef(config?.Logo),
+			ToRef(config?.Icon), ToRef(config?.ShareImage), config?.UpdatedAt, footer[code]));
 	}
 
-	/// <summary>Published pages marked <c>footer</c> in the instance config, in config order, titles in <paramref name="code"/>.</summary>
-	private async Task<List<FooterLink>> FooterLinksAsync(string? code, CancellationToken ct)
+	/// <summary>Published pages marked <c>footer</c> in the instance config, in config order, per language code.</summary>
+	private async Task<Dictionary<string, List<FooterLink>>> FooterLinksAsync(IReadOnlyList<string> codes,
+		CancellationToken ct)
 	{
 		var slugs = cms.Pages.Where(p => p.Footer).Select(p => p.Slug).ToList();
-		if (slugs.Count == 0) return [];
-		var lang = cms.Site.Lang;
-		var pages = await db.Pages.AsNoTracking()
-			.Where(p => slugs.Contains(p.Slug) && p.Status == PageStatus.Published)
-			.Select(p => new { Title = p.PublishedTitle!, p.PublishedTranslations, p.Slug })
-			.ToListAsync(ct);
-		return pages
-			.Select(p => new FooterLink(
-				PageService.LiveTitle(p.Title, p.PublishedTranslations, lang.Resolve(code), lang.DefaultCode), p.Slug))
-			.OrderBy(l => slugs.IndexOf(l.Slug)).ToList();
+		var pages = slugs.Count == 0
+			? []
+			: (await db.Pages.AsNoTracking()
+				.Where(p => slugs.Contains(p.Slug) && p.Status == PageStatus.Published)
+				.Select(p => new { Title = p.PublishedTitle!, p.PublishedTranslations, p.Slug })
+				.ToListAsync(ct))
+				.OrderBy(p => slugs.IndexOf(p.Slug)).ToList();
+		var defaultCode = cms.Site.Lang.DefaultCode;
+		return codes.ToDictionary(code => code, code => pages
+			.Select(p => new FooterLink(PageService.LiveTitle(p.Title, p.PublishedTranslations, code, defaultCode), p.Slug))
+			.ToList());
 	}
 
 	/// <summary>
@@ -124,7 +133,7 @@ public class SiteConfigService(AppDbContext db, CmsConfig cms)
 		// built from what was just written, not re-read
 		var (fields, groups) = Resolve(schema, values!);
 		return SiteConfigResult.Ok(new SiteConfigResponse(fields, groups, RefOf(req.LogoMediaId), RefOf(req.IconMediaId),
-			RefOf(req.ShareImageMediaId), config.UpdatedAt, await FooterLinksAsync(null, ct)));
+			RefOf(req.ShareImageMediaId), config.UpdatedAt, (await FooterLinksAsync([cms.Site.Lang.DefaultCode], ct)).Values.Single()));
 
 		MediaRef? RefOf(Guid? id) => id is { } mediaId ? media[mediaId] : null;
 	}

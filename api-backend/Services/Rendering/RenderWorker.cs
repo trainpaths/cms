@@ -113,11 +113,12 @@ public sealed class RenderWorker(
 		using var scope = scopeFactory.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 		var codes = cms.Site.Lang.Codes;
-		// a language added to the config counts as missing HTML
-		var stale = await db.Pages.AnyAsync(
-			p => p.Status == PageStatus.Published
-				 && db.RenderedPages.Count(r => r.PageId == p.Id && r.RendererVersion == version && codes.Contains(r.Lang))
-				 < codes.Count, ct);
+		// one current row per published page and language (key: page + lang), so counts tell; a language added to the
+		// config counts as missing HTML
+		var published = await db.Pages.CountAsync(p => p.Status == PageStatus.Published, ct);
+		var rendered = await db.RenderedPages.CountAsync(r => r.RendererVersion == version && codes.Contains(r.Lang)
+			&& r.Page!.Status == PageStatus.Published, ct);
+		var stale = rendered < published * codes.Count;
 
 		if (changed || stale || status.NotFoundHtml is null || status.Screens is null)
 		{
@@ -160,14 +161,15 @@ public sealed class RenderWorker(
 				|| pages.Any(p => p.Status != PageStatus.Published || p.RenderedTitle != p.Title || p.RenderedSlug != p.Slug);
 		}
 
-		// main menu + site config per language (page titles in them are translated)
+		// main menu + site config per language (page titles in them are translated; the first miss loads all languages)
 		var cache = services.GetRequiredService<PublicCache>();
+		var (menuService, siteConfig) = (services.GetRequiredService<MenuService>(), services.GetRequiredService<SiteConfigService>());
 		var menus = new Dictionary<string, PublicMenu?>();
 		var configs = new Dictionary<string, SiteConfigResponse>();
 		foreach (var code in codes)
 		{
-			menus[code] = await cache.MenuAsync(services.GetRequiredService<MenuService>(), Menu.MainHandle, code, ct);
-			configs[code] = await cache.SiteConfigAsync(services.GetRequiredService<SiteConfigService>(), code, ct);
+			menus[code] = await cache.MenuAsync(menuService, Menu.MainHandle, code, ct);
+			configs[code] = await cache.SiteConfigAsync(siteConfig, code, ct);
 		}
 		var pageService = services.GetRequiredService<PageService>();
 		var baseUrl = options.Value.PublicBaseUrl.TrimEnd('/');

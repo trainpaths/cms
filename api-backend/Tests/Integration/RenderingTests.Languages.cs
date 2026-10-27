@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using api_backend.Controllers;
 using api_backend.Models.Dto;
 using api_backend.Services.Cms;
+using api_backend.Services.Menus;
 using api_backend.Services.Rendering;
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
@@ -137,6 +138,38 @@ public partial class RenderingTests
 
 		var home = await WaitForAsync(site, "/api/public/html/de", (r, body) => r.StatusCode == HttpStatusCode.OK && Accel(r) is null);
 		(await home.Content.ReadAsStringAsync(Ct)).Should().Contain("|lang:de|");
+	}
+
+	[Fact]
+	public async Task Localized_MissingLanguageRow_IsRenderedByThePeriodicCheck()
+	{
+		// what a language newly added to the config looks like: its rows are missing
+		await using var site = await StartAsync(cms: Localized);
+		var (id, slug) = await CreatePublishedAsync(site, "Added language");
+		await WaitForAsync(site, $"/api/public/html/it/{slug}", (r, _) => r.StatusCode == HttpStatusCode.OK && Accel(r) is null);
+		using var scope = site.App.Services.CreateScope();
+		var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+		await db.RenderedPages.Where(r => r.PageId == Guid.Parse(id) && r.Lang == "it").ExecuteDeleteAsync(Ct);
+
+		await WaitForAsync(site, $"/api/public/html/it/{slug}", (r, body) => r.StatusCode == HttpStatusCode.OK
+			&& Accel(r) is null && body.Contains("|lang:it|"));
+	}
+
+	[Fact]
+	public async Task Localized_MenuAndConfig_LoadedOnceForAllLanguages()
+	{
+		await using var site = await StartAsync(cms: Localized);
+		await CreatePublishedAsync(site, "Cached");
+		var cache = site.App.Services.GetRequiredService<PublicCache>();
+		cache.Invalidate();
+		using var scope = site.App.Services.CreateScope();
+		var menus = scope.ServiceProvider.GetRequiredService<MenuService>();
+
+		var german = await cache.MenuAsync(menus, "main", "de", Ct);
+		// the first miss stored every language: same generation, no load needed
+		(await cache.MenuAsync(new MenuService(null!, Localized), "main", "fr", Ct))
+			.Should().NotBeNull();
+		german.Should().NotBeNull();
 	}
 
 	[Fact]
