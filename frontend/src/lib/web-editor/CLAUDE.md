@@ -83,13 +83,14 @@ editor/BlockSettingsPanel.vue    right sidebar: "Block" | "Page" tabs (store.rig
                           clearing → Page). Block = BlockType.settings + width/background/text colour per `supports`
                           (ColorPicker gets `paletteFor(supports.…)`),
                           "No block selected" when empty. No deselect button: X only closes the sidebar
-editor/PageSettings.vue   title (< sm only), slug (saved on blur/Enter via store.updateSlug; disabled when locked),
-                          "Search & sharing": meta title (≤70) + description (≤200) with counters and the resulting tab
-                          title (public/head documentTitle + site config firm name), saved on blur with the page
-                          (store.pageMetaTitle/-Description); tags (`TagInput`, saved right away via store.updateTags,
-                          not part of undo), Translations (localized: a row per language with its untranslated/outdated counts,
-                          click = edit it), Status: "Draft" / "Published" / "Published · unpublished changes" +
-                          Publish / Publish changes + Unpublish (same rules as the header: usePublishState)
+editor/PageSettings.vue   sections in this order: "Search & sharing": meta title (≤70) + description (≤200) with counters
+                          and the resulting tab title (public/head documentTitle + site config firm name), saved on blur
+                          with the page (store.pageMetaTitle/-Description); Translations (localized: a row per language
+                          with its untranslated/outdated counts, click = edit it); Page: title (< sm only), status
+                          "Draft" / "Published" / "Published · unpublished changes" + Publish / Publish changes +
+                          Unpublish (same rules as the header: usePublishState), then slug (saved on blur/Enter via
+                          store.updateSlug; disabled when locked); tags (`TagInput`, saved right away via
+                          store.updateTags, not part of undo); Export (JSON download)
 editor/ToolbarDropdown.vue  compact inline-toolbar choice (current value + menu); paragraph align, heading level
 editor/ColorPicker.vue    palette swatches (`colors` prop, default the whole theme) + none (no custom colours),
                           model = palette key

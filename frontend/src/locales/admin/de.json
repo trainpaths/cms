@@ -307,7 +307,6 @@
 			"tab": "Tab: {title}",
 			"metaDescription": "Meta-Beschreibung",
 			"metaDescriptionHint": "Suchergebnisse und Linkvorschauen; leer = der erste Absatz.",
-			"status": "Status",
 			"statusHint": "Speichern veröffentlicht nie: Besucher sehen die zuletzt veröffentlichte Version.",
 			"downloadJson": "JSON herunterladen",
 			"exportHint": "Eine Kopie dieser Seite. Importieren Sie sie in der Seitenliste, um einen neuen Entwurf zu erstellen."

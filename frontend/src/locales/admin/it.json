@@ -307,7 +307,6 @@
 			"tab": "Scheda: {title}",
 			"metaDescription": "Meta description",
 			"metaDescriptionHint": "Risultati di ricerca e anteprime dei link; vuoto = il primo paragrafo.",
-			"status": "Stato",
 			"statusHint": "Salvare non pubblica mai: i visitatori vedono l’ultima versione pubblicata.",
 			"downloadJson": "Scarica JSON",
 			"exportHint": "Una copia di questa pagina. Importala nell’elenco delle pagine per creare una nuova bozza."

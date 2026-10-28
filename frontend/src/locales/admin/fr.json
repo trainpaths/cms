@@ -307,7 +307,6 @@
 			"tab": "Onglet : {title}",
 			"metaDescription": "Méta-description",
 			"metaDescriptionHint": "Résultats de recherche et aperçus de liens ; vide = le premier paragraphe.",
-			"status": "Statut",
 			"statusHint": "Enregistrer ne publie jamais : les visiteurs voient la dernière version publiée.",
 			"downloadJson": "Télécharger le JSON",
 			"exportHint": "Une copie de cette page. Importez-la dans la liste des pages pour créer un nouveau brouillon."
