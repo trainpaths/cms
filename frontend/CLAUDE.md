@@ -314,7 +314,7 @@ Bumping nb-ui = devDependency + peerDependency here + `playground/package.json` 
 `suggestions`/`popular`/`max`/`maxLength`/`normalize`), `Modal` (`PageEditDialog`), `Select`, `Switch`, `Badge`,
 `EmptyState`, `useConfirm()` (every delete; never `window.confirm`; e2e clicks `confirm-ok`). Also available: `Textarea`,
 `Checkbox`, `RadioGroup`, `Dropdown`, `Tooltip`, `Tabs`, `Table`, `Pagination`, `Avatar`, `Skeleton`, `ProgressBar`, `Icon`.
-Colour props (`bg`, `text`, `border`) take theme colour names. `App.vue` mounts the global `ToastContainer` + `ConfirmDialog`.
+Colour props (`bg`, `text`, `border`) take theme colour names. `App.vue` mounts the global `ToastContainer` (bottom right, `bottom-[25vh]`) + `ConfirmDialog`.
 - UI icons: nb-ui `Icon`, no inline SVGs (exceptions: block-type `…Icon.vue`s, the `PageFilters` sort icon). Directional
   shapes exist once pointing left (`chevron`, `arrow`, `panel`) + `rotate` (90 up, 180 right, 270 down). Missing
   icon → add it to nb-ui's `Icon.vue`.

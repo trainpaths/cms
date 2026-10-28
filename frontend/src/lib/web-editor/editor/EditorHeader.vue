@@ -64,9 +64,7 @@ function handleTitleBlur() {
 			>
 				<Icon name="panel" :size="18" />
 			</button>
-			<!-- before the title: the title input grows (flex-1) -->
-			<EditLanguageSelect />
-			<!-- < sm: hidden, no room (title + publish live in the Page tab there) -->
+			<!-- < sm: hidden, no room (title + publish live in the Page tab there); content width: language select sits right after it -->
 			<input
 				v-model="title"
 				:placeholder="originalTitle"
@@ -74,9 +72,10 @@ function handleTitleBlur() {
 				:class="{ 'underline decoration-amber-500 decoration-wavy': titleOutdated }"
 				:aria-label="$t('editor.page.title')"
 				data-testid="page-title"
-				class="m-0 min-w-0 flex-1 truncate border-none bg-transparent text-xl font-semibold text-gray-900 outline-hidden focus:ring-1 focus:ring-primary max-sm:hidden"
+				class="m-0 field-sizing-content min-w-0 truncate border-none bg-transparent text-xl font-semibold text-gray-900 outline-hidden focus:ring-1 focus:ring-primary max-sm:hidden"
 				@blur="handleTitleBlur"
 			/>
+			<EditLanguageSelect />
 		</div>
 		<div class="flex shrink-0 items-center gap-4 md:gap-8">
 			<button
@@ -131,8 +130,8 @@ function handleTitleBlur() {
 			</Button>
 			<!-- md+: text button; < md: globe icon (same rules) -->
 			<Button
+				bg="primary"
 				variant="outline"
-				text="primary"
 				class="whitespace-nowrap max-md:hidden"
 				:title="publishHint"
 				:disabled="!canPublish"
@@ -141,22 +140,22 @@ function handleTitleBlur() {
 			>
 				{{ publishLabel }}
 			</Button>
-			<!-- wrappers: .header-icon-btn's display would beat a hidden utility on the button itself -->
-			<span class="contents md:hidden">
-				<button
-					class="header-icon-btn disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-					:title="publishHint"
-					:aria-label="publishLabel"
-					:disabled="!canPublish"
-					data-testid="page-publish-icon"
-					@click="publish"
-				>
-					<Icon
-						name="globe"
-						:size="18"
-					/>
-				</button>
-			</span>
+			<Button
+				bg="primary"
+				variant="outline"
+				square
+				class="shrink-0 md:hidden"
+				:title="publishHint"
+				:aria-label="publishLabel"
+				:disabled="!canPublish"
+				data-testid="page-publish-icon"
+				@click="publish"
+			>
+				<Icon
+					name="globe"
+					:size="18"
+				/>
+			</Button>
 			<!-- < lg: icon only; < sm: hidden, the Page tab has it -->
 			<Button
 				v-if="isPublished"
