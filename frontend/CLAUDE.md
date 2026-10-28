@@ -97,7 +97,8 @@ components/UnsavedDialog.vue     translated copy of nb-ui's UnsavedChangesDialog
 ```
 - Admin (`createAdmin`): language = `cms_lang` cookie else default, `<html lang>` set at runtime, switch = load the
   admin chunk, set locale + cookie (no reload). Public app (`createPublicApp`): language = `state.lang` (from the URL
-  prefix, never the cookie); switch = cookie + full page load of `localePath(current router path, code)`.
+  prefix, never the cookie); switch = cookie + `switchLanguage` from `entry-client.ts` (no page load, see there); a
+  full page load of `localePath(current router path, code)` without it.
 - Writing UI text: `$t('key')` in templates, `const { t } = useI18n()` in setup, `<I18nT keypath scope="global">`
   for sentences with links/markup, `t(key, n)` with `'{n} one | {n} many'` plurals. Add the key to all four
   `locales/*/<code>.json` (Vitest fails otherwise); German is Swiss: "ss", never "ß". Keep English wording stable:
@@ -140,7 +141,11 @@ entry-client.ts     hydrates from #__STATE__ (web history base = its language pr
                     prefix and fetches page + menu + config in one `GET /api/public/state/{slug}?lang=` (screens/deeper
                     paths: no slug), adds head tags; interceptors (401 →
                     login with redirect); after mounting, a `data-refresh` on #__STATE__ (stored HTML older than a
-                    menu/config change, set by the API during the quiet re-render) → refresh.ts
+                    menu/config change, set by the API during the quiet re-render) → refresh.ts. Language switch
+                    (`switchLanguage(path)`, passed to createPublicApp): fetch that language's state, pushState, client-
+                    render a new app under its prefix, unmount the old one + destroy its history in the same task, set
+                    `<html lang>` + title; not-found → full load; latest switch wins. A popstate listener registered
+                    before vue-router's remounts on back/forward into another language (stopImmediatePropagation)
 refresh.ts          refreshSurroundings(pinia): one `GET /api/public/state?lang=` (no slug) → seeds menus.main + the site
                     config store, keeps both on failure (not awaited, no hydration mismatch)
 render.test.ts      Vitest: render output, escaping, screens, languages (vitest.config.ts: vue + nbUi only; two projects:

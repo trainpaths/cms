@@ -330,8 +330,11 @@ remaining phases (one PR each): `claude-context/localization/` (README first).
 - **Public site** (Phase 2): language prefix with the code, default unprefixed (`/about`, `/de/about`), one
   stored HTML per page and language (`rendered_pages` key `(PageId, Lang)`), `hreflang` alternates; an unprefixed URL
   with a `cms_lang` cookie for another language redirects (see Public pages → Language routing). The public
-  `LanguageDropdown` (default footer) remembers the choice and loads the same page under the other language's URL (full
-  page load: stored HTML + head of that language). Rejected: same URL by cookie/`Accept-Language` (crawlers and
+  `LanguageDropdown` (default footer) remembers the choice and shows the same page under the other language's URL
+  without a page load: `entry-client.ts` fetches that language's state (one `/api/public/state` call), renders a fresh
+  app under its prefix and swaps it in (`pushState`; back/forward across languages remount too); `<html lang>` + title
+  update, the other head tags only on the next load (crawlers get the stored HTML per URL). Missing page → full load.
+  Was a full page load: ~1.5 s of unstyled HTML in dev, a white flash and scroll reset in production. Rejected: same URL by cookie/`Accept-Language` (crawlers and
   link previews only ever see one language) and client-side text swapping (wrong language flashes, no SEO, hydration
   mismatches). Storage: a few KB per page and language; a full re-render takes N× longer.
 - **Content** (Phase 3): per-field translations on one shared block tree (`translations: { code: { attr } }` per
