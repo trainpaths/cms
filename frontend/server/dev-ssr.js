@@ -1,8 +1,31 @@
+import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
+import { normalizePath } from 'vite'
 import { splice } from './template.js'
 import { SCREEN_SLUGS } from './screens.js'
 import { codeOf, readSiteLanguages } from './site-lang.js'
+
+/**
+ * The app's compiled `src/style.css` as a `<style>` Vite's client adopts (`data-vite-dev-id` = the id of the
+ * `import './style.css'` in the entry): the SSR HTML is styled before the JS loads, the import reuses the element (no
+ * duplicate, HMR works). A `<link>` would stop HMR (Vite skips updates of linked sheets). Empty when the app has no
+ * `src/style.css` or the transform fails (styles arrive with the JS then).
+ * @param {import('vite').ViteDevServer} server
+ */
+async function inlineStylesheet(server) {
+	const file = resolve(server.config.root, 'src/style.css')
+	if (!existsSync(file)) return ''
+	try {
+		const result = await server.environments.client.transformRequest('/src/style.css?direct')
+		if (!result) return ''
+		// `</style` inside the CSS (a string or comment) would end the element early
+		const css = result.code.replace(/<\/style/gi, '<\\/style')
+		return `<style type="text/css" data-vite-dev-id="${normalizePath(file)}">${css}</style>`
+	} catch {
+		return ''
+	}
+}
 
 /**
  * Dev only: server-renders public pages and customer screens like production (hydration mismatches show up in dev
@@ -60,7 +83,9 @@ export function devSsr(apiTarget) {
 						return redirect(302, rest ? `/${cookie}/${rest}` : `/${cookie}`)
 					const { page = null, menu = null, config = null } = state ?? {}
 					const html = await readFile(resolve(server.config.root, 'public.html'), 'utf8')
-					const template = await server.transformIndexHtml(req.url ?? '/', html)
+					const style = await inlineStylesheet(server)
+					// function replacer: CSS may contain `$&`
+					const template = (await server.transformIndexHtml(req.url ?? '/', html)).replace('</head>', () => `${style}</head>`)
 					const { render } =
 						/** @type {{ render: (state: unknown) => Promise<import('./template.js').Rendered> }} */ (
 							await server.ssrLoadModule('/src/entry-server.ts')

@@ -155,7 +155,8 @@ server/theme.js          build time, part of cms(): theme.colors (validated like
 server/dev-ssr.js        part of cms(): dev server-renders published pages + customer screens via the app's
                          /src/entry-server.ts (one `/api/public/state[/{slug}]?lang=` fetch, screens also `/api/public/instance`
                          for publicAuth; falls through to the SPA when neither a page nor a screen with public auth on);
-                         language prefixes + `cms_lang` redirect like the API
+                         language prefixes + `cms_lang` redirect like the API; inlines the app's compiled `src/style.css`
+                         as `<style data-vite-dev-id>` (styled before the JS; Vite's client adopts it, HMR works)
 server/screens.js        SCREEN_SLUGS (dev SSR; mirrors screens/index.ts and the API's PublicScreens)
 ```
 - Public code imports **directly** (`../lib/web-editor/view/ViewBlockList.vue`, `../stores/media`), type-only from the
