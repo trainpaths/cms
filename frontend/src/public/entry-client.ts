@@ -107,18 +107,18 @@ export async function hydratePublic(): Promise<void> {
 		event.stopImmediatePropagation()
 		void switchLanguage(location.pathname + location.search + location.hash, false)
 	})
-	// bearer + refresh for the account screens, same ApiError as the admin. Session gone → customer login (staff
-	// calls here, the admin bar's logout, never refresh)
-	setupInterceptors(() => {
-		const active = current?.router
-		if (active?.hasRoute('login'))
-			void active.push({ name: 'login', query: { redirect: active.currentRoute.value.fullPath } })
-	})
 	const embedded = embeddedState()
 	const state = embedded ?? (await fetchState(location.pathname))
 	const { app, router, pinia, i18n, history } = await build(state, !!embedded)
 	// the shell's <head> is empty; same tags the server render puts there
 	if (!embedded) document.head.insertAdjacentHTML('beforeend', headTags(state, i18n.global.t))
+	// bearer + refresh for the account screens, same ApiError as the admin. Session gone → customer login (staff
+	// calls here, the admin bar's logout, never refresh). After build(): reads the auth store, needs an active Pinia
+	setupInterceptors(() => {
+		const active = current?.router
+		if (active?.hasRoute('login'))
+			void active.push({ name: 'login', query: { redirect: active.currentRoute.value.fullPath } })
+	})
 	app.mount('#app')
 	current = { app, router, history, lang: state.lang }
 	// stored HTML older than a menu/site config change (the API marks it while the quiet re-render runs): refetch
