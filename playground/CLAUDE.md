@@ -6,7 +6,7 @@ Package internals: `frontend/CLAUDE.md`. Why instances: `claude-context/ARCHITEC
 
 ```
 cms.config.json     instance config (API; `site.lang` + `theme.colors` also read by cms() at build time; compose.yaml mounts it at /app/cms.config.json in the api container,
-                    restart the api after editing): publicAuth on (e2e uses customer accounts), site.lang en-US + localization de-CH/fr-CH/it-CH, theme.colors (primary, accent, dark, light,
+                    restart the api after editing): publicAuth on (e2e uses customer accounts), site.lang en-US + localization de-CH/it-CH/fr-CH, theme.colors (primary, accent, dark, light,
                     white: block-fixes.spec picks them), site config field
                     `vatId` + group `socials` (instagram/linkedin/facebook, no custom entries), the default pages
                     + `imprint` (template page)
@@ -34,13 +34,15 @@ app; the `renderer` and `frontend` images serve its `dist/` and `dist-ssr/`.
 ## E2E tests (`e2e/`, Playwright, Chromium, 1 worker)
 Needs the full stack (`pnpm docker:up`).
 ```
-e2e/playwright.config.ts       base URL from PLAYWRIGHT_BASE_URL (default http://localhost:5173)
+e2e/playwright.config.ts       base URL from PLAYWRIGHT_BASE_URL (default http://localhost:5173); reducedMotion 'reduce'
+                               (transitions off: layout specs measure right after toggling sidebars)
 e2e/global-setup.ts            frontend-reachable preflight
 e2e/fixtures/auth.fixture.ts   authenticatedPage (registers a fresh customer)
 e2e/fixtures/test-utils.ts     uniqueEmail, testPassword, registerCustomer / loginCustomer / logoutCustomer (public-site
                                screens: register + login land on `/` or the redirect, logout via `/user/profile`)
 e2e/fixtures/staff.fixture.ts  staffPage (logs in as bootstrap super admin) + createPage/insertBlock/uploadImage helpers,
                                publish(page) (saves if dirty, then header Publish) / unpublish(page),
+                               editLanguage(page, 'Deutsch') (editor header language menu),
                                rowAction(row, 'page-edit'|'page-duplicate'|'page-export'|'page-delete') (opens the row's "…" menu)
 e2e/tests/smoke.spec.ts, e2e/tests/nav.spec.ts, e2e/tests/auth/*.spec.ts, e2e/tests/site/{public-site,server-render}.spec.ts
 (needs the seeded default pages)

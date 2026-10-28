@@ -4,7 +4,7 @@
 	"site": {
 		"lang": {
 			"default": "en-US",
-			"localization": ["de-CH", "fr-CH", "it-CH"]
+			"localization": ["de-CH", "it-CH", "fr-CH"]
 		}
 	},
 	"theme": {

@@ -67,7 +67,7 @@ Phase 4: `POST /api/translate` (`TranslateController`, `ITranslator` → `DeepLT
 API (`api-backend/`): `Services/Cms/CmsConfig.cs` `CmsSiteLang { Default, Localization, Tags, IsLocalized, CodeOf(tag) }`
 (read from a string or the object by `CmsSiteLangConverter`), `CmsConfigLoader.ValidateLang` (tags, unique codes, no
 code equal to a `PageService.ReservedSlugs` entry or a configured page slug). The API doesn't use the languages for
-anything else yet. Playground config: en-US default + de-CH, fr-CH, it-CH.
+anything else yet. Playground config: en-US default + de-CH, it-CH, fr-CH.
 
 ## Conventions every phase follows
 - Branch off fresh `main` after the previous phase merged (`git fetch origin --prune && git checkout main && git pull`).

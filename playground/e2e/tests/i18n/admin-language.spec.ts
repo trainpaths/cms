@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-// the playground is localized (cms.config.json site.lang: en-US + de-CH, fr-CH, it-CH)
+// the playground is localized (cms.config.json site.lang: en-US + de-CH, it-CH, fr-CH)
 test.describe('Admin language', () => {
 	test('opens in the default language and switches in place, remembered in the cms_lang cookie', async ({
 		page,
