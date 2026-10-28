@@ -46,7 +46,7 @@
 		"test": "vitest run --dir src"
 	},
 	"peerDependencies": {
-		"@trainpaths/nb-ui": "github:trainpaths/nb-ui#4e5b90bbe8bcfd7f9b31c1eff999b1003118b5d4",
+		"@trainpaths/nb-ui": "github:trainpaths/nb-ui#v1.3.0",
 		"pinia": "^4.1.0",
 		"tailwindcss": "^4.3.3",
 		"vite": "^8.3.5",
@@ -62,7 +62,7 @@
 	},
 	"devDependencies": {
 		"@hey-api/openapi-ts": "0.99.0",
-		"@trainpaths/nb-ui": "github:trainpaths/nb-ui#4e5b90bbe8bcfd7f9b31c1eff999b1003118b5d4",
+		"@trainpaths/nb-ui": "github:trainpaths/nb-ui#v1.3.0",
 		"@types/node": "^26.6.5",
 		"pinia": "^4.1.0",
 		"tailwindcss": "^4.3.3",
