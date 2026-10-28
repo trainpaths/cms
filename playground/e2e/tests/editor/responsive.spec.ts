@@ -23,7 +23,8 @@ test.describe('Editor layout ≥ md', () => {
 		// closing a sidebar gives the canvas its width
 		await page.getByTestId('toggle-right-sidebar').click()
 		await expect(page.getByTestId('toggle-right-sidebar')).toHaveAttribute('aria-pressed', 'false')
-		expect((await main(page).boundingBox())!.width).toBeGreaterThan(canvas!.width)
+		// the leave transition removes the aside a frame later, even with reduced motion
+		await expect.poll(async () => (await main(page).boundingBox())!.width).toBeGreaterThan(canvas!.width)
 	})
 
 	test('canvas keeps 320px; sidebars then overlap it instead of overflowing the page', async ({
