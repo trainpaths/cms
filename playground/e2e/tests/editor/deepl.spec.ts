@@ -1,4 +1,4 @@
-import { test, expect, createPage, insertBlock } from '../../fixtures/staff.fixture'
+import { test, expect, createPage, editLanguage, insertBlock } from '../../fixtures/staff.fixture'
 
 // DeepL is stubbed: the instance endpoint says a key is set, /api/translate upper-cases. CI needs no key.
 test('"Translate missing fields" fills the edited language in one undo step', async ({ staffPage: page }) => {
@@ -18,7 +18,7 @@ test('"Translate missing fields" fills the edited language in one undo step', as
 	await page.getByPlaceholder('Click to add text...').fill('Hello world')
 	await page.getByPlaceholder('Click to add text...').blur()
 
-	await page.getByTestId('edit-language').selectOption('de')
+	await editLanguage(page, 'Deutsch')
 	// the inserted block switched the sidebar to its Block tab
 	await page.getByTestId('sidebar-tab-page').click()
 	await page.getByTestId('deepl-missing').click()

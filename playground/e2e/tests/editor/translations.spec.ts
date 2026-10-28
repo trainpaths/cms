@@ -1,6 +1,6 @@
-import { test, expect, createPage, insertBlock, publish } from '../../fixtures/staff.fixture'
+import { test, expect, createPage, editLanguage, insertBlock, publish } from '../../fixtures/staff.fixture'
 
-// the playground is localized (en-US default + de-CH, fr-CH, it-CH): one block tree, text per language
+// the playground is localized (en-US default + de-CH, it-CH, fr-CH): one block tree, text per language
 test('a German translation is published at /de/<slug>, untranslated languages show the default', async ({
 	staffPage: page,
 	browser,
@@ -14,7 +14,7 @@ test('a German translation is published at /de/<slug>, untranslated languages sh
 	await page.getByTestId('page-save').click()
 	await publish(page)
 
-	await page.getByTestId('edit-language').selectOption('de')
+	await editLanguage(page, 'Deutsch')
 	await expect(page.getByTestId('translation-hint')).toBeVisible()
 	// untranslated: empty, the default's text as placeholder
 	const german = page.getByPlaceholder('Hello world')
@@ -57,20 +57,20 @@ test('changing the default text marks its translation outdated until it is edite
 	await paragraph.fill('Hello world')
 	await paragraph.blur()
 
-	const language = page.getByTestId('edit-language')
-	await language.selectOption('de')
+	await editLanguage(page, 'Deutsch')
 	await paragraph.fill('Hallo Welt')
 	await paragraph.blur()
-	await language.selectOption('en')
+	await editLanguage(page, 'English')
 	await paragraph.fill('Hello there')
 	await paragraph.blur()
 
-	await language.selectOption('de')
+	await editLanguage(page, 'Deutsch')
 	await expect(paragraph).toHaveValue('Hallo Welt')
 	await expect(page.locator('[data-outdated]')).toHaveCount(1)
-	// the untranslated title + the outdated paragraph
-	await expect(language.locator('option[value="de"]')).toHaveText(/· 2$/)
+	// the untranslated title + the outdated paragraph: badge on the trigger (German is being edited)
+	const trigger = page.getByTestId('edit-language').getByRole('button')
+	await expect(trigger).toHaveText(/DE\s*2$/)
 	await paragraph.fill('Hallo zusammen')
 	await expect(page.locator('[data-outdated]')).toHaveCount(0)
-	await expect(language.locator('option[value="de"]')).toHaveText(/· 1$/)
+	await expect(trigger).toHaveText(/DE\s*1$/)
 })

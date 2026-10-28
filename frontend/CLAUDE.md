@@ -86,8 +86,12 @@ i18n/siteConfigLabels.ts  useConfiguredLabel(key, fallback) (message if it exist
                     (blocks.<name>.title/description)
 locales/public/<code>.json   common.*, site.*, screens.*, account.*, siteConfig.* (public app + admin)
 locales/admin/<code>.json    admin.*, editor.*, blocks.* (admin only); en/de/fr/it, same keys (i18n.test.ts checks)
-components/LanguageDropdown.vue  nb-ui Dropdown of useLanguageSwitch().languages (nothing when < 2); trigger only during
-                    SSR/hydration (Popover isn't SSR-safe); admin: AppNav (sidebar head + mobile bar), AdminLogin;
+components/LanguagePicker.vue    presentational language menu (nb-ui Dropdown, `placement="auto"`: opens above without room
+                    below): trigger = nb-ui `Flag` + short code (EN, DE; `globe` for a language without a flag), rows =
+                    flag + endonym (`lang` = tag) + check; optional `counts` badges; trigger only during SSR/hydration
+                    (Popover isn't SSR-safe). Used by LanguageDropdown and the editor's EditLanguageSelect
+components/LanguageDropdown.vue  LanguagePicker over useLanguageSwitch() (nothing when < 2 languages); admin: AppNav
+                    bottom row between User and log out (`align="end"`: the sidebar scrolls), AdminLogin;
                     public: SiteFooter bottom row (localized sites)
 components/UnsavedDialog.vue     translated copy of nb-ui's UnsavedChangesDialog (Menus, Configuration)
 ```
@@ -223,7 +227,8 @@ weekday for weekly + biweekly, day 1-28 for monthly), storage folder (`hostPath`
 
 **Nav:** `App.vue` renders `components/AppNav.vue` on `meta.requiresAuth` routes unless `meta.hideNav` (editor,
 preview): md+ fixed left sidebar (`w-220`; content gets `md:pl-220`): `<favicon> CMS`, items with nb-ui `Icon`s
-(Dashboard, Pages, Menus, Media, Configuration), bottom row `User` → `/admin/profile` + exit icon button (log out).
+(Dashboard, Pages, Menus, Media, Configuration), bottom row `User` → `/admin/profile` + LanguageDropdown (localized) +
+exit icon button (log out).
 Below md: sticky 56px top bar + burger → the same `#app-nav-menu` as a full-screen overlay below the bar (body scroll
 locked). `/admin/login` has no nav. Fixed overlays: md+ the sidebar is on the left (no top offset).
 **Admin bar** (`components/AdminBar.vue`, public site): thin dark bar above `SiteHeader` for staff → `/admin`, log out

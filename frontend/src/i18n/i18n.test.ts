@@ -83,11 +83,11 @@ async function ssr(render: () => ReturnType<typeof h>, languages: readonly Langu
 }
 
 describe('LanguageDropdown', () => {
-	it('shows the current language as the trigger', async () => {
+	it('shows the current language as the trigger: flag + short code, its name in the label', async () => {
 		const html = await ssr(() => h(LanguageDropdown), LANGUAGES, languageOf('fr'))
 		expect(html).toContain('data-testid="language-dropdown"')
-		expect(html).toContain('Français')
-		expect(html).toContain('lang="fr-CH"')
+		expect(html).toContain('aria-label="Langue: Français"')
+		expect(html).toMatch(/<\/svg> FR/)
 	})
 
 	it('renders nothing on a single-language site', async () => {
