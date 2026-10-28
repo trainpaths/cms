@@ -153,7 +153,7 @@ onBeforeUnmount(() => (document.body.style.overflow = ''))
 			/>
 			<button
 				type="button"
-				class="flex size-36 shrink-0 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+				class="flex h-36 w-28 shrink-0 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900"
 				:title="$t('common.logOut')"
 				:aria-label="$t('common.logOut')"
 				data-testid="app-nav-logout"

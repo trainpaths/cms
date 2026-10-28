@@ -45,11 +45,11 @@ editor/Editor.vue   editor for ONE page: props pageId/publicBase/previewPath, em
                     flushes unsaved changes on leave; hosts the error toast; non-editable config page
                     (store.pageEditable false) → template notice instead of the BlockList
 editor/EditorHeader.vue   back (stays on phones: the only visible way out), left-sidebar toggle, title (in the edited
-                    language, usePageText; saves on blur; hidden < sm → PageSettings shows it), EditLanguageSelect just before it
+                    language, usePageText; saves on blur; hidden < sm → PageSettings shows it; `field-sizing-content`), EditLanguageSelect right after it
                     (localized sites, md+: `components/LanguagePicker.vue` like the site switch, store.editLang +
                     untranslated/outdated count badges), right group: undo/redo, View/Preview link (`eye` icon, like the pages list), Save
-                    (disabled when clean / saving), Publish ("Publish" / "Publish changes" text button md+, `globe` icon
-                    button < md; rules, tooltip + confirm from usePublishState), Unpublish (bordered `globe-slash`, only
+                    (disabled when clean / saving), Publish ("Publish" / "Publish changes" text button md+, `globe` square
+                    button < md, both primary outline; rules, tooltip + confirm from usePublishState), Unpublish (bordered `globe-slash`, only
                     when published; text lg+, icon only sm–lg, hidden < sm: Page tab has it),
                     right-sidebar toggle; toggles show open state by colour (`.header-icon-btn--active`, `aria-pressed`)
 editor/EditorLayout.vue   md+: flex row, left LeftSidebar | scrolling <main> (flex-1, min-w-320, `@container/canvas`) | right

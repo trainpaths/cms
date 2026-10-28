@@ -15,6 +15,7 @@ const showNav = computed(() => !!route.meta.requiresAuth && !route.meta.hideNav)
 	<div :class="{ 'md:pl-220': showNav }">
 		<router-view />
 	</div>
-	<ToastContainer />
+	<!-- bottom right, ~70% down: clear of the editor header + bottom-edge controls -->
+	<ToastContainer position="right-16 bottom-[25vh]" />
 	<ConfirmDialog />
 </template>
