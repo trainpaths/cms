@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-// the playground is localized (cms.config.json site.lang: en-US + de-CH, fr-CH, it-CH): one URL per language,
+// the playground is localized (cms.config.json site.lang: en-US + de-CH, it-CH, fr-CH): one URL per language,
 // default unprefixed. Other specs never set cms_lang, so they always see the default language.
 test.describe('Public site languages', () => {
 	test('footer switch loads the same page in German, remembers it, unprefixed URLs then redirect', async ({

@@ -285,7 +285,7 @@ describe('theme colours (build time)', () => {
 	})
 })
 
-describe('languages (localized site: en-US default + de-CH, fr-CH, it-CH)', () => {
+describe('languages (localized site: en-US default + de-CH, it-CH, fr-CH)', () => {
 	it('renders German strings, prefixed links and the German <html lang>', async () => {
 		const rendered = await render(state({ lang: 'de', slug: 'login', page: null }))
 		expect(rendered.tag).toBe('de-CH')
