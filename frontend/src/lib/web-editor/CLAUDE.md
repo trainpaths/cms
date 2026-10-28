@@ -48,8 +48,8 @@ editor/EditorHeader.vue   back (stays on phones: the only visible way out), left
                     language, usePageText; saves on blur; hidden < sm → PageSettings shows it), EditLanguageSelect
                     (localized sites, md+: store.editLang + untranslated/outdated counts), undo/redo, View/Preview link (`eye` icon, like the pages list), Save
                     (disabled when clean / saving), Publish ("Publish" / "Publish changes" text button md+, `globe` icon
-                    button < md; rules, tooltip + confirm from usePublishState), Unpublish (bordered `globe-slash` +
-                    text button, only when published, hidden < md: Page tab has it),
+                    button < md; rules, tooltip + confirm from usePublishState), Unpublish (bordered `globe-slash`, only
+                    when published; text lg+, icon only sm–lg, hidden < sm: Page tab has it),
                     right-sidebar toggle; toggles show open state by colour (`.header-icon-btn--active`, `aria-pressed`)
 editor/EditorLayout.vue   md+: flex row, left LeftSidebar | scrolling <main> (flex-1, min-w-320, `@container/canvas`) | right
                           settings; widths md 240/240, lg 240/280, xl 280/280 (slot + inner panel carry the same classes);

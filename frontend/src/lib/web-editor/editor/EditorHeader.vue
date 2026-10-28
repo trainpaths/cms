@@ -155,13 +155,15 @@ function handleTitleBlur() {
 					/>
 				</button>
 			</span>
-			<!-- < md: hidden, the Page tab has it -->
+			<!-- < lg: icon only; < sm: hidden, the Page tab has it -->
 			<Button
 				v-if="isPublished"
 				variant="outline"
 				text="secondary"
 				border="secondary"
-				class="whitespace-nowrap max-md:hidden"
+				class="whitespace-nowrap max-sm:hidden max-lg:px-8"
+				:title="$t('editor.publish.unpublish')"
+				:aria-label="$t('editor.publish.unpublish')"
 				:disabled="store.publishing"
 				data-testid="page-unpublish"
 				@click="unpublish"
@@ -170,7 +172,7 @@ function handleTitleBlur() {
 					name="globe-slash"
 					:size="16"
 				/>
-				{{ $t('editor.publish.unpublish') }}
+				<span class="max-lg:hidden">{{ $t('editor.publish.unpublish') }}</span>
 			</Button>
 			<button
 				class="header-icon-btn"
