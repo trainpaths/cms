@@ -93,4 +93,10 @@ export async function unpublish(page: Page) {
 	await expect(page.getByTestId('page-unpublish')).toHaveCount(0)
 }
 
+/** Editor header language menu: edit the language named `name` ("Deutsch", "English"). */
+export async function editLanguage(page: Page, name: string) {
+	await page.getByTestId('edit-language').getByRole('button').click()
+	await page.getByRole('menuitem', { name: new RegExp(`^${name}`) }).click()
+}
+
 export { expect } from '@playwright/test'

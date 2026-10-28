@@ -9,7 +9,7 @@ import { IS_LOCALIZED } from '../i18n'
 import LanguageDropdown from './LanguageDropdown.vue'
 
 /**
- * Navigation for signed-in views: fixed left sidebar on md+ (items on top, user + log out at the bottom).
+ * Navigation for signed-in views: fixed left sidebar on md+ (items on top, user + language + log out at the bottom).
  * Below md a top bar whose burger opens the same content as a full-screen overlay.
  */
 
@@ -71,22 +71,19 @@ onBeforeUnmount(() => (document.body.style.overflow = ''))
 			/>
 			CMS
 		</RouterLink>
-		<div class="flex items-center gap-4">
-			<LanguageDropdown align="end" />
-			<button
-				type="button"
-				class="flex size-36 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-gray-600 hover:bg-gray-100"
-				:aria-expanded="open"
-				aria-controls="app-nav-menu"
-				:aria-label="open ? $t('site.closeMenu') : $t('site.openMenu')"
-				@click="open = !open"
+		<button
+			type="button"
+			class="flex size-36 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-gray-600 hover:bg-gray-100"
+			:aria-expanded="open"
+			aria-controls="app-nav-menu"
+			:aria-label="open ? $t('site.closeMenu') : $t('site.openMenu')"
+			@click="open = !open"
 			>
-				<Icon
-					:name="open ? 'x' : 'menu'"
-					:size="20"
-				/>
-			</button>
-		</div>
+			<Icon
+			:name="open ? 'x' : 'menu'"
+			:size="20"
+			/>
+		</button>
 	</header>
 
 	<!-- md+: sidebar; below md: full-screen overlay under the top bar -->
@@ -96,7 +93,7 @@ onBeforeUnmount(() => (document.body.style.overflow = ''))
 		:class="open ? 'flex' : 'hidden'"
 		@keydown.escape="open = false"
 	>
-		<div class="hidden h-56 shrink-0 items-center justify-between gap-8 pl-20 pr-8 md:flex">
+		<div class="hidden h-56 shrink-0 items-center pl-20 md:flex">
 			<RouterLink
 				to="/admin"
 				class="flex items-center gap-8 text-lg font-semibold text-primary no-underline"
@@ -108,10 +105,6 @@ onBeforeUnmount(() => (document.body.style.overflow = ''))
 				/>
 				CMS
 			</RouterLink>
-			<LanguageDropdown
-				v-if="IS_LOCALIZED"
-				align="end"
-			/>
 		</div>
 
 		<nav
@@ -153,6 +146,11 @@ onBeforeUnmount(() => (document.body.style.overflow = ''))
 				/>
 				{{ $t('admin.nav.user') }}
 			</RouterLink>
+			<!-- end: the sidebar scrolls (overflow), a start-aligned menu would stick out of it -->
+			<LanguageDropdown
+				v-if="IS_LOCALIZED"
+				align="end"
+			/>
 			<button
 				type="button"
 				class="flex size-36 shrink-0 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900"

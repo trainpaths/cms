@@ -63,6 +63,8 @@ function handleTitleBlur() {
 			>
 				<Icon name="panel" :size="18" />
 			</button>
+			<!-- before the title: the title input grows (flex-1) -->
+			<EditLanguageSelect />
 			<!-- < sm: hidden, no room (title + publish live in the Page tab there) -->
 			<input
 				v-model="title"
@@ -76,7 +78,6 @@ function handleTitleBlur() {
 			/>
 		</div>
 		<div class="flex shrink-0 items-center gap-4 md:gap-8">
-			<EditLanguageSelect />
 			<button
 				class="toolbar-btn"
 				:title="$t('editor.header.undo')"
