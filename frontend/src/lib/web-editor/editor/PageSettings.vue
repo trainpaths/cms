@@ -95,49 +95,6 @@ async function commitSlug() {
 
 <template>
 	<div class="p-16">
-		<SettingsSection :title="$t('editor.page.section')">
-			<!-- < sm only: the header hides its title input there -->
-			<label class="field-label mb-12 sm:hidden">
-				{{ $t('editor.page.title') }}
-				<input
-					v-model="title.value.value"
-					:placeholder="title.original.value"
-					:class="{ 'border-amber-500!': title.outdated.value }"
-					:title="title.outdated.value ? $t('editor.translations.fieldOutdated') : undefined"
-					data-testid="page-title-mobile"
-					class="input-field mt-4"
-					@blur="store.pageTitle.trim() && store.savePage()"
-					@keydown.enter="($event.target as HTMLInputElement).blur()"
-				/>
-			</label>
-			<label class="field-label">
-				{{ $t('admin.pages.slug') }}
-				<div class="mt-4 flex items-center rounded border border-gray-300 bg-white text-sm">
-					<span class="pl-8 text-gray-400">/</span>
-					<input
-						v-model="slugDraft"
-						data-testid="page-slug"
-						class="w-full border-none bg-transparent px-2 py-4 outline-hidden disabled:cursor-not-allowed disabled:text-gray-500"
-						:disabled="store.pageLocked"
-						@blur="commitSlug"
-						@keydown.enter="($event.target as HTMLInputElement).blur()"
-					/>
-				</div>
-			</label>
-			<p class="mt-8 mb-0 text-xs text-gray-400">
-				<template v-if="store.pageLocked">{{ $t('editor.page.slugLocked') }}</template>
-				<template v-else>{{ $t('editor.page.slugRule') }}</template>
-				{{ ' ' }}
-				<I18nT
-					keypath="editor.page.servedAt"
-					scope="global"
-				>
-					<template #path>
-						<span class="font-mono">{{ localePath(`/${store.pageSlug}`, store.editLang) }}</span>
-					</template>
-				</I18nT>
-			</p>
-		</SettingsSection>
 		<SettingsSection :title="$t('editor.page.seo')">
 			<label class="field-label">
 				{{ $t('editor.page.metaTitle') }}
@@ -247,20 +204,21 @@ async function commitSlug() {
 			</Button>
 			<p class="mt-8 mb-0 text-xs text-gray-400">{{ $t('editor.translations.hint') }}</p>
 		</SettingsSection>
-		<SettingsSection :title="$t('admin.pages.tags')">
-			<TagInput
-				:model-value="store.pageTags"
-				:suggestions="tags.names"
-				:popular="tags.popular"
-				:max="TAGS_PER_PAGE"
-				:max-length="TAG_MAX_LENGTH"
-				:normalize="normalizeTag"
-				test-id="page-tags"
-				:label="$t('admin.pages.tags')"
-				@update:model-value="store.updateTags"
-			/>
-		</SettingsSection>
-		<SettingsSection :title="$t('editor.page.status')">
+		<SettingsSection :title="$t('editor.page.section')">
+			<!-- < sm only: the header hides its title input there -->
+			<label class="field-label mb-12 sm:hidden">
+				{{ $t('editor.page.title') }}
+				<input
+					v-model="title.value.value"
+					:placeholder="title.original.value"
+					:class="{ 'border-amber-500!': title.outdated.value }"
+					:title="title.outdated.value ? $t('editor.translations.fieldOutdated') : undefined"
+					data-testid="page-title-mobile"
+					class="input-field mt-4"
+					@blur="store.pageTitle.trim() && store.savePage()"
+					@keydown.enter="($event.target as HTMLInputElement).blur()"
+				/>
+			</label>
 			<p
 				class="mt-0 mb-8 text-sm"
 				:class="published ? 'text-green-700' : 'text-gray-600'"
@@ -292,7 +250,47 @@ async function commitSlug() {
 					{{ $t('editor.publish.unpublish') }}
 				</Button>
 			</div>
-			<p class="mt-8 mb-0 text-xs text-gray-400">{{ $t('editor.page.statusHint') }}</p>
+			<p class="mt-8 mb-12 text-xs text-gray-400">{{ $t('editor.page.statusHint') }}</p>
+			<label class="field-label">
+				{{ $t('admin.pages.slug') }}
+				<div class="mt-4 flex items-center rounded border border-gray-300 bg-white text-sm">
+					<span class="pl-8 text-gray-400">/</span>
+					<input
+						v-model="slugDraft"
+						data-testid="page-slug"
+						class="w-full border-none bg-transparent px-2 py-4 outline-hidden disabled:cursor-not-allowed disabled:text-gray-500"
+						:disabled="store.pageLocked"
+						@blur="commitSlug"
+						@keydown.enter="($event.target as HTMLInputElement).blur()"
+					/>
+				</div>
+			</label>
+			<p class="mt-8 mb-0 text-xs text-gray-400">
+				<template v-if="store.pageLocked">{{ $t('editor.page.slugLocked') }}</template>
+				<template v-else>{{ $t('editor.page.slugRule') }}</template>
+				{{ ' ' }}
+				<I18nT
+					keypath="editor.page.servedAt"
+					scope="global"
+				>
+					<template #path>
+						<span class="font-mono">{{ localePath(`/${store.pageSlug}`, store.editLang) }}</span>
+					</template>
+				</I18nT>
+			</p>
+		</SettingsSection>
+		<SettingsSection :title="$t('admin.pages.tags')">
+			<TagInput
+				:model-value="store.pageTags"
+				:suggestions="tags.names"
+				:popular="tags.popular"
+				:max="TAGS_PER_PAGE"
+				:max-length="TAG_MAX_LENGTH"
+				:normalize="normalizeTag"
+				test-id="page-tags"
+				:label="$t('admin.pages.tags')"
+				@update:model-value="store.updateTags"
+			/>
 		</SettingsSection>
 		<SettingsSection :title="$t('admin.pages.export')">
 			<Button

@@ -307,7 +307,6 @@
 			"tab": "Tab: {title}",
 			"metaDescription": "Meta description",
 			"metaDescriptionHint": "Search results and link previews; empty = the first paragraph.",
-			"status": "Status",
 			"statusHint": "Saving never publishes: visitors see the last published version.",
 			"downloadJson": "Download JSON",
 			"exportHint": "A copy of this page. Import it on the Pages list to create a new draft."
