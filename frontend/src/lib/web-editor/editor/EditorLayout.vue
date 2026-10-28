@@ -16,18 +16,26 @@ function handleMainClick(e: MouseEvent) {
 <template>
 	<!-- md+: flex row, canvas takes what the open sidebars leave but never < 320px; then the sidebar slots shrink and
 		their panels (absolute) overlap the canvas. Widths: md both 240, lg left 240 / right 280, xl both 280.
-		Below md the sidebars are full-screen modals -->
-	<div class="relative flex h-[calc(100vh-56px)]">
-		<aside
-			v-if="store.showInserterSidebar"
-			class="fixed inset-x-0 top-56 bottom-0 z-30 md:relative md:inset-auto md:w-240 md:min-w-0 xl:w-280"
+		Below md the sidebars are full-screen modals. Open/close: slot width animates from 0 (md+), panel slides in from
+		its edge; overflow-x-clip hides it while outside -->
+	<div class="relative flex h-[calc(100vh-56px)] overflow-x-clip">
+		<Transition
+			enter-active-class="transition-[width] duration-200 ease-out *:transition-[translate] *:duration-200 *:ease-out motion-reduce:transition-none motion-reduce:*:transition-none"
+			enter-from-class="md:w-0! *:-translate-x-full"
+			leave-active-class="transition-[width] duration-150 ease-in *:transition-[translate] *:duration-150 *:ease-in motion-reduce:transition-none motion-reduce:*:transition-none"
+			leave-to-class="md:w-0! *:-translate-x-full"
 		>
-			<div
-				class="h-full overflow-hidden bg-gray-50 md:absolute md:inset-y-0 md:left-0 md:w-240 md:border-r md:border-gray-200 xl:w-280"
+			<aside
+				v-if="store.showInserterSidebar"
+				class="fixed inset-x-0 top-56 bottom-0 z-30 md:relative md:inset-auto md:w-240 md:min-w-0 xl:w-280"
 			>
-				<LeftSidebar />
-			</div>
-		</aside>
+				<div
+					class="h-full overflow-hidden bg-gray-50 md:absolute md:inset-y-0 md:left-0 md:w-240 md:border-r md:border-gray-200 xl:w-280"
+				>
+					<LeftSidebar />
+				</div>
+			</aside>
+		</Transition>
 
 		<!-- .site-theme: the instance's site theme applies to the canvas (WYSIWYG); chrome in it uses the cms-* tokens -->
 		<main
@@ -49,15 +57,22 @@ function handleMainClick(e: MouseEvent) {
 			</div>
 		</main>
 
-		<aside
-			v-if="store.showSettingsPanel"
-			class="fixed inset-x-0 top-56 bottom-0 z-30 md:relative md:inset-auto md:w-240 md:min-w-0 lg:w-280"
+		<Transition
+			enter-active-class="transition-[width] duration-200 ease-out *:transition-[translate] *:duration-200 *:ease-out motion-reduce:transition-none motion-reduce:*:transition-none"
+			enter-from-class="md:w-0! *:translate-x-full"
+			leave-active-class="transition-[width] duration-150 ease-in *:transition-[translate] *:duration-150 *:ease-in motion-reduce:transition-none motion-reduce:*:transition-none"
+			leave-to-class="md:w-0! *:translate-x-full"
 		>
-			<div
-				class="h-full overflow-hidden bg-gray-50 md:absolute md:inset-y-0 md:right-0 md:w-240 md:border-l md:border-gray-200 lg:w-280"
+			<aside
+				v-if="store.showSettingsPanel"
+				class="fixed inset-x-0 top-56 bottom-0 z-30 md:relative md:inset-auto md:w-240 md:min-w-0 lg:w-280"
 			>
-				<BlockSettingsPanel />
-			</div>
-		</aside>
+				<div
+					class="h-full overflow-hidden bg-gray-50 md:absolute md:inset-y-0 md:right-0 md:w-240 md:border-l md:border-gray-200 lg:w-280"
+				>
+					<BlockSettingsPanel />
+				</div>
+			</aside>
+		</Transition>
 	</div>
 </template>

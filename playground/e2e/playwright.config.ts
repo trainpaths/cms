@@ -13,6 +13,8 @@ export default defineConfig({
         trace: 'on-first-retry',
         screenshot: 'only-on-failure',
         video: 'retain-on-failure',
+        // transitions off (motion-reduce:transition-none): layout specs measure sidebars right after toggling
+        contextOptions: { reducedMotion: 'reduce' },
     },
 
     globalSetup: './global-setup.ts',

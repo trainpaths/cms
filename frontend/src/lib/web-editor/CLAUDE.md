@@ -57,7 +57,9 @@ editor/EditorLayout.vue   md+: flex row, left LeftSidebar | scrolling <main> (fl
                           shrink (min-w-0) and their absolute panels overlap the canvas (z-30). < md: sidebars are fixed
                           full-screen modals under the header, `#editor-mobile-toolbar` sticky bar at the top of
                           <main> (v-show while a block is selected). Canvas column is `@container` (blocks size by it) and
-                          grows (flex) so the root BlockList fills it (drop below last block = append)
+                          grows (flex) so the root BlockList fills it (drop below last block = append).
+                          Sidebars open/close with a `<Transition>`: slot width from 0 (md+, `md:w-0!`) + panel
+                          (`*:` child) slides from its edge; container `overflow-x-clip`; off under motion-reduce
 editor/BlockList.vue      recursive list + HTML5 drag/drop (move + create from sidebar, validity via
                           useBlockDrag; handlers stopPropagation so the innermost list decides); Inserter for nested lists.
                           Drop index from pointer vs block midpoints (upper half = before). Indicator slots (h-10) always
