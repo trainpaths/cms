@@ -18,7 +18,8 @@ public auth, but shouldn't own (or fork) the whole CMS. So this repo is a **fram
   (template pages), `src/overrides/<Name>.vue` (replaces the package's component of that name, resolved by `cms()`),
   `src/overrides/ui/` (nb-ui), `src/style.css` (site theme). Overriding internals couples an instance to file
   names: only SiteHeader, SiteFooter, NotFound, PageContent, block Edit/View and nb-ui components count as stable
-  (renames there = major version). Instance code imports `@trainpaths/cms/editor` (edit side) / `/site` (views).
+  (renames there = breaking release: minor on 0.x, major from 1.0). Instance code imports `@trainpaths/cms/editor`
+  (edit side) / `/site` (views).
 - **Instance config** `cms.config.json` (`publicAuth`, `blocks.exclude`, `pages`), validated strictly on API start.
   The API is its only runtime reader (no frontend/backend default drift; `site.lang` and `theme.colors` are the keys
   the `cms()` Vite plugin applies at build time); the admin reads `/api/public/instance`. Pages it

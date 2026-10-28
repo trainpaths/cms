@@ -1,9 +1,11 @@
 # Green CI on main → bump frontend/package.json, tag vX.Y.Z, GitHub release, publish the API image.
 # Instances pin both: "@trainpaths/cms": "github:trainpaths/cms#vX.Y.Z&path:/frontend" + ghcr.io/trainpaths/cms-api:X.Y.Z.
 # The bump commit exists only on the tag (main is protected, never pushed to): package.json version on main is stale.
-# Bump from Conventional Commits since the last tag (merge commits ignored), like nb-ui:
-#   `type!:` or a `BREAKING CHANGE:` footer → major, `feat` → minor, anything else → patch.
+# Bump from Conventional Commits since the last tag (merge commits ignored):
+#   `type!:` or a `BREAKING CHANGE:` footer → breaking, `feat` → feature, anything else → fix.
 #   Only docs/chore/ci/test/style/build commits → no release.
+#   0.x (pre-1.0): breaking → minor, feature/fix → patch. 1.x+: breaking → major, feature → minor, fix → patch.
+# Never leaves 0.x on its own: 1.0.0 only via a manual run with bump=major. No tag yet → the first release is v0.0.1.
 # Manual run (Actions → Release → Run workflow) can force the bump.
 name: Release
 
@@ -75,11 +77,20 @@ jobs:
           fi
 
           IFS=. read -r major minor patch <<<"${last#v}"
+          # pre-1.0 an auto bump shifts down one place: breaking → minor, feature/fix → patch
+          if [ "$FORCED" = auto ] && [ "$major" = 0 ]; then
+            case $bump in
+              major) bump=minor ;;
+              minor) bump=patch ;;
+            esac
+          fi
           case $bump in
             major) next="$((major + 1)).0.0" ;;
             minor) next="$major.$((minor + 1)).0" ;;
             patch) next="$major.$minor.$((patch + 1))" ;;
           esac
+          # first release ever (no tag): v0.0.1, unless forced straight to 1.0.0
+          [ "$last" = v0.0.0 ] && [ "$bump" != major ] && next=0.0.1
           echo "$last → v$next ($bump)"
           echo "last=$last" >> "$GITHUB_OUTPUT"
           echo "next=$next" >> "$GITHUB_OUTPUT"

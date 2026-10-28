@@ -76,7 +76,8 @@ CI fails when either drifts.
 ## Releases
 
 Every green CI run on `main` may release: the version bump comes from the Conventional Commits since the last tag
-(`feat` → minor, `fix` etc. → patch, `!` / `BREAKING CHANGE` → major; docs/chore/ci/test/style/build only → none).
+(docs/chore/ci/test/style/build only → none). While on 0.x: `!` / `BREAKING CHANGE` → minor, anything else → patch;
+1.0.0 is cut by hand (Actions → Release → Run workflow → `major`). From 1.x: `!` → major, `feat` → minor, else patch.
 The release tags `vX.Y.Z` (the package version) and publishes `ghcr.io/trainpaths/cms-api:X.Y.Z`.
 
 ## Docs
