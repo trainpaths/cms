@@ -49,7 +49,7 @@ src/locales/public/*.json  strings of the public app (also loaded by the admin);
 src/components/LanguageDropdown.vue  nb-ui Dropdown over useLanguageSwitch(); nothing when < 2 languages; the server
                            render shows only the trigger (nb-ui Popover touches `document` in setup)
 src/main.ts                admin: language = cms_lang cookie else default; switch = swap strings in place + cookie
-src/public/createPublicApp.ts  public app in state.lang; switch = cookie + full page load (Phase 2)
+src/public/createPublicApp.ts  public app in state.lang; switch = cookie + client remount under the new prefix (entry-client.ts)
 src/public/locale.ts       localeBase / localePath / stripLocale (Phase 2); router history base = language prefix
 src/public/head.ts         headTags(state, t) (canonical per language, hreflang, og:locale), documentTitle(...)
 ```
