@@ -40,8 +40,9 @@ function handleTitleBlur() {
 </script>
 
 <template>
+	<!-- z-40: over the sidebars (z-30), the language menu opens across them -->
 	<header
-		class="sticky top-0 z-10 flex h-56 items-center justify-between gap-8 border-b border-gray-200 bg-white px-8 md:gap-12 md:px-16"
+		class="sticky top-0 z-40 flex h-56 items-center justify-between gap-8 border-b border-gray-200 bg-white px-8 md:gap-12 md:px-16"
 	>
 		<div class="flex min-w-0 flex-1 items-center gap-4 md:gap-8">
 			<button
