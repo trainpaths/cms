@@ -149,8 +149,8 @@ the dev server after adding/removing one). Wrap the original instead of copying 
 import Base from '@trainpaths/cms/src/components/SiteFooter.vue'
 </script>
 ```
-**Stable override points** (renamed or re-propped only in a major version): `SiteHeader.vue` (props `config`,
-`menu`), `SiteFooter.vue` (`config`), `NotFound.vue`, `PageContent.vue` (`title`, `blocks`, `media`, slots
+**Stable override points** (renamed or re-propped only in a breaking release: major, or minor while on 0.x):
+`SiteHeader.vue` (props `config`, `menu`), `SiteFooter.vue` (`config`), `NotFound.vue`, `PageContent.vue` (`title`, `blocks`, `media`, slots
 `before`/`after`), every block's `*View.vue` / `*Edit.vue` (`block`), and nb-ui components
 (`src/overrides/ui/<Name>.vue`). Overriding anything else works, but may break on any upgrade.
 
@@ -298,8 +298,9 @@ paragraph. Link-preview image: the page's first image, else the share image from
 
 ## Upgrading
 
-1. Read the release notes between your version and the target (GitHub releases of `trainpaths/cms`); a major
-   version lists what breaks (config keys, override points, block contract, entry stubs).
+1. Read the release notes between your version and the target (GitHub releases of `trainpaths/cms`); a breaking
+   release lists what breaks (config keys, override points, block contract, entry stubs). The CMS is pre-1.0: on
+   0.x a **minor** bump (0.3.x → 0.4.0) may break, patches don't; from 1.0.0 only majors do.
 2. Bump **both**: the package tag in `package.json` and the API image tag (and `@trainpaths/nb-ui` to the CMS's
    `peerDependencies` value), then `pnpm install`. Instances from `trainpaths/cms-starter` do all of this with
    `pnpm bump-cms [X.Y.Z]` (default: latest release; also checks the tag and image exist).

@@ -135,7 +135,9 @@ OpenAPI drift check. **frontend**: `pnpm audit`, generated-client drift check, l
 Playwright from `playground/` (with a bootstrap super admin for the editor specs). Dependabot opens weekly update PRs.
 The backend job installs `postgresql-client-18` (backup round-trip tests).
 `release.yml` runs after a green CI run on `main` (or manually, forcing the bump): Conventional Commits since the last
-tag → bump (`!`/`BREAKING CHANGE` major, `feat` minor, else patch; only docs/chore/ci/test/style/build → none), commits
+tag → bump (only docs/chore/ci/test/style/build → none). **Pre-1.0 (now)**: `!`/`BREAKING CHANGE` → minor, everything
+else → patch; 1.0.0 only by a manual run with `major` (the user decides when). From 1.x: `!` major, `feat` minor, else
+patch. No tag at all → the first release is v0.0.1. Commits
 `chore(release): vX.Y.Z` (version in `frontend/package.json`) **on the tag only**, GitHub release, pushes
 `ghcr.io/trainpaths/cms-api:X.Y.Z` / `:X.Y` / `:latest` (amd64 + arm64; build arg `CMS_VERSION` → `Cms:Version`, recorded in
 backup manifests). `main` is protected (PR + required checks)
