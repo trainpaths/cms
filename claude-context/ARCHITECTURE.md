@@ -301,6 +301,9 @@ staff save ─► API IRenderQueue ─► RenderWorker ─POST /render─► ren
   screens) gets it for free; `src/public/locale.ts` (`localePath`, `stripLocale`) covers the code that builds URLs
   itself (head tags, the shell's fetch, the language switch). The public JSON endpoints take `?lang=`.
 - No renderer configured (`Renderer:BaseUrl` empty, e.g. tests) → everything falls back to the shell.
+- A page the renderer can't render (500, e.g. an instance block view throws on its data) is skipped and logged: the
+  other pages still render, that one is served as the shell, and it's retried on its next change or a new renderer
+  build (not by the periodic check, which would otherwise re-render everything every interval).
 - **Site meta** (`src/public/head.ts`): document title "{page meta title} - {firm name}", the firm name alone without
   a meta title (no firm name: meta title, then page title); description = page meta description, else the first
   paragraph; og:site_name = firm name; og:image = first image, else the site's share image; `<html lang>` = the

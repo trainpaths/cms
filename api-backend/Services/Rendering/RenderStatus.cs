@@ -41,7 +41,28 @@ public sealed class RenderStatus
 	/// </summary>
 	public void MarkRefreshed() => Interlocked.Exchange(ref _refreshedAt, DateTimeOffset.UtcNow.UtcTicks);
 
-	public void MarkChanged(Guid pageId) => _pageChangedAt[pageId] = DateTimeOffset.UtcNow;
+	/// <summary>A page's content changed: its HTML is stale, and a render failure of it is retried.</summary>
+	public void MarkChanged(Guid pageId)
+	{
+		_pageChangedAt[pageId] = DateTimeOffset.UtcNow;
+		foreach (var key in _failed.Keys.Where(k => k.PageId == pageId))
+			_failed.TryRemove(key, out _);
+	}
+
+	// (page, language code) → renderer version it failed with
+	private readonly ConcurrentDictionary<(Guid PageId, string Lang), string?> _failed = new();
+
+	/// <summary>
+	/// The renderer answered 500 for this page and language (e.g. a block view throws on its data): served as the
+	/// shell, and not retried by the version check until the page changes or the renderer version does.
+	/// </summary>
+	public void MarkFailed(Guid pageId, string lang) => _failed[(pageId, lang)] = CurrentVersion;
+
+	public void ClearFailed(Guid pageId, string lang) => _failed.TryRemove((pageId, lang), out _);
+
+	/// <summary>Failed with the current renderer version (a newer build gets another try).</summary>
+	public bool HasFailed(Guid pageId, string lang) =>
+		_failed.TryGetValue((pageId, lang), out var version) && version is not null && version == CurrentVersion;
 
 	/// <summary>
 	/// Stored HTML rendered before the last change affecting the page is stale: the controller serves the

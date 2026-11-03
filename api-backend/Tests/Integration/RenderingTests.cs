@@ -29,6 +29,9 @@ public sealed class FakeRenderer : IRendererClient
 	/// <summary>While set, every render waits for it: tests look at what is served before the re-render.</summary>
 	public volatile TaskCompletionSource? Hold;
 
+	/// <summary>Pages with these titles fail like a throwing block view: the renderer answers 500.</summary>
+	public ConcurrentDictionary<string, byte> FailTitles { get; } = new();
+
 	public bool Enabled => true;
 
 	public Task<string> GetVersionAsync(CancellationToken ct) => Task.FromResult(Version);
@@ -37,6 +40,8 @@ public sealed class FakeRenderer : IRendererClient
 	{
 		if (Hold is { } hold)
 			await hold.Task.WaitAsync(ct);
+		if (state.Page is { } failing && FailTitles.ContainsKey(failing.Title))
+			throw new HttpRequestException("render failed", null, HttpStatusCode.InternalServerError);
 		Rendered.Enqueue(state.Slug);
 		States.Enqueue(state);
 		var firm = state.Config?.Fields.GetValueOrDefault(CoreSiteConfig.FirmName);
@@ -238,6 +243,32 @@ public partial class RenderingTests(ApiFactory factory) : IClassFixture<ApiFacto
 
 	private static string? Accel(HttpResponseMessage response) =>
 		response.Headers.TryGetValues("X-Accel-Redirect", out var v) ? v.Single() : null;
+
+	[Fact]
+	public async Task PageThatFailsToRender_IsSkipped_OthersStillRender_AndTheCheckDoesNotLoop()
+	{
+		await using var site = await StartAsync();
+		site.Renderer.FailTitles["Broken render"] = 0;
+		var (brokenId, broken) = await CreatePublishedAsync(site, "Broken render");
+		var (_, good) = await CreatePublishedAsync(site, "Good render");
+
+		await WaitForAsync(site, $"/api/public/html/{good}",
+			(r, body) => r.StatusCode == HttpStatusCode.OK && body.Contains("Good render"));
+		Accel(await site.Client.GetAsync($"/api/public/html/{broken}", Ct)).Should().Be(PublicHtmlController.PublicShell);
+
+		// the version check runs every second here: a known failure must not re-render everything each time
+		await SettleAsync();
+		var before = site.Renderer.Rendered.Count(s => s == good);
+		await Task.Delay(TimeSpan.FromSeconds(3), Ct);
+		site.Renderer.Rendered.Count(s => s == good).Should().Be(before);
+
+		// fixed (the edit retries it)
+		site.Renderer.FailTitles.Clear();
+		(await SendAsync(site, HttpMethod.Put, $"/api/pages/{brokenId}",
+			new JsonObject { ["title"] = "Fixed render", ["status"] = "published" })).StatusCode.Should().Be(HttpStatusCode.OK);
+		await WaitForAsync(site, $"/api/public/html/{broken}",
+			(r, body) => r.StatusCode == HttpStatusCode.OK && body.Contains("Fixed render"));
+	}
 
 	[Fact]
 	public async Task PublishedPage_IsRenderedAndServed_WithEtag()

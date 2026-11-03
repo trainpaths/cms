@@ -22,7 +22,7 @@ public interface IRendererClient
 	Task<RenderResult> RenderAsync(RenderState state, CancellationToken ct);
 }
 
-/// <summary>HTTP client for the frontend render service (<c>frontend/server/render-server.ts</c>).</summary>
+/// <summary>HTTP client for the frontend render service (<c>frontend/server/render-server.js</c>).</summary>
 public sealed class HttpRendererClient(HttpClient http, IOptions<RendererOptions> options) : IRendererClient
 {
 	// same shape as the public API responses the client hydrates from
