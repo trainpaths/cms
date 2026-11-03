@@ -88,7 +88,8 @@ TagsController         /api/tags             [Authorize(StaffOnly)], rate limit 
 - Block validation (`ValidateBlocks`): id non-empty ≤64, name `^[a-z0-9-]+$`, attributes primitive only,
   translations: codes `^[a-z]{2,3}$`, values primitive, empty languages dropped (none left → null; unknown codes kept),
   depth ≤10, ≤2000 blocks; null attributes/innerBlocks normalized to empty. No knowledge of block types.
-- `AppDbContext` maps `Blocks` via a System.Text.Json value converter (camelCase) + ValueComparer, column type `jsonb`.
+- `AppDbContext` maps `Blocks` (like every jsonb column: `HasJson()` / `HasNullableJson()`, the file-local `JsonColumn`)
+  via a System.Text.Json value converter (camelCase) + ValueComparer, column type `jsonb`.
 - `Services/Pages/PageSeeder.cs`: on startup (after `StaffBootstrapper`) seeds the config's pages, published: **all**
   while the pages table is empty (off with `Bootstrap:SeedPages=false`: the test `ApiFactory` does this,
   `PageSeederTests` turns it on), and **locked/template pages on every start** when their slug is missing.
