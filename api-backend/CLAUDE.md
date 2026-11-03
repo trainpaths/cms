@@ -203,8 +203,10 @@ PublicHtmlController   /api/public/html      [AllowAnonymous], rate limit "pages
   `HttpRendererClient` (`IRendererClient`, typed HttpClient to the Node renderer; `RenderState` mirrors
   `frontend/src/public/state.ts`), `PublicScreens` (screen paths; mirrors
   `frontend/src/public/screens/index.ts`), `RenderWorker` (hosted: debounced render loop + version check every
-  `CheckIntervalSeconds` (stale = a published page lacks a current row in some configured language); failures retry
-  after 30 s; widen check = one query over the queued ids (default language's rows); every page/screen/not-found rendered
+  `CheckIntervalSeconds` (stale = a published page lacks a current row in some configured language, not counting
+  known render failures); failures retry after 30 s, except a renderer 500 for one page and language (a block view
+  throwing on its data): logged, skipped (the others still render, it's served as the shell) and recorded in
+  `RenderStatus` (`MarkFailed`/`HasFailed`, per renderer version) until the page changes or the version does; widen check = one query over the queued ids (default language's rows); every page/screen/not-found rendered
   once per language (`RenderState.Lang`); full render deletes rows of unpublished pages + unconfigured languages; chunks of 20 pages:
   `PageService.GetPublishedByIdsAsync`, existing row ids (old HTML never read: `Update` of a fresh entity), committed per
   chunk, row by row after an FK violation; logs the duration).

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net;
 using api_backend.Models.Dto;
 using api_backend.Models.Menus;
 using api_backend.Models.Pages;
@@ -118,13 +119,27 @@ public sealed class RenderWorker(
 		var published = await db.Pages.CountAsync(p => p.Status == PageStatus.Published, ct);
 		var rendered = await db.RenderedPages.CountAsync(r => r.RendererVersion == version && codes.Contains(r.Lang)
 			&& r.Page!.Status == PageStatus.Published, ct);
-		var stale = rendered < published * codes.Count;
+		var stale = rendered < published * codes.Count && await MissingBeyondFailuresAsync(db, version, codes, ct);
 
 		if (changed || stale || status.NotFoundHtml is null || status.Screens is null)
 		{
 			if (changed) logger.LogInformation("Renderer version {Version}; re-rendering public pages.", version);
 			queue.Requeue(null);
 		}
+	}
+
+	/// <summary>
+	/// Counts said HTML is missing: whether some published page lacks a current row for a reason other than a known
+	/// render failure (those would re-render everything every check, failing again).
+	/// </summary>
+	private async Task<bool> MissingBeyondFailuresAsync(AppDbContext db, string version, IReadOnlyList<string> codes,
+		CancellationToken ct)
+	{
+		var ids = await db.Pages.Where(p => p.Status == PageStatus.Published).Select(p => p.Id).ToListAsync(ct);
+		var current = (await db.RenderedPages.Where(r => r.RendererVersion == version && codes.Contains(r.Lang))
+			.Select(r => new { r.PageId, r.Lang }).ToListAsync(ct))
+			.Select(r => (r.PageId, r.Lang)).ToHashSet();
+		return ids.Any(id => codes.Any(code => !current.Contains((id, code)) && !status.HasFailed(id, code)));
 	}
 
 	private async Task RenderAsync(bool all, HashSet<Guid> ids, CancellationToken ct)
@@ -183,7 +198,7 @@ public sealed class RenderWorker(
 		// per chunk: pages + media refs in two queries, existing row keys in one, one commit (one POST per page and
 		// language: Node renders one at a time anyway). Existing rows are updated without reading them (Apply sets
 		// every column), so the old HTML never leaves the DB. A page is fresh once its chunk commits.
-		var count = 0;
+		var (count, failed) = (0, 0);
 		foreach (var chunk in targets.Chunk(ChunkSize))
 		{
 			var published = await pageService.GetPublishedByIdsAsync(chunk, codes, ct);
@@ -198,8 +213,23 @@ public sealed class RenderWorker(
 				foreach (var code in codes)
 				{
 					var page = languages[code];
-					var result = await renderer.RenderAsync(
-						new RenderState(page.Slug, page, menus[code], configs[code], baseUrl, code), ct);
+					RenderResult result;
+					try
+					{
+						result = await renderer.RenderAsync(
+							new RenderState(page.Slug, page, menus[code], configs[code], baseUrl, code), ct);
+					}
+					// this page failed to render (a block view throws on its data): skip it, the others still render.
+					// Its old row stays (stale → shell); retried when it changes or the renderer version does
+					catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.InternalServerError)
+					{
+						logger.LogWarning("Rendering page {PageId} (/{Slug}, {Lang}) failed, serving the shell: {Message}",
+							id, page.Slug, code, ex.Message);
+						status.MarkFailed(id, code);
+						failed++;
+						continue;
+					}
+					status.ClearFailed(id, code);
 					results.Add((id, code, page, result));
 					Track(db, id, code, existing.Contains((id, code)), page, result, startedAt);
 				}
@@ -216,7 +246,7 @@ public sealed class RenderWorker(
 					await StoreAsync(db, id, code, page, result, startedAt, ct);
 			}
 			db.ChangeTracker.Clear(); // don't keep every page's HTML tracked
-			count += results.Count / codes.Count;
+			count += results.Select(r => r.Id).Distinct().Count();
 		}
 
 		if (all)
@@ -242,8 +272,9 @@ public sealed class RenderWorker(
 			status.Screens = new RenderedScreens(screens, startedAt, version!);
 			status.CurrentVersion = version;
 		}
-		logger.LogInformation("Rendered {Count} public page(s){All} in {Languages} language(s) in {Milliseconds} ms.",
-			count, all ? " (all)" : "", codes.Count, stopwatch.ElapsedMilliseconds);
+		logger.LogInformation(
+			"Rendered {Count} public page(s){All} in {Languages} language(s) in {Milliseconds} ms ({Failed} failed).",
+			count, all ? " (all)" : "", codes.Count, stopwatch.ElapsedMilliseconds, failed);
 	}
 
 	private static async Task StoreAsync(
