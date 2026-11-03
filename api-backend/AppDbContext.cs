@@ -146,7 +146,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 			e.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
 			e.HasIndex(x => x.Status);
 
-			// jsonb via a value converter (JsonColumn below), not Npgsql dynamic JSON: keeps InMemory test provider working.
+			// Stored as jsonb through a value converter (JsonColumn below) instead of Npgsql dynamic JSON,
+			// so the InMemory test provider still works.
 			e.Property(x => x.Blocks).HasJson().IsRequired();
 			e.Property(x => x.Translations).HasJson().IsRequired()
 				.HasDefaultValueSql("'{}'::jsonb");

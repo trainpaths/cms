@@ -219,7 +219,8 @@ public sealed class RenderWorker(
 						result = await renderer.RenderAsync(
 							new RenderState(page.Slug, page, menus[code], configs[code], baseUrl, code), ct);
 					}
-					// skip it, the others still render; its old row stays (stale → served as the shell)
+					// Skip this page so the others still render. Its old row stays; it is stale, so the shell is
+					// served instead.
 					catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.InternalServerError)
 					{
 						logger.LogWarning("Rendering page {PageId} (/{Slug}, {Lang}) failed, serving the shell: {Message}",
