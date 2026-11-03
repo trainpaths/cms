@@ -11,6 +11,7 @@ using api_backend.Models.Site;
 using api_backend.Services.Pages;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace api_backend;
 
@@ -30,20 +31,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 	public DbSet<Menu> Menus => Set<Menu>();
 	public DbSet<RenderedPage> RenderedPages => Set<RenderedPage>();
 	public DbSet<BackupSettings> BackupSettings => Set<BackupSettings>();
-
-	// camelCase in the jsonb column, matching the API and the frontend BlockInstance shape.
-	private static readonly JsonSerializerOptions BlockJson = new(JsonSerializerDefaults.Web);
-
-	// block trees compare + snapshot by their JSON
-	private static ValueComparer<Dictionary<string, PageTextTranslation>> TranslationsComparer() => new(
-		(a, c) => JsonSerializer.Serialize(a, BlockJson) == JsonSerializer.Serialize(c, BlockJson),
-		v => JsonSerializer.Serialize(v, BlockJson).GetHashCode(),
-		v => JsonSerializer.Deserialize<Dictionary<string, PageTextTranslation>>(JsonSerializer.Serialize(v, BlockJson), BlockJson)!);
-
-	private static ValueComparer<List<Block>?> BlocksComparer() => new(
-		(a, c) => JsonSerializer.Serialize(a, BlockJson) == JsonSerializer.Serialize(c, BlockJson),
-		v => JsonSerializer.Serialize(v, BlockJson).GetHashCode(),
-		v => v == null ? null : JsonSerializer.Deserialize<List<Block>>(JsonSerializer.Serialize(v, BlockJson), BlockJson));
 
 	protected override void OnModelCreating(ModelBuilder b)
 	{
@@ -159,21 +146,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 			e.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
 			e.HasIndex(x => x.Status);
 
-			// Value converter, not Npgsql dynamic JSON: keeps InMemory test provider working.
-			e.Property(x => x.Blocks)
-				.HasColumnType("jsonb")
-				.HasConversion(
-					v => JsonSerializer.Serialize(v, BlockJson),
-					v => JsonSerializer.Deserialize<List<Block>>(v, BlockJson) ?? new List<Block>(),
-					BlocksComparer())
-				.IsRequired();
-			e.Property(x => x.Translations)
-				.HasColumnType("jsonb")
-				.HasConversion(
-					v => JsonSerializer.Serialize(v, BlockJson),
-					v => JsonSerializer.Deserialize<Dictionary<string, PageTextTranslation>>(v, BlockJson) ?? new(),
-					TranslationsComparer())
-				.IsRequired()
+			// jsonb via a value converter (JsonColumn below), not Npgsql dynamic JSON: keeps InMemory test provider working.
+			e.Property(x => x.Blocks).HasJson().IsRequired();
+			e.Property(x => x.Translations).HasJson().IsRequired()
 				.HasDefaultValueSql("'{}'::jsonb");
 
 			// published snapshot (null title/blocks = never published)
@@ -182,19 +157,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 				.HasDefaultValue("");
 			e.Property(x => x.PublishedMetaDescription).HasMaxLength(PageService.MaxMetaDescriptionLength).IsRequired()
 				.HasDefaultValue("");
-			e.Property(x => x.PublishedBlocks)
-				.HasColumnType("jsonb")
-				.HasConversion(
-					v => JsonSerializer.Serialize(v, BlockJson),
-					v => JsonSerializer.Deserialize<List<Block>>(v, BlockJson),
-					BlocksComparer());
-			e.Property(x => x.PublishedTranslations)
-				.HasColumnType("jsonb")
-				.HasConversion(
-					v => JsonSerializer.Serialize(v, BlockJson),
-					v => JsonSerializer.Deserialize<Dictionary<string, PageTextTranslation>>(v, BlockJson) ?? new(),
-					TranslationsComparer())
-				.IsRequired()
+			e.Property(x => x.PublishedBlocks).HasNullableJson();
+			e.Property(x => x.PublishedTranslations).HasJson().IsRequired()
 				.HasDefaultValueSql("'{}'::jsonb");
 
 			e.HasOne(x => x.CreatedBy)
@@ -230,16 +194,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 			e.HasKey(x => x.Id);
 			e.Property(x => x.Handle).HasMaxLength(MenuLimits.MaxHandleLength).IsRequired();
 			e.HasIndex(x => x.Handle).IsUnique();
-			e.Property(x => x.Items)
-				.HasColumnType("jsonb")
-				.HasConversion(
-					v => JsonSerializer.Serialize(v, BlockJson),
-					v => JsonSerializer.Deserialize<List<MenuItem>>(v, BlockJson) ?? new List<MenuItem>(),
-					new ValueComparer<List<MenuItem>>(
-						(a, c) => JsonSerializer.Serialize(a, BlockJson) == JsonSerializer.Serialize(c, BlockJson),
-						v => JsonSerializer.Serialize(v, BlockJson).GetHashCode(),
-						v => JsonSerializer.Deserialize<List<MenuItem>>(JsonSerializer.Serialize(v, BlockJson), BlockJson)!))
-				.IsRequired();
+			e.Property(x => x.Items).HasJson().IsRequired();
 			e.HasOne(x => x.UpdatedBy).WithMany().HasForeignKey(x => x.UpdatedById).OnDelete(DeleteBehavior.SetNull);
 		});
 
@@ -264,16 +219,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 			e.ToTable("site_config");
 			e.HasKey(x => x.Id);
 			e.Property(x => x.Id).ValueGeneratedNever();
-			e.Property(x => x.Values)
-				.HasColumnType("jsonb")
-				.HasConversion(
-					v => JsonSerializer.Serialize(v, BlockJson),
-					v => JsonSerializer.Deserialize<SiteConfigValues>(v, BlockJson) ?? new SiteConfigValues(),
-					new ValueComparer<SiteConfigValues>(
-						(a, c) => JsonSerializer.Serialize(a, BlockJson) == JsonSerializer.Serialize(c, BlockJson),
-						v => JsonSerializer.Serialize(v, BlockJson).GetHashCode(),
-						v => JsonSerializer.Deserialize<SiteConfigValues>(JsonSerializer.Serialize(v, BlockJson), BlockJson)!))
-				.IsRequired();
+			e.Property(x => x.Values).HasJson().IsRequired();
 			// deleting the media just clears the slot
 			e.HasOne(x => x.Logo).WithMany().HasForeignKey(x => x.LogoMediaId).OnDelete(DeleteBehavior.SetNull);
 			e.HasOne(x => x.ShareImage).WithMany().HasForeignKey(x => x.ShareImageMediaId).OnDelete(DeleteBehavior.SetNull);
@@ -311,4 +257,30 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 			new Role { Id = staffId, Name = "staff", Description = "Default staff member." }
 		);
 	}
+}
+
+/// <summary>
+/// jsonb columns (block trees, translations, menu items, site config): System.Text.Json, camelCase like the API and the
+/// frontend's shapes. Change tracking compares and snapshots the values by their JSON.
+/// </summary>
+file static class JsonColumn
+{
+	private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+
+	/// <summary>Required value; a stored JSON <c>null</c> reads as an empty one.</summary>
+	public static PropertyBuilder<T> HasJson<T>(this PropertyBuilder<T> property) where T : class, new() =>
+		property.HasColumnType("jsonb").HasConversion(v => ToJson(v), v => FromJson<T>(v) ?? new T(), Comparer<T>());
+
+	/// <summary>Nullable value (<c>null</c> column = none).</summary>
+	public static PropertyBuilder<T?> HasNullableJson<T>(this PropertyBuilder<T?> property) where T : class =>
+		property.HasColumnType("jsonb").HasConversion(v => ToJson(v), v => FromJson<T>(v), Comparer<T?>());
+
+	private static string ToJson<T>(T value) => JsonSerializer.Serialize(value, Json);
+
+	private static T? FromJson<T>(string json) where T : class => JsonSerializer.Deserialize<T>(json, Json);
+
+	private static ValueComparer<T> Comparer<T>() => new(
+		(a, b) => ToJson(a) == ToJson(b),
+		v => ToJson(v).GetHashCode(),
+		v => JsonSerializer.Deserialize<T>(ToJson(v), Json)!);
 }
