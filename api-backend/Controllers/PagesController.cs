@@ -1,6 +1,7 @@
 using api_backend.Models.Auth.JWT;
 using api_backend.Models.Dto;
 using api_backend.Models.Pages;
+using api_backend.Services;
 using api_backend.Services.Pages;
 using api_backend.Services.Rendering;
 using Microsoft.AspNetCore.Authorization;
@@ -103,12 +104,9 @@ public class PagesController(PageService pages, IRenderQueue render) : Controlle
 		return NoContent();
 	}
 
-	private ObjectResult ToProblem<T>(PageResult<T> result) => result.Error switch
-	{
-		PageError.NotFound => NotFoundProblem(),
-		PageError.SlugTaken => Problem(statusCode: 409, title: "Slug already in use.", detail: result.Detail),
-		_ => Problem(statusCode: 400, title: "Invalid page.", detail: result.Detail),
-	};
+	private static readonly ProblemTitles Titles = new("Page not found.", "Invalid page.", "Slug already in use.");
 
-	private ObjectResult NotFoundProblem() => Problem(statusCode: 404, title: "Page not found.");
+	private ObjectResult ToProblem<T>(ServiceResult<T> result) => this.ToProblem(result, Titles);
+
+	private ObjectResult NotFoundProblem() => this.NotFoundProblem(Titles);
 }

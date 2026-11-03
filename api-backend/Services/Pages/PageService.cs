@@ -10,20 +10,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace api_backend.Services.Pages;
 
-/// <summary>Why a page operation failed; the controller maps it to a ProblemDetails status.</summary>
-public enum PageError
-{
-	NotFound,
-	SlugTaken,
-	Invalid,
-}
-
-public record PageResult<T>(T? Value, PageError? Error = null, string? Detail = null)
-{
-	public static PageResult<T> Ok(T value) => new(value);
-	public static PageResult<T> Fail(PageError error, string? detail = null) => new(default, error, detail);
-}
-
 /// <summary>
 /// What a write did to the public site. <see cref="StatusChanged"/>: published or unpublished.
 /// <see cref="LiveChanged"/>: the live page changed while staying published (publish changes, slug).
@@ -203,15 +189,15 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		string defaultCode) =>
 		code != defaultCode && translations.GetValueOrDefault(code)?.Title is { Length: > 0 } translated ? translated : title;
 
-	public async Task<PageResult<PageDetail>> CreateAsync(CreatePageRequest req, Guid staffId, CancellationToken ct)
+	public async Task<ServiceResult<PageDetail>> CreateAsync(CreatePageRequest req, Guid staffId, CancellationToken ct)
 	{
 		var title = req.Title.Trim();
 		if (title.Length == 0)
-			return PageResult<PageDetail>.Fail(PageError.Invalid, "Title is required.");
+			return ServiceResult<PageDetail>.Fail(ServiceError.Invalid, "Title is required.");
 
 		var blocks = req.Blocks ?? [];
 		if (ValidateBlocks(blocks) is { } blockError)
-			return PageResult<PageDetail>.Fail(PageError.Invalid, blockError);
+			return ServiceResult<PageDetail>.Fail(ServiceError.Invalid, blockError);
 
 		string slug;
 		if (string.IsNullOrWhiteSpace(req.Slug))
@@ -222,9 +208,9 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		{
 			slug = req.Slug.Trim().ToLowerInvariant();
 			if (SlugError(slug) is { } slugError)
-				return PageResult<PageDetail>.Fail(PageError.Invalid, slugError);
+				return ServiceResult<PageDetail>.Fail(ServiceError.Invalid, slugError);
 			if (await db.Pages.AnyAsync(p => p.Slug == slug, ct))
-				return PageResult<PageDetail>.Fail(PageError.SlugTaken, $"Slug '{slug}' is already in use.");
+				return ServiceResult<PageDetail>.Fail(ServiceError.Conflict, $"Slug '{slug}' is already in use.");
 		}
 
 		var page = new Page
@@ -238,51 +224,51 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		};
 		db.Pages.Add(page);
 		await db.SaveChangesAsync(ct);
-		return PageResult<PageDetail>.Ok(await ToDetailAsync(page, [], ct));
+		return ServiceResult<PageDetail>.Ok(await ToDetailAsync(page, [], ct));
 	}
 
 	/// <summary>
 	/// Creates a draft page from an exported page file. Never overwrites: a taken (or reserved) slug gets a
 	/// <c>-2</c>, <c>-3</c>... suffix. Media is referenced by id; ids unknown to this site are reported, not rejected.
 	/// </summary>
-	public async Task<PageResult<ImportPageResult>> ImportAsync(ImportPageRequest req, Guid staffId, CancellationToken ct)
+	public async Task<ServiceResult<ImportPageResult>> ImportAsync(ImportPageRequest req, Guid staffId, CancellationToken ct)
 	{
 		var title = req.Title.Trim();
 		if (title.Length == 0)
-			return PageResult<ImportPageResult>.Fail(PageError.Invalid, "Title is required.");
+			return ServiceResult<ImportPageResult>.Fail(ServiceError.Invalid, "Title is required.");
 		if ((MetaError(req.MetaTitle, MaxMetaTitleLength, "Meta title")
 			?? MetaError(req.MetaDescription, MaxMetaDescriptionLength, "Meta description")) is { } metaError)
-			return PageResult<ImportPageResult>.Fail(PageError.Invalid, metaError);
+			return ServiceResult<ImportPageResult>.Fail(ServiceError.Invalid, metaError);
 		if (ValidateBlocks(req.Blocks) is { } blockError)
-			return PageResult<ImportPageResult>.Fail(PageError.Invalid, blockError);
+			return ServiceResult<ImportPageResult>.Fail(ServiceError.Invalid, blockError);
 		var (tagNames, tagError) = NormalizeTags(req.Tags ?? []);
 		if (tagError is not null)
-			return PageResult<ImportPageResult>.Fail(PageError.Invalid, tagError);
+			return ServiceResult<ImportPageResult>.Fail(ServiceError.Invalid, tagError);
 		var (translations, translationError) = NormalizeTranslations(req.Translations ?? []);
 		if (translationError is not null)
-			return PageResult<ImportPageResult>.Fail(PageError.Invalid, translationError);
+			return ServiceResult<ImportPageResult>.Fail(ServiceError.Invalid, translationError);
 
 		var detail = await CreateDraftAsync(title, string.IsNullOrWhiteSpace(req.Slug) ? title : req.Slug, req.Blocks,
 			req.MetaTitle?.Trim() ?? "", req.MetaDescription?.Trim() ?? "", translations, tagNames, staffId, ct);
 		var found = detail.Media.Select(m => m.Id).ToHashSet();
 		var missing = MediaService.CollectIds(req.Blocks).Where(id => !found.Contains(id)).ToList();
-		return PageResult<ImportPageResult>.Ok(new ImportPageResult(detail, missing));
+		return ServiceResult<ImportPageResult>.Ok(new ImportPageResult(detail, missing));
 	}
 
 	/// <summary>A draft copy: "{title} (copy)", a free variant of the slug, same blocks, meta, translations and tags.</summary>
-	public async Task<PageResult<PageDetail>> DuplicateAsync(Guid id, Guid staffId, CancellationToken ct)
+	public async Task<ServiceResult<PageDetail>> DuplicateAsync(Guid id, Guid staffId, CancellationToken ct)
 	{
 		var source = await db.Pages.AsNoTracking()
 			.Where(p => p.Id == id)
 			.Select(p => new { Page = p, Tags = string.Join(" ", p.PageTags.Select(pt => pt.Tag.Name)) })
 			.FirstOrDefaultAsync(ct);
 		if (source is null)
-			return PageResult<PageDetail>.Fail(PageError.NotFound);
+			return ServiceResult<PageDetail>.Fail(ServiceError.NotFound);
 		var page = source.Page;
 		var title = $"{page.Title} (copy)";
 		if (title.Length > MaxTitleLength)
 			title = page.Title[..(MaxTitleLength - 7)].TrimEnd() + " (copy)";
-		return PageResult<PageDetail>.Ok(await CreateDraftAsync(title, page.Slug, page.Blocks, page.MetaTitle,
+		return ServiceResult<PageDetail>.Ok(await CreateDraftAsync(title, page.Slug, page.Blocks, page.MetaTitle,
 			page.MetaDescription, page.Translations, SplitTags(source.Tags), staffId, ct));
 	}
 
@@ -316,40 +302,40 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 	/// it to the live snapshot (also when already published), <c>draft</c> unpublishes (the snapshot stays). Tags alone
 	/// don't bump <c>UpdatedAt</c>: tagging isn't a content edit, and the pages list sorts by it.
 	/// </summary>
-	public async Task<PageResult<PageUpdate>> UpdateAsync(Guid id, UpdatePageRequest req, Guid staffId, CancellationToken ct)
+	public async Task<ServiceResult<PageUpdate>> UpdateAsync(Guid id, UpdatePageRequest req, Guid staffId, CancellationToken ct)
 	{
 		var page = await db.Pages.FirstOrDefaultAsync(p => p.Id == id, ct);
 		if (page is null)
-			return PageResult<PageUpdate>.Fail(PageError.NotFound);
+			return ServiceResult<PageUpdate>.Fail(ServiceError.NotFound);
 		// response tag names + diff base for a tag write
 		var pageTags = await db.PageTags.Include(pt => pt.Tag).Where(pt => pt.PageId == id).ToListAsync(ct);
 		var config = cms.Page(page.Slug);
 
 		var title = req.Title?.Trim();
 		if (title is { Length: 0 })
-			return PageResult<PageUpdate>.Fail(PageError.Invalid, "Title cannot be empty.");
+			return ServiceResult<PageUpdate>.Fail(ServiceError.Invalid, "Title cannot be empty.");
 
 		var slug = req.Slug?.Trim().ToLowerInvariant();
 		if (slug is not null)
 		{
 			if (SlugError(slug) is { } slugError)
-				return PageResult<PageUpdate>.Fail(PageError.Invalid, slugError);
+				return ServiceResult<PageUpdate>.Fail(ServiceError.Invalid, slugError);
 			if (slug != page.Slug && config is { IsLocked: true })
-				return PageResult<PageUpdate>.Fail(PageError.Invalid, "This page's slug is fixed by the site configuration.");
+				return ServiceResult<PageUpdate>.Fail(ServiceError.Invalid, "This page's slug is fixed by the site configuration.");
 			if (slug != page.Slug && await db.Pages.AnyAsync(p => p.Slug == slug, ct))
-				return PageResult<PageUpdate>.Fail(PageError.SlugTaken, $"Slug '{slug}' is already in use.");
+				return ServiceResult<PageUpdate>.Fail(ServiceError.Conflict, $"Slug '{slug}' is already in use.");
 		}
 
 		if ((MetaError(req.MetaTitle, MaxMetaTitleLength, "Meta title")
 			?? MetaError(req.MetaDescription, MaxMetaDescriptionLength, "Meta description")) is { } metaError)
-			return PageResult<PageUpdate>.Fail(PageError.Invalid, metaError);
+			return ServiceResult<PageUpdate>.Fail(ServiceError.Invalid, metaError);
 
 		if (req.Blocks is not null)
 		{
 			if (config is { Editable: false })
-				return PageResult<PageUpdate>.Fail(PageError.Invalid, "This page's content comes from its template.");
+				return ServiceResult<PageUpdate>.Fail(ServiceError.Invalid, "This page's content comes from its template.");
 			if (ValidateBlocks(req.Blocks) is { } blockError)
-				return PageResult<PageUpdate>.Fail(PageError.Invalid, blockError);
+				return ServiceResult<PageUpdate>.Fail(ServiceError.Invalid, blockError);
 		}
 
 		Dictionary<string, PageTextTranslation>? translations = null;
@@ -357,7 +343,7 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		{
 			(translations, var translationError) = NormalizeTranslations(req.Translations);
 			if (translationError is not null)
-				return PageResult<PageUpdate>.Fail(PageError.Invalid, translationError);
+				return ServiceResult<PageUpdate>.Fail(ServiceError.Invalid, translationError);
 		}
 
 		List<string>? tagNames = null;
@@ -365,7 +351,7 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		{
 			(tagNames, var tagError) = NormalizeTags(req.Tags);
 			if (tagError is not null)
-				return PageResult<PageUpdate>.Fail(PageError.Invalid, tagError);
+				return ServiceResult<PageUpdate>.Fail(ServiceError.Invalid, tagError);
 		}
 
 		var (wasPublished, oldLiveTitle, oldSlug) = (page.Status == PageStatus.Published, page.PublishedTitle, page.Slug);
@@ -431,7 +417,7 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 		// a translated title shows in other pages' menus/footers too
 		var liveRenamed = live && (page.PublishedTitle != oldLiveTitle || page.Slug != oldSlug
 			|| LiveTitles(page.PublishedTranslations) != oldLiveTitles);
-		return PageResult<PageUpdate>.Ok(new PageUpdate(ToSummary(page, tags), statusChanged,
+		return ServiceResult<PageUpdate>.Ok(new PageUpdate(ToSummary(page, tags), statusChanged,
 			live && (publish || page.Slug != oldSlug), liveRenamed));
 	}
 
@@ -496,22 +482,22 @@ public partial class PageService(AppDbContext db, CmsConfig cms)
 	private static string? MetaError(string? value, int max, string label) =>
 		value?.Trim().Length > max ? $"{label} must be at most {max} characters." : null;
 
-	public async Task<PageResult<bool>> DeleteAsync(Guid id, CancellationToken ct)
+	public async Task<ServiceResult<bool>> DeleteAsync(Guid id, CancellationToken ct)
 	{
 		var page = await db.Pages.AsNoTracking()
 			.Where(p => p.Id == id)
 			.Select(p => new { p.Slug, HasTags = p.PageTags.Any() })
 			.FirstOrDefaultAsync(ct);
 		if (page is null)
-			return PageResult<bool>.Fail(PageError.NotFound);
+			return ServiceResult<bool>.Fail(ServiceError.NotFound);
 		if (cms.Page(page.Slug) is { IsLocked: true })
-			return PageResult<bool>.Fail(PageError.Invalid, "This page is part of the site configuration and can't be deleted.");
+			return ServiceResult<bool>.Fail(ServiceError.Invalid, "This page is part of the site configuration and can't be deleted.");
 		// page_tags + rendered_pages cascade in Postgres
 		if (await db.Pages.Where(p => p.Id == id).ExecuteDeleteAsync(ct) == 0)
-			return PageResult<bool>.Fail(PageError.NotFound);
+			return ServiceResult<bool>.Fail(ServiceError.NotFound);
 		if (page.HasTags)
 			await DeleteUnusedTagsAsync(ct);
-		return PageResult<bool>.Ok(true);
+		return ServiceResult<bool>.Ok(true);
 	}
 
 	/// <summary>Normalized, deduplicated tag names, or the first validation error.</summary>

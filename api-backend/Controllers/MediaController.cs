@@ -1,5 +1,6 @@
 using api_backend.Models.Auth.JWT;
 using api_backend.Models.Dto;
+using api_backend.Services;
 using api_backend.Services.Media;
 using api_backend.Services.Rendering;
 using Microsoft.AspNetCore.Authorization;
@@ -63,11 +64,9 @@ public class MediaController(MediaService media, IRenderQueue render) : Controll
 		return NoContent();
 	}
 
-	private ObjectResult ToProblem<T>(MediaResult<T> result) => result.Error switch
-	{
-		MediaError.NotFound => NotFoundProblem(),
-		_ => Problem(statusCode: 400, title: "Invalid media.", detail: result.Detail),
-	};
+	private static readonly ProblemTitles Titles = new("Media not found.", "Invalid media.");
 
-	private ObjectResult NotFoundProblem() => Problem(statusCode: 404, title: "Media not found.");
+	private ObjectResult ToProblem<T>(ServiceResult<T> result) => this.ToProblem(result, Titles);
+
+	private ObjectResult NotFoundProblem() => this.NotFoundProblem(Titles);
 }

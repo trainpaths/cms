@@ -1,6 +1,7 @@
 using api_backend.Models.Auth.JWT;
 using api_backend.Models.Dto;
 using api_backend.Models.Menus;
+using api_backend.Services;
 using api_backend.Services.Menus;
 using api_backend.Services.Pages;
 using api_backend.Services.Rendering;
@@ -65,12 +66,9 @@ public class MenusController(MenuService menus, IRenderQueue render, PublicCache
 		return NoContent();
 	}
 
-	private ObjectResult ToProblem<T>(PageResult<T> result) => result.Error switch
-	{
-		PageError.NotFound => NotFoundProblem(),
-		PageError.SlugTaken => Problem(statusCode: 409, title: "Handle already in use.", detail: result.Detail),
-		_ => Problem(statusCode: 400, title: "Invalid menu.", detail: result.Detail),
-	};
+	private static readonly ProblemTitles Titles = new("Menu not found.", "Invalid menu.", "Handle already in use.");
 
-	private ObjectResult NotFoundProblem() => Problem(statusCode: 404, title: "Menu not found.");
+	private ObjectResult ToProblem<T>(ServiceResult<T> result) => this.ToProblem(result, Titles);
+
+	private ObjectResult NotFoundProblem() => this.NotFoundProblem(Titles);
 }

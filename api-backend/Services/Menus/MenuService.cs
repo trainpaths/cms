@@ -11,7 +11,7 @@ namespace api_backend.Services.Menus;
 
 /// <summary>
 /// Menus: CRUD for the admin view, validation of the item tree, and the public (resolved) form.
-/// Errors reuse <see cref="PageResult{T}"/>: <see cref="PageError.SlugTaken"/> = handle taken.
+/// Errors: <see cref="ServiceResult{T}"/>, <see cref="ServiceError.Conflict"/> = handle taken.
 /// </summary>
 public partial class MenuService(AppDbContext db, CmsConfig cms)
 {
@@ -51,47 +51,47 @@ public partial class MenuService(AppDbContext db, CmsConfig cms)
 		return menu is null ? null : ToDetail(menu);
 	}
 
-	public async Task<PageResult<MenuDetail>> CreateAsync(CreateMenuRequest req, Guid staffId, CancellationToken ct)
+	public async Task<ServiceResult<MenuDetail>> CreateAsync(CreateMenuRequest req, Guid staffId, CancellationToken ct)
 	{
 		var handle = NormalizeHandle(req.Handle);
 		if (ValidateHandle(handle) is { } error)
-			return PageResult<MenuDetail>.Fail(PageError.Invalid, error);
+			return ServiceResult<MenuDetail>.Fail(ServiceError.Invalid, error);
 		if (await db.Menus.AnyAsync(m => m.Handle == handle, ct))
-			return PageResult<MenuDetail>.Fail(PageError.SlugTaken, $"Handle '{handle}' is already in use.");
+			return ServiceResult<MenuDetail>.Fail(ServiceError.Conflict, $"Handle '{handle}' is already in use.");
 
 		var menu = new Menu { Handle = handle, UpdatedById = staffId };
 		db.Menus.Add(menu);
 		await db.SaveChangesAsync(ct);
-		return PageResult<MenuDetail>.Ok(ToDetail(menu));
+		return ServiceResult<MenuDetail>.Ok(ToDetail(menu));
 	}
 
-	public async Task<PageResult<MenuDetail>> UpdateAsync(Guid id, UpdateMenuRequest req, Guid staffId, CancellationToken ct)
+	public async Task<ServiceResult<MenuDetail>> UpdateAsync(Guid id, UpdateMenuRequest req, Guid staffId, CancellationToken ct)
 	{
 		var menu = await db.Menus.FirstOrDefaultAsync(m => m.Id == id, ct);
 		if (menu is null)
-			return PageResult<MenuDetail>.Fail(PageError.NotFound);
+			return ServiceResult<MenuDetail>.Fail(ServiceError.NotFound);
 
 		var items = req.Items ?? [];
 		if (await ValidateItemsAsync(items, ct) is { } itemError)
-			return PageResult<MenuDetail>.Fail(PageError.Invalid, itemError);
+			return ServiceResult<MenuDetail>.Fail(ServiceError.Invalid, itemError);
 
 		menu.Items = items;
 		menu.UpdatedAt = DateTimeOffset.UtcNow;
 		menu.UpdatedById = staffId;
 		await db.SaveChangesAsync(ct);
-		return PageResult<MenuDetail>.Ok(ToDetail(menu));
+		return ServiceResult<MenuDetail>.Ok(ToDetail(menu));
 	}
 
-	public async Task<PageResult<bool>> DeleteAsync(Guid id, CancellationToken ct)
+	public async Task<ServiceResult<bool>> DeleteAsync(Guid id, CancellationToken ct)
 	{
 		var menu = await db.Menus.FirstOrDefaultAsync(m => m.Id == id, ct);
 		if (menu is null)
-			return PageResult<bool>.Fail(PageError.NotFound);
+			return ServiceResult<bool>.Fail(ServiceError.NotFound);
 		if (menu.Handle == Menu.MainHandle)
-			return PageResult<bool>.Fail(PageError.Invalid, "The main menu can't be deleted.");
+			return ServiceResult<bool>.Fail(ServiceError.Invalid, "The main menu can't be deleted.");
 		db.Menus.Remove(menu);
 		await db.SaveChangesAsync(ct);
-		return PageResult<bool>.Ok(true);
+		return ServiceResult<bool>.Ok(true);
 	}
 
 	/// <summary>

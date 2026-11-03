@@ -1,6 +1,7 @@
 using System.Text.Json;
 using api_backend.Models.Dto;
 using api_backend.Models.Pages;
+using api_backend.Services;
 using api_backend.Services.Cms;
 using api_backend.Services.Pages;
 using AwesomeAssertions;
@@ -73,12 +74,12 @@ public class PageServiceTests
 		var service = new PageService(db, Localized);
 
 		var create = await service.CreateAsync(new CreatePageRequest("x", code, null), StaffId, Ct);
-		create.Error.Should().Be(PageError.Invalid);
+		create.Error.Should().Be(ServiceError.Invalid);
 		create.Detail.Should().Be($"Slug '{code}' is reserved.");
 
 		var page = await service.CreateAsync(new CreatePageRequest("Page", null, null), StaffId, Ct);
 		(await service.UpdateAsync(page.Value!.Id, new UpdatePageRequest(null, code, null), StaffId, Ct))
-			.Error.Should().Be(PageError.Invalid);
+			.Error.Should().Be(ServiceError.Invalid);
 		// generated from a title
 		(await service.CreateAsync(new CreatePageRequest(code.ToUpperInvariant(), null, null), StaffId, Ct))
 			.Value!.Slug.Should().Be($"{code}-page");
@@ -226,7 +227,7 @@ public class PageServiceTests
 		var created = (await service.CreateAsync(new CreatePageRequest("Page", null, null), StaffId, Ct)).Value!;
 
 		(await service.UpdateAsync(created.Id, new UpdatePageRequest(null, null, null,
-			Translations: new() { ["Deutsch"] = new PageTextTranslation("x") }), StaffId, Ct)).Error.Should().Be(PageError.Invalid);
+			Translations: new() { ["Deutsch"] = new PageTextTranslation("x") }), StaffId, Ct)).Error.Should().Be(ServiceError.Invalid);
 		(await service.UpdateAsync(created.Id, new UpdatePageRequest(null, null, null,
 			Translations: new() { ["de"] = new PageTextTranslation("", new string('x', 71)) }), StaffId, Ct))
 			.Detail.Should().Contain("Meta title (de)");
@@ -263,7 +264,7 @@ public class PageServiceTests
 
 		var result = await service.CreateAsync(new CreatePageRequest("Two", "home", null), StaffId, Ct);
 
-		result.Error.Should().Be(PageError.SlugTaken);
+		result.Error.Should().Be(ServiceError.Conflict);
 	}
 
 	[Fact]
@@ -288,7 +289,7 @@ public class PageServiceTests
 		await using var db = TestDbContextFactory.Create();
 		var result = await new PageService(db, CmsConfig.Default).UpdateAsync(Guid.NewGuid(), new UpdatePageRequest("x", null, null), StaffId, Ct);
 
-		result.Error.Should().Be(PageError.NotFound);
+		result.Error.Should().Be(ServiceError.NotFound);
 	}
 
 	[Fact]
