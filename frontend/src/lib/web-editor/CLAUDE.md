@@ -36,7 +36,6 @@ core/translatable.ts  isTranslatable(blockName, key) (`translatable: true` in th
                     outdated} per language in one walk: store.translationStatus), pruneTranslations (drops
                     non-translatable keys + sources without a translation; what a save sends)
 core/localize.ts    localizeBlocks / localizeText: mirror of the API's PageService.Localize (admin preview)
-core/serializer.ts  serialize/parse helpers (unused by the store, kept for import/export)
 blocks/<name>/      block.json (name, title, category, description, supports, parent?) + index.ts (`export default defineBlock(meta, {icon,
                     attributes, edit, settings?})`) + <Name>Edit/View/Icon.vue [+ <Name>Settings.vue]. Picked up
                     automatically: no central list (card, heading, paragraph, image, list, list-item, link)
