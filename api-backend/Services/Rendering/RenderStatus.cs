@@ -49,7 +49,7 @@ public sealed class RenderStatus
 			_failed.TryRemove(key, out _);
 	}
 
-	// (page, language code) → renderer version it failed with
+	// Maps a page and language code to the renderer version it failed to render with.
 	private readonly ConcurrentDictionary<(Guid PageId, string Lang), string?> _failed = new();
 
 	/// <summary>

@@ -256,13 +256,13 @@ public partial class RenderingTests(ApiFactory factory) : IClassFixture<ApiFacto
 			(r, body) => r.StatusCode == HttpStatusCode.OK && body.Contains("Good render"));
 		Accel(await site.Client.GetAsync($"/api/public/html/{broken}", Ct)).Should().Be(PublicHtmlController.PublicShell);
 
-		// the version check runs every second here: a known failure must not re-render everything each time
+		// The version check runs every second here. A known failure must not trigger a full re-render on each check.
 		await SettleAsync();
 		var before = site.Renderer.Rendered.Count(s => s == good);
 		await Task.Delay(TimeSpan.FromSeconds(3), Ct);
 		site.Renderer.Rendered.Count(s => s == good).Should().Be(before);
 
-		// fixed (the edit retries it)
+		// After the fix, editing the page makes the worker retry it.
 		site.Renderer.FailTitles.Clear();
 		(await SendAsync(site, HttpMethod.Put, $"/api/pages/{brokenId}",
 			new JsonObject { ["title"] = "Fixed render", ["status"] = "published" })).StatusCode.Should().Be(HttpStatusCode.OK);
