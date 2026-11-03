@@ -219,8 +219,7 @@ public sealed class RenderWorker(
 						result = await renderer.RenderAsync(
 							new RenderState(page.Slug, page, menus[code], configs[code], baseUrl, code), ct);
 					}
-					// this page failed to render (a block view throws on its data): skip it, the others still render.
-					// Its old row stays (stale → shell); retried when it changes or the renderer version does
+					// skip it, the others still render; its old row stays (stale → served as the shell)
 					catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.InternalServerError)
 					{
 						logger.LogWarning("Rendering page {PageId} (/{Slug}, {Lang}) failed, serving the shell: {Message}",
