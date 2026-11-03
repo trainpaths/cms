@@ -78,8 +78,9 @@ TagsController         /api/tags             [Authorize(StaffOnly)], rate limit 
   of `Blocks`, set on every blocks write + by the seeder, so `GET /api/pages` never reads `Blocks`), `Models/Pages/Block.cs`
   (recursive: `Id`, `Name`, `Dictionary<string, JsonElement> Attributes`, `Translations?` (code → attributes, omitted
   when null), `List<Block> InnerBlocks`).
-- `Services/Pages/PageService.cs` returns `PageResult<T>` (`PageError`: NotFound | SlugTaken | Invalid);
-  the controller maps errors to ProblemDetails. Status is exposed as lowercase `"draft"|"published"`.
+- `Services/Pages/PageService.cs` returns `ServiceResult<T>` (`Services/ServiceResult.cs`, `ServiceError`: NotFound |
+  Conflict (slug taken) | Invalid), like the media, menu and backup services; controllers map errors to ProblemDetails
+  via `this.ToProblem(result, Titles)` (`Controllers/ServiceProblems.cs`: 404 title only, 409/400 with the detail). Status is exposed as lowercase `"draft"|"published"`.
 - Slugs: kebab-case, ≤100, generated from title when omitted (dedup `-2`, `-3`), `ReservedSlugs` rejected
   (customer screens incl. `user` for `/user/*`, admin SPA routes, API paths — keep in sync with `PublicScreens` and
   `frontend/src/router/index.ts`; `PublicHtmlController` also uses the list to send non-screen ones to the admin SPA).
@@ -156,7 +157,7 @@ PublicMenusController  /api/public/menus     [AllowAnonymous], rate limit "pages
   page title), PageId xor Url, Url per `IsMenuUrl`, PageIds must exist.
 - Public resolution (`GetPublicAsync`): page links → current slug/title, published only. A link to a draft/deleted page
   becomes a folder when labeled, else its children move up; folders without children are dropped.
-- Errors reuse `PageResult<T>`/`PageError` (`SlugTaken` = handle taken).
+- Errors: `ServiceResult<T>` (`Conflict` = handle taken).
 
 ## Machine translation (`Services/Translation/`)
 ```
@@ -230,8 +231,8 @@ BackupsController           /api/backups             [Authorize(SuperAdmin)], ra
   POST   /upload               multipart `file` (no Kestrel cap; ≤ Backup:MaxUploadMegabytes) → 201 BackupInfo (upload-…) | 400 damaged/not a backup
   POST   /{name}/restore       → RestoreResult(preRestoreBackup) | 400 damaged/newer schema | 404 | 409 | 500
 ```
-- `BackupService` (scoped): Create/List/Delete/SaveUpload/Restore/RunScheduledAsync, `BackupResult<T>` (`BackupError`:
-  NotFound | Busy | Invalid), tool/disk failures throw `BackupFailedException` (controller → 500 with the message).
+- `BackupService` (scoped): Create/List/Delete/SaveUpload/Restore/RunScheduledAsync, `ServiceResult<T>` (`Conflict`
+  = busy), tool/disk failures throw `BackupFailedException` (controller → 500 with the message).
   Names only via `BackupArchive.NamePattern()` (no traversal); work files in `<dir>/.work/<guid>`, archives written as `.partial`.
 - `BackupArchive` (layout, manifest record, `ReadManifestAsync` = first entry only, `ScanAsync` = full read + checks),
   `BackupSchedule` (pure due/next logic, unit-tested), `BackupScheduler` (hosted, 1-min tick: `DeleteExpired` (> 2 years,
@@ -475,8 +476,8 @@ UpdateSiteConfigRequest   Fields {key: value}, Groups {key: ConfigEntryValue[]},
 1. Entity in `Models/` + configure in `AppDbContext.cs`
 2. `dotnet ef migrations add <Name>` → commit migration files
 3. DTO in `Models/Dto/`
-4. Service in `Services/` → register Scoped in `Program.cs`
-5. Controller in `Controllers/` → inject service, apply `[Authorize(Policy="...")]`
+4. Service in `Services/` (failures as `ServiceResult<T>`) → register Scoped in `Program.cs`
+5. Controller in `Controllers/` → inject service, apply `[Authorize(Policy="...")]`, errors via `this.ToProblem(result, Titles)`
 
 ## DB tables
 `customers`, `staff`, `roles` (seeded), `staff_roles` (junction), `refresh_tokens`,

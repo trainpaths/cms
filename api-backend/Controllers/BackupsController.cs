@@ -1,5 +1,6 @@
 using api_backend.Models.Auth.JWT;
 using api_backend.Models.Dto;
+using api_backend.Services;
 using api_backend.Services.Backup;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -86,17 +87,14 @@ public class BackupsController(BackupService backups) : ControllerBase
 		}
 	}
 
-	private ActionResult<BackupInfo> Map(BackupResult<BackupInfo> result, bool created) =>
+	private ActionResult<BackupInfo> Map(ServiceResult<BackupInfo> result, bool created) =>
 		result.Error is not null ? ToProblem(result)
 		: created ? StatusCode(StatusCodes.Status201Created, result.Value)
 		: Ok(result.Value);
 
-	private ObjectResult ToProblem<T>(BackupResult<T> result) => result.Error switch
-	{
-		BackupError.NotFound => NotFoundProblem(),
-		BackupError.Busy => Problem(statusCode: 409, title: "Backup busy.", detail: result.Detail),
-		_ => Problem(statusCode: 400, title: "Invalid backup.", detail: result.Detail),
-	};
+	private static readonly ProblemTitles Titles = new("Backup not found.", "Invalid backup.", "Backup busy.");
 
-	private ObjectResult NotFoundProblem() => Problem(statusCode: 404, title: "Backup not found.");
+	private ObjectResult ToProblem<T>(ServiceResult<T> result) => this.ToProblem(result, Titles);
+
+	private ObjectResult NotFoundProblem() => this.NotFoundProblem(Titles);
 }

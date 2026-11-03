@@ -12,19 +12,6 @@ using Npgsql;
 
 namespace api_backend.Services.Backup;
 
-public enum BackupError
-{
-	NotFound,
-	Busy,
-	Invalid,
-}
-
-public record BackupResult<T>(T? Value, BackupError? Error = null, string? Detail = null)
-{
-	public static BackupResult<T> Ok(T value) => new(value);
-	public static BackupResult<T> Fail(BackupError error, string? detail = null) => new(default, error, detail);
-}
-
 /// <summary>
 /// Full site backups: the database (pg_dump) and every media blob in one archive in <see cref="BackupOptions.Directory"/>,
 /// which is the source of truth for the list (no table). Design + failure handling: claude-context/ARCHITECTURE.md → Backups.
@@ -112,15 +99,15 @@ public sealed class BackupService(
 	public string? PathOf(string name) =>
 		BackupArchive.NamePattern().IsMatch(name) && File.Exists(Path.Combine(Dir, name)) ? Path.Combine(Dir, name) : null;
 
-	public BackupResult<bool> Delete(string name)
+	public ServiceResult<bool> Delete(string name)
 	{
 		using var held = backupLock.TryEnter();
 		if (held is null)
-			return BackupResult<bool>.Fail(BackupError.Busy, BusyMessage);
+			return ServiceResult<bool>.Fail(ServiceError.Conflict, BusyMessage);
 		if (PathOf(name) is not { } path)
-			return BackupResult<bool>.Fail(BackupError.NotFound);
+			return ServiceResult<bool>.Fail(ServiceError.NotFound);
 		File.Delete(path);
-		return BackupResult<bool>.Ok(true);
+		return ServiceResult<bool>.Ok(true);
 	}
 
 	private static async Task<BackupInfo> InfoAsync(string path, CancellationToken ct)
@@ -141,12 +128,12 @@ public sealed class BackupService(
 
 	// ── create ─────────────────────────────────────────────────────────────────
 
-	public async Task<BackupResult<BackupInfo>> CreateAsync(BackupKind kind, CancellationToken ct)
+	public async Task<ServiceResult<BackupInfo>> CreateAsync(BackupKind kind, CancellationToken ct)
 	{
 		using var held = backupLock.TryEnter();
 		if (held is null)
-			return BackupResult<BackupInfo>.Fail(BackupError.Busy, BusyMessage);
-		return BackupResult<BackupInfo>.Ok(await CreateLockedAsync(kind, ct));
+			return ServiceResult<BackupInfo>.Fail(ServiceError.Conflict, BusyMessage);
+		return ServiceResult<BackupInfo>.Ok(await CreateLockedAsync(kind, ct));
 	}
 
 	/// <summary>
@@ -219,11 +206,11 @@ public sealed class BackupService(
 	// ── upload ─────────────────────────────────────────────────────────────────
 
 	/// <summary>Stores an archive from elsewhere as <c>upload-…</c> after reading it fully (catches damage early).</summary>
-	public async Task<BackupResult<BackupInfo>> SaveUploadAsync(Stream content, CancellationToken ct)
+	public async Task<ServiceResult<BackupInfo>> SaveUploadAsync(Stream content, CancellationToken ct)
 	{
 		using var held = backupLock.TryEnter();
 		if (held is null)
-			return BackupResult<BackupInfo>.Fail(BackupError.Busy, BusyMessage);
+			return ServiceResult<BackupInfo>.Fail(ServiceError.Conflict, BusyMessage);
 		var work = CreateWorkDir();
 		try
 		{
@@ -236,11 +223,11 @@ public sealed class BackupService(
 			}
 			catch (BackupFailedException e)
 			{
-				return BackupResult<BackupInfo>.Fail(BackupError.Invalid, e.Message);
+				return ServiceResult<BackupInfo>.Fail(ServiceError.Invalid, e.Message);
 			}
 			var final = Path.Combine(Dir, NewName(BackupKind.Upload));
 			File.Move(temp, final);
-			return BackupResult<BackupInfo>.Ok(await InfoAsync(final, ct));
+			return ServiceResult<BackupInfo>.Ok(await InfoAsync(final, ct));
 		}
 		finally
 		{
@@ -255,13 +242,13 @@ public sealed class BackupService(
 	/// <c>pre-restore</c> backup, then (API in maintenance) upload the blobs (keys are unique: additive), swap the database
 	/// in one transaction, migrate, carry the backup schedule over and drop blobs nothing references any more.
 	/// </summary>
-	public async Task<BackupResult<string>> RestoreAsync(string name, CancellationToken ct)
+	public async Task<ServiceResult<string>> RestoreAsync(string name, CancellationToken ct)
 	{
 		using var held = backupLock.TryEnter();
 		if (held is null)
-			return BackupResult<string>.Fail(BackupError.Busy, BusyMessage);
+			return ServiceResult<string>.Fail(ServiceError.Conflict, BusyMessage);
 		if (PathOf(name) is not { } path)
-			return BackupResult<string>.Fail(BackupError.NotFound);
+			return ServiceResult<string>.Fail(ServiceError.NotFound);
 
 		var work = CreateWorkDir();
 		try
@@ -274,10 +261,10 @@ public sealed class BackupService(
 			}
 			catch (BackupFailedException e)
 			{
-				return BackupResult<string>.Fail(BackupError.Invalid, e.Message);
+				return ServiceResult<string>.Fail(ServiceError.Invalid, e.Message);
 			}
 			if (manifest.LastMigration is { } migration && !db.Database.GetMigrations().Contains(migration))
-				return BackupResult<string>.Fail(BackupError.Invalid,
+				return ServiceResult<string>.Fail(ServiceError.Invalid,
 					$"The backup was made by a newer CMS version (database migration {migration} is unknown here). Upgrade first.");
 
 			var schedule = await LoadSettingsAsync(ct);
@@ -316,7 +303,7 @@ public sealed class BackupService(
 				render.All();
 			}
 			logger.LogWarning("Backup {Name} restored.", name);
-			return BackupResult<string>.Ok(safety.Name);
+			return ServiceResult<string>.Ok(safety.Name);
 		}
 		finally
 		{

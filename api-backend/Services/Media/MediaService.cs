@@ -7,18 +7,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace api_backend.Services.Media;
 
-public enum MediaError
-{
-	NotFound,
-	Invalid,
-}
-
-public record MediaResult<T>(T? Value, MediaError? Error = null, string? Detail = null)
-{
-	public static MediaResult<T> Ok(T value) => new(value);
-	public static MediaResult<T> Fail(MediaError error, string? detail = null) => new(default, error, detail);
-}
-
 public record MediaUpdate(MediaItem Item, bool AltChanged);
 
 /// <summary>
@@ -70,14 +58,14 @@ public partial class MediaService(AppDbContext db, IBlobStorage blobs, ILogger<M
 		return asset is null ? null : ToItem(asset);
 	}
 
-	public async Task<MediaResult<MediaItem>> UploadAsync(IFormFile file, string? alt, Guid staffId, CancellationToken ct)
+	public async Task<ServiceResult<MediaItem>> UploadAsync(IFormFile file, string? alt, Guid staffId, CancellationToken ct)
 	{
 		if (file.Length == 0)
-			return MediaResult<MediaItem>.Fail(MediaError.Invalid, "File is empty.");
+			return ServiceResult<MediaItem>.Fail(ServiceError.Invalid, "File is empty.");
 		if (file.Length > MaxUploadBytes)
-			return MediaResult<MediaItem>.Fail(MediaError.Invalid, $"File exceeds {MaxUploadBytes / 1024 / 1024} MB.");
+			return ServiceResult<MediaItem>.Fail(ServiceError.Invalid, $"File exceeds {MaxUploadBytes / 1024 / 1024} MB.");
 		if (alt is { Length: > MediaLimits.MaxAltLength })
-			return MediaResult<MediaItem>.Fail(MediaError.Invalid, $"Alt text exceeds {MediaLimits.MaxAltLength} characters.");
+			return ServiceResult<MediaItem>.Fail(ServiceError.Invalid, $"Alt text exceeds {MediaLimits.MaxAltLength} characters.");
 
 		// ≤10 MB, buffered: needed for sniffing anyway and gives S3 a seekable stream with a length
 		using var buffer = new MemoryStream((int)file.Length);
@@ -86,7 +74,7 @@ public partial class MediaService(AppDbContext db, IBlobStorage blobs, ILogger<M
 
 		var format = Formats.FirstOrDefault(f => f.Matches(bytes));
 		if (format.ContentType is null)
-			return MediaResult<MediaItem>.Fail(MediaError.Invalid,
+			return ServiceResult<MediaItem>.Fail(ServiceError.Invalid,
 				"Unsupported file type. Allowed: JPEG, PNG, GIF, WebP, AVIF.");
 
 		var asset = new MediaAsset
@@ -113,28 +101,28 @@ public partial class MediaService(AppDbContext db, IBlobStorage blobs, ILogger<M
 			await TryDeleteBlobAsync(asset.StorageKey);
 			throw;
 		}
-		return MediaResult<MediaItem>.Ok(ToItem(asset));
+		return ServiceResult<MediaItem>.Ok(ToItem(asset));
 	}
 
 	/// <summary><see cref="MediaUpdate.AltChanged"/>: rendered pages show the alt text, the display name they don't.</summary>
-	public async Task<MediaResult<MediaUpdate>> UpdateAsync(Guid id, UpdateMediaRequest req, CancellationToken ct)
+	public async Task<ServiceResult<MediaUpdate>> UpdateAsync(Guid id, UpdateMediaRequest req, CancellationToken ct)
 	{
 		var asset = await db.MediaAssets.FirstOrDefaultAsync(m => m.Id == id, ct);
 		if (asset is null)
-			return MediaResult<MediaUpdate>.Fail(MediaError.NotFound);
+			return ServiceResult<MediaUpdate>.Fail(ServiceError.NotFound);
 
 		if (req.FileName is not null)
 		{
 			var name = new string(req.FileName.Where(c => !char.IsControl(c)).ToArray()).Trim();
 			if (name.Length == 0)
-				return MediaResult<MediaUpdate>.Fail(MediaError.Invalid, "File name must not be empty.");
+				return ServiceResult<MediaUpdate>.Fail(ServiceError.Invalid, "File name must not be empty.");
 			asset.FileName = name;
 		}
 		var alt = req.Alt?.Trim() ?? "";
 		var altChanged = alt != asset.Alt;
 		asset.Alt = alt;
 		await db.SaveChangesAsync(ct);
-		return MediaResult<MediaUpdate>.Ok(new MediaUpdate(ToItem(asset), altChanged));
+		return ServiceResult<MediaUpdate>.Ok(new MediaUpdate(ToItem(asset), altChanged));
 	}
 
 	/// <summary>Deletes the blob, then the row: a failed blob delete leaves the entry for a retry.</summary>
