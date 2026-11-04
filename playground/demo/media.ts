@@ -3,7 +3,6 @@ import blocks from './images/blocks.svg'
 import city from './images/city.svg'
 import forest from './images/forest.svg'
 import lake from './images/lake.svg'
-import logo from './images/logo.svg'
 import mountains from './images/mountains.svg'
 import waves from './images/waves.svg'
 
@@ -23,9 +22,6 @@ export const MEDIA: MediaItem[] = [
 	item('media-waves', waves, 'waves.svg', 'Teal and amber waves', 604),
 ]
 
-/** Site config logo (header + footer); not offered in the picker. */
-export const LOGO = item('media-logo', logo, 'logo.svg', 'Lakeside Studio', 434)
-
 export const toRef = (media: MediaItem): MediaRef => ({ id: media.id, url: media.url, alt: media.alt })
 
-export const mediaById = (id: string): MediaItem | undefined => [...MEDIA, LOGO].find((m) => m.id === id)
+export const mediaById = (id: string): MediaItem | undefined => MEDIA.find((m) => m.id === id)

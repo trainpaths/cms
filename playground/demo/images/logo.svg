@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" width="320" height="80">
-	<rect x="4" y="8" width="64" height="64" rx="16" fill="#0f766e"/>
-	<path d="M14 50 C24 40 32 58 42 48 S58 40 58 48 L58 62 L14 62 Z" fill="#f59e0b"/>
-	<circle cx="46" cy="28" r="8" fill="#fef3c7"/>
-	<text x="84" y="50" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="30" font-weight="700" fill="#1f2937">Lakeside Studio</text>
-</svg>

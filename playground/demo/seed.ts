@@ -1,5 +1,5 @@
 import type { Block, PageDetail, PageTextTranslation, SiteConfigResponse } from '@trainpaths/cms/src/api/types.gen.ts'
-import { LOGO, MEDIA, toRef } from './media'
+import { MEDIA, toRef } from './media'
 
 /** The one demo page as first seen (published) plus the site around it: main menu and site config. */
 
@@ -37,16 +37,16 @@ export function seedBlocks(): Block[] {
 			{ blockWidth: 'wide' },
 		),
 		paragraph(
-			'Lakeside Studio designs and builds websites that their owners can keep up to date themselves. Every page is a stack of blocks: text, images, lists, cards and links, each with its own settings.',
+			'A website its owner can keep up to date without a developer. Every page is a stack of blocks: text, images, lists, cards and links, each with its own settings.',
 			{
 				de: {
-					text: 'Lakeside Studio gestaltet und baut Websites, die ihre Besitzer selbst aktuell halten können. Jede Seite ist ein Stapel aus Blöcken: Text, Bilder, Listen, Karten und Links, jeder mit eigenen Einstellungen.',
+					text: 'Eine Website, die ihre Besitzer ohne Entwickler aktuell halten können. Jede Seite ist ein Stapel aus Blöcken: Text, Bilder, Listen, Karten und Links, jeder mit eigenen Einstellungen.',
 				},
 				fr: {
-					text: 'Lakeside Studio conçoit et réalise des sites web que leurs propriétaires peuvent tenir à jour eux-mêmes. Chaque page est une pile de blocs : textes, images, listes, cartes et liens.',
+					text: 'Un site web que son propriétaire peut tenir à jour sans développeur. Chaque page est une pile de blocs : textes, images, listes, cartes et liens.',
 				},
 				it: {
-					text: 'Lakeside Studio progetta e realizza siti web che i proprietari possono aggiornare da soli. Ogni pagina è una pila di blocchi: testi, immagini, elenchi, schede e link.',
+					text: 'Un sito web che il proprietario può aggiornare senza uno sviluppatore. Ogni pagina è una pila di blocchi: testi, immagini, elenchi, schede e link.',
 				},
 			},
 			{ alignment: 'center' },
@@ -68,7 +68,7 @@ export function seedBlocks(): Block[] {
 				},
 			},
 		),
-		heading('What we do', 2, { de: { text: 'Was wir machen' }, fr: { text: 'Ce que nous faisons' } }),
+		heading('What you get', 2, { de: { text: 'Was du bekommst' }, fr: { text: 'Ce que vous obtenez' } }),
 		block(
 			'card',
 			{
@@ -237,7 +237,7 @@ export const MENU: DemoMenuItem[] = [
 ]
 
 export const SITE_CONFIG: SiteConfigResponse = {
-	fields: { firmName: 'Lakeside Studio', vatId: 'CHE-123.456.789 MWST' },
+	fields: {},
 	groups: {
 		contact: [
 			{
@@ -246,14 +246,14 @@ export const SITE_CONFIG: SiteConfigResponse = {
 				label: 'Address',
 				type: 'address',
 				value: '',
-				address: { street: 'Seestrasse 1', postalCode: '8000', city: 'Zürich', country: 'Switzerland' },
+				address: { street: 'Example Street 1', postalCode: '1234', city: 'Sample Town', country: 'Exampleland' },
 			},
 			{ id: 'contact-phone', key: 'phone', label: 'Phone', type: 'phone', value: '+41 44 000 00 00' },
 			{ id: 'contact-email', key: 'email', label: 'Email', type: 'email', value: 'hello@example.com' },
 		],
 		socials: [],
 	},
-	logo: toRef(LOGO),
+	logo: null,
 	icon: null,
 	shareImage: null,
 	updatedAt: CREATED,
