@@ -30,6 +30,7 @@ bld/
 # Frontend build artifacts
 dist
 dist-ssr
+dist-demo
 *.local
 
 # Editor directories and files

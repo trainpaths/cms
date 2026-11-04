@@ -13,6 +13,7 @@ export default defineConfigWithVueTs(
 		ignores: [
 			'**/dist/**',
 			'**/dist-ssr/**',
+			'**/dist-demo/**',
 			'frontend/src/api/**',
 			'**/playwright-report/**',
 			'**/test-results/**',

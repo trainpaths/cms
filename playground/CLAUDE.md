@@ -24,6 +24,7 @@ src/blocks/callout/ instance block example (Edit imports @trainpaths/cms/editor,
 src/overrides/NotFound.vue   override example: wraps the package's NotFound
 src/templates/imprint.vue    template page example: PageContent + `after` slot: firm name, contact, VAT ID, socials
 e2e/                Playwright suite (below); e2e/tests/instance/ covers the examples above
+demo/, demo.html, vite.demo.config.ts   browser-only demo for GitHub Pages (below)
 ```
 Extension points in general: `frontend/CLAUDE.md` → Package surface.
 
@@ -74,3 +75,34 @@ Editor specs need staff credentials in the Playwright env — the same values as
 BOOTSTRAP_SUPERADMIN_EMAIL=... BOOTSTRAP_SUPERADMIN_PASSWORD=... pnpm test:e2e
 ```
 First run on a machine: `pnpm --filter cms-playground exec playwright install chromium`.
+
+## Demo (`demo/`, GitHub Pages)
+The real editor and public view of **one page**, with no server: the generated client's `fetch` is replaced by an
+in-browser mock of the API (`client.setConfig({ fetch })`), and the page lives in localStorage. Nothing in the package
+changes for it; it uses deep imports (`@trainpaths/cms/src/….ts`, with extension: the `./src/*` export adds none).
+`pnpm dev:demo` (no Docker), `pnpm build:demo` → `dist-demo/` (deployed by `.github/workflows/pages.yml`),
+`pnpm test:demo`.
+```
+demo.html             shell → demo/main.ts
+vite.demo.config.ts   cms() without dev SSR + plugin `cms-demo`: build input demo.html only (emitted as index.html),
+                      `/` → demo.html in dev, the package's MediaUploadButton.vue → demo/NoUpload.vue (no uploads);
+                      base './' (Pages serves /cms/)
+demo/main.ts          app: Pinia, CMS i18n (+ demo/messages.ts after each loadAdminMessages), mock fetch, toApiError,
+                      hash router: `#/` + `#/:slug` = ViewPage, `#/edit` = EditPage, `#/de/home` (editor view link) →
+                      switch language + `#/`; one language for view + UI (`LANGUAGE_SWITCH`, demo/context.ts)
+demo/mockApi.ts       createMockFetch(store, {languages}): page GET/PUT (draft/live like the API: publish copies the
+                      working copy to the live snapshot, hasUnpublishedChanges = differs from it, slug fixed: page is
+                      `locked`), public state/page/menu/site-config (localized via core/localize.ts), media list +
+                      tags (read-only), instance config from cms.config.json; anything else → 403 "Not available in the demo"
+demo/store.ts         localStorage `cms-demo:v1` (working copy + live snapshot; memory when storage fails), reset()
+demo/seed.ts          the page (every block incl. callout; de complete, fr/it partly: shows the untranslated badges),
+                      main menu (labels per language), site config (Lakeside Studio, contact)
+demo/media.ts, images/  seeded placeholder SVGs (the picker's library) + the logo; media URLs are always served fresh
+                      (stored ones would point at an older deploy's hashed assets)
+demo/ViewPage.vue     SiteHeader + PageView + SiteFooter of the published page; delegated clicks on link-block hrefs
+                      (`/`, `/edit`, other paths → "only one page" toast)
+demo/EditPage.vue     the package's Editor.vue (view link + back → `#/`)
+demo/DemoMenu.vue     floating round button (cog + "Demo", bottom left, z-45) → Popover: edit/view, reset (confirm →
+                      reload), GitHub links
+demo/mockApi.test.ts  Vitest (demo/vitest.config.ts): draft vs live, storage + reset, unpublish, languages, refusals
+```

@@ -1,5 +1,8 @@
 # CMS
 
+**Building a website with it?** Start from [`trainpaths/cms-starter`](https://github.com/trainpaths/cms-starter): the
+template for a new site, with everything you need to develop your own site on this CMS.
+
 A block-based content management system: site owners build pages from blocks in a Gutenberg-style editor; visitors
 get server-rendered pages at `/{slug}`.
 
@@ -13,6 +16,9 @@ bumping one version.
 - **API**: the image `ghcr.io/trainpaths/cms-api:X.Y.Z`, configured per site by `cms.config.json`
 
 Building a site on it: [`frontend/docs/INSTANCE_GUIDE.md`](frontend/docs/INSTANCE_GUIDE.md).
+
+**[Try the editor in your browser](https://trainpaths.github.io/cms/)**: a demo page you can edit, publish and view,
+with no server (changes stay in your browser).
 
 ## Features
 
@@ -69,6 +75,7 @@ pnpm dev                          # postgres + seaweedfs + api in docker, playgr
 | `pnpm test:front`                | Vitest (SSR render, head tags)                                                        |
 | `pnpm test:e2e`                  | Playwright against the running stack (see `playground/CLAUDE.md`)                     |
 | `pnpm test:all`                  | All three test suites                                                                 |
+| `pnpm dev:demo` / `build:demo`   | Browser-only demo (GitHub Pages), no Docker; `test:demo` = its unit tests             |
 
 API change: `pnpm build:back`, then `pnpm gen-api`, commit `frontend/openapi/swagger.json` and `frontend/src/api/`;
 CI fails when either drifts.
