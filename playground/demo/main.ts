@@ -25,7 +25,7 @@ import { createDemoStore } from './store'
 
 /**
  * Browser-only demo (GitHub Pages): the real editor and public page view of one page, against an in-browser mock
- * of the API that keeps the page in localStorage. Two routes: `#/` (view) and `#/edit`.
+ * of the API that keeps the page in localStorage. Two routes: `#/` (editor) and `#/home` (view).
  */
 async function createDemo(): Promise<void> {
 	const store = createDemoStore()
@@ -53,9 +53,10 @@ async function createDemo(): Promise<void> {
 	const router = createRouter({
 		history: createWebHashHistory(),
 		routes: [
-			{ path: '/', name: 'home', component: ViewPage },
-			{ path: '/edit', name: 'edit', component: EditPage },
-			{ path: '/home', redirect: '/' },
+			{ path: '/', name: 'edit', component: EditPage },
+			// route name `home`: SiteHeader's logo + the menu's Home link go here
+			{ path: '/home', name: 'home', component: ViewPage },
+			{ path: '/edit', redirect: '/' },
 			// the editor's view link puts the edited language first (`/de/home`): switch, then show the page
 			...(languageCodes.length
 				? [
@@ -64,7 +65,7 @@ async function createDemo(): Promise<void> {
 							redirect: (to: { params: Record<string, unknown> }) => {
 								void context.changeLanguage(String(to.params.lang))
 								const slug = to.params.slug
-								return !slug || slug === 'home' ? '/' : `/${String(slug)}`
+								return `/${String(slug || 'home')}`
 							},
 						},
 					]

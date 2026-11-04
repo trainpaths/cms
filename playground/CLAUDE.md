@@ -88,8 +88,8 @@ vite.demo.config.ts   cms() without dev SSR + plugin `cms-demo`: build input dem
                       `/` → demo.html in dev, the package's MediaUploadButton.vue → demo/NoUpload.vue (no uploads);
                       base './' (Pages serves /cms/)
 demo/main.ts          app: Pinia, CMS i18n (+ demo/messages.ts after each loadAdminMessages), mock fetch, toApiError,
-                      hash router: `#/` + `#/:slug` = ViewPage, `#/edit` = EditPage, `#/de/home` (editor view link) →
-                      switch language + `#/`; one language for view + UI (`LANGUAGE_SWITCH`, demo/context.ts)
+                      hash router: `#/` = EditPage (what Pages opens; `#/edit` redirects there), `#/home` (route name
+                      `home`) + `#/:slug` = ViewPage, `#/de/home` (editor view link) → switch language + `#/home`; one language for view + UI (`LANGUAGE_SWITCH`, demo/context.ts)
 demo/mockApi.ts       createMockFetch(store, {languages}): page GET/PUT (draft/live like the API: publish copies the
                       working copy to the live snapshot, hasUnpublishedChanges = differs from it, slug fixed: page is
                       `locked`), public state/page/menu/site-config (localized via core/localize.ts), media list +
@@ -100,8 +100,8 @@ demo/seed.ts          the page (every block incl. callout; de complete, fr/it pa
 demo/media.ts, images/  seeded placeholder SVGs (the picker's library); media URLs are always served fresh
                       (stored ones would point at an older deploy's hashed assets)
 demo/ViewPage.vue     SiteHeader + PageView + SiteFooter of the published page; delegated clicks on link-block hrefs
-                      (`/`, `/edit`, other paths → "only one page" toast)
-demo/EditPage.vue     the package's Editor.vue (view link + back → `#/`)
+                      (`/`, `/home` → view, `/edit` → editor, other paths → "only one page" toast)
+demo/EditPage.vue     the package's Editor.vue (view link + back → `#/home`)
 demo/DemoMenu.vue     floating round button (cog + "Demo", bottom left, z-45) → Popover: edit/view, reset (confirm →
                       reload), GitHub links
 demo/mockApi.test.ts  Vitest (demo/vitest.config.ts): draft vs live, storage + reset, unpublish, languages, refusals

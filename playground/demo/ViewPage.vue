@@ -49,8 +49,8 @@ function onClick(e: MouseEvent) {
 	e.preventDefault()
 	const { code, path } = stripLocale(href.split(/[?#]/)[0]!)
 	if (code !== siteLang.value) void changeLanguage(code)
-	if (path === '/' || path === '/home' || path === `/${page.value?.slug}`) void router.push('/')
-	else if (path === '/edit') void router.push('/edit')
+	if (path === '/' || path === '/home' || path === `/${page.value?.slug}`) void router.push('/home')
+	else if (path === '/edit') void router.push('/')
 	else toast.info(translate('demo.onlyPage'))
 }
 </script>
@@ -78,7 +78,7 @@ function onClick(e: MouseEvent) {
 			<p class="m-0 text-gray-600">{{ $t('demo.notPublished') }}</p>
 			<Button
 				bg="primary"
-				@click="router.push('/edit')"
+				@click="router.push('/')"
 				>{{ $t('demo.edit') }}</Button
 			>
 		</div>
