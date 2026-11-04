@@ -59,7 +59,7 @@ describe('demo mock API', () => {
 		const { data: state } = await call<PublicStateResponse>('GET', '/api/public/state/home')
 		expect(state.page?.title).toBe('Welcome')
 		expect(state.menu?.items.map((i) => i.label)).toContain('Home')
-		expect(state.config.fields.firmName).toBe('Lakeside Studio')
+		expect(state.config.groups.contact).toHaveLength(3)
 	})
 
 	it('a save changes the working copy, not the view; publishing does', async () => {

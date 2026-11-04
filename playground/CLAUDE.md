@@ -96,8 +96,8 @@ demo/mockApi.ts       createMockFetch(store, {languages}): page GET/PUT (draft/l
                       tags (read-only), instance config from cms.config.json; anything else → 403 "Not available in the demo"
 demo/store.ts         localStorage `cms-demo:v1` (working copy + live snapshot; memory when storage fails), reset()
 demo/seed.ts          the page (every block incl. callout; de complete, fr/it partly: shows the untranslated badges),
-                      main menu (labels per language), site config (Lakeside Studio, contact)
-demo/media.ts, images/  seeded placeholder SVGs (the picker's library) + the logo; media URLs are always served fresh
+                      main menu (labels per language), site config (contact only: no firm name or logo)
+demo/media.ts, images/  seeded placeholder SVGs (the picker's library); media URLs are always served fresh
                       (stored ones would point at an older deploy's hashed assets)
 demo/ViewPage.vue     SiteHeader + PageView + SiteFooter of the published page; delegated clicks on link-block hrefs
                       (`/`, `/edit`, other paths → "only one page" toast)
