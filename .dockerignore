@@ -15,6 +15,7 @@ api-backend/Tests/
 **/node_modules
 **/dist
 **/dist-ssr
+**/dist-demo
 **/playwright-report
 **/test-results
 *.local

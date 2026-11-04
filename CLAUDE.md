@@ -48,7 +48,7 @@ frontend/                @trainpaths/cms package (raw source): admin SPA, public
                          vite plugin, server/ (renderer, dev SSR), nginx.conf, generated API client
   src/lib/web-editor/     block editor library (editor, blocks, view renderer, limits)
 playground/              instance app on `workspace:*` (cms.config.json, index.html, public.html, entry stubs, style.css,
-                         sample block/override/template) + e2e/
+                         sample block/override/template) + e2e/ + demo/ (browser-only demo for GitHub Pages, see playground/CLAUDE.md)
 api-backend/             .NET API (+ Tests/: xUnit unit + Testcontainers integration)
 package.json, pnpm-workspace.yaml   pnpm workspace root (frontend + playground; ESLint, all repo scripts)
 Dockerfile               5-stage build: api-build → frontend-build (playground) → api → renderer → frontend
@@ -74,6 +74,8 @@ pnpm test:back           # xUnit (needs Docker for Testcontainers)
 pnpm test:front          # Vitest unit tests (SSR render)
 pnpm test:e2e            # Playwright (needs the stack running; editor specs need staff creds, see frontend/CLAUDE.md)
 pnpm test:all            # test:back + test:front + test:e2e
+pnpm dev:demo            # browser-only demo (playground/demo/, no Docker) → http://localhost:5173
+pnpm build:demo          # demo → playground/dist-demo/ (what pages.yml deploys); test:demo = its Vitest
 ```
 
 **No local .NET SDK?** Run `dotnet` in the SDK image with the repo mounted at the same path (the
@@ -132,7 +134,9 @@ Typed client generated from the committed contract (and committed itself: instan
 ## CI + releases (.github/workflows/)
 `ci.yml` runs on PRs + pushes to `main`. **backend**: vulnerable-package check, `dotnet test`,
 OpenAPI drift check. **frontend**: `pnpm audit`, generated-client drift check, lint, typecheck, Vitest, compose stack,
-Playwright from `playground/` (with a bootstrap super admin for the editor specs). Dependabot opens weekly update PRs.
+Playwright from `playground/` (with a bootstrap super admin for the editor specs), plus `test:demo` + `build:demo`.
+Dependabot opens weekly update PRs. `pages.yml`: push to `main` → `build:demo` → GitHub Pages
+(https://trainpaths.github.io/cms/; repo Settings → Pages → Source "GitHub Actions").
 The backend job installs `postgresql-client-18` (backup round-trip tests).
 `release.yml` runs after a green CI run on `main` (or manually, forcing the bump): Conventional Commits since the last
 tag → bump (only docs/chore/ci/test/style/build → none). **Pre-1.0 (now)**: `!`/`BREAKING CHANGE` → minor, everything
