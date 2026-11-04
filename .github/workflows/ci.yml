@@ -107,6 +107,12 @@ jobs:
       - name: Unit tests
         run: pnpm test:front
 
+      # Browser-only demo (GitHub Pages, pages.yml): a package change that breaks it fails here, not after merge
+      - name: Demo tests + build
+        run: |
+          pnpm test:demo
+          pnpm build:demo
+
       - name: Build & start stack
         run: docker compose up -d --build frontend renderer
 
