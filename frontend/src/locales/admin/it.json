@@ -366,7 +366,6 @@
 			"type": "Tipo di elenco"
 		},
 		"listItem": {
-			"empty": "Clicca per aggiungere una voce…",
 			"placeholder": "Testo della voce…"
 		},
 		"link": {

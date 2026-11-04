@@ -366,7 +366,6 @@
 			"type": "List type"
 		},
 		"listItem": {
-			"empty": "Click to add item...",
 			"placeholder": "List item text..."
 		},
 		"link": {
