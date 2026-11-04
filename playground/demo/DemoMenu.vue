@@ -70,7 +70,7 @@ const linkClass = 'text-sm text-primary underline-offset-2 hover:underline'
 							bg="primary"
 							block
 							data-testid="demo-switch"
-							@click="go(editing ? '/' : '/edit', close)"
+							@click="go(editing ? '/home' : '/', close)"
 						>
 							<Icon
 								:name="editing ? 'eye' : 'edit'"
