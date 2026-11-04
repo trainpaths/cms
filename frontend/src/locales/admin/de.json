@@ -366,7 +366,6 @@
 			"type": "Listentyp"
 		},
 		"listItem": {
-			"empty": "Klicken, um einen Eintrag hinzuzufügen…",
 			"placeholder": "Text des Listeneintrags…"
 		},
 		"link": {

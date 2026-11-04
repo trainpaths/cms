@@ -59,7 +59,7 @@ test.describe('Block operations', () => {
 		await expect(inner.getByRole('button', { name: /^\+ / })).toHaveText(['+ List Item'])
 		await inner.getByRole('button', { name: '+ List Item' }).click()
 		await inner.getByRole('button', { name: '+ List Item' }).click()
-		await expect(main(page).getByText('Click to add item...')).toHaveCount(2)
+		await expect(main(page).getByPlaceholder('List item text...')).toHaveCount(2)
 
 		// The list is still selected, so its inline toolbar (list type) is showing.
 		await main(page).locator('select').selectOption('numbered')

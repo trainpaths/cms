@@ -2,15 +2,10 @@
 import { computed } from 'vue'
 import type { BlockInstance } from '../../core/types'
 import { useEditorStore } from '../../../../stores/editor'
-import { useSelection } from '../../composables/useSelection'
 import { useBlockText } from '../../composables/useBlockAttribute'
 
 const props = defineProps<{ block: BlockInstance }>()
 const store = useEditorStore()
-const { isSelected } = useSelection()
-
-const selected = computed(() => isSelected(props.block.id))
-
 const { value: text, original } = useBlockText(() => props.block, 'text')
 
 const context = computed(() => store.getBlockContext(props.block.id))
@@ -26,18 +21,10 @@ const marker = computed(() => (isOrdered.value ? `${itemIndex.value}.` : '\u2022
 <template>
 	<div class="flex items-start gap-8 px-8 py-4">
 		<span class="mt-2 min-w-16 text-right text-gray-400">{{ marker }}</span>
-		<span
-			v-if="!selected"
-			class="mt-2 flex-1 rounded border border-transparent px-8 py-4 text-gray-700"
-			:class="{ 'text-gray-400 italic': !text }"
-		>
-			{{ text || original || $t('editor.listItem.empty') }}
-		</span>
 		<input
-			v-else
 			v-model="text"
 			type="text"
-			class="input-field flex-1"
+			class="m-0 mt-2 min-w-0 flex-1 border-none bg-transparent px-8 py-4 text-gray-700 outline-hidden placeholder:italic placeholder:text-gray-400 focus:ring-0"
 			:placeholder="original || $t('editor.listItem.placeholder')"
 		/>
 	</div>
