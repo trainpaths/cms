@@ -123,9 +123,11 @@ function onDragStart(e: DragEvent) {
 			to="#editor-mobile-toolbar"
 			:disabled="!toolbarInBar"
 		>
+			<!-- no scroll anchor: height changes with the block's inline toolbar (image width input: 36 → 44px);
+				as anchor, Chrome scrolled the canvas by that much on select -->
 			<div
 				ref="toolbarRef"
-				class="font-cms z-20 flex flex-wrap items-center gap-2 bg-gray-900 p-6 text-white transition-opacity"
+				class="font-cms z-20 flex flex-wrap items-center gap-2 bg-gray-900 p-6 text-white transition-opacity [overflow-anchor:none]"
 				:class="toolbarClass"
 			>
 				<span
