@@ -28,7 +28,7 @@ COPY playground/ playground/
 RUN pnpm --filter cms-playground build
 
 # ── Stage 3: API runtime (the published image: no instance config, no frontend) ──
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS api
+FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS api
 # Backups (Services/Backup) run pg_dump / pg_restore / psql: client 18 from the PostgreSQL apt repo (the distro's is
 # older, and the client must not be older than the server). /backups = Backup:Directory, writable by the app user.
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
