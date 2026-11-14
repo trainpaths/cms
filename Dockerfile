@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ── Stage 1: Build .NET API ─────────────────────────────────────────────────
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS api-build
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS api-build
 WORKDIR /source
 # Restore first so the package layer is cached until the csproj changes.
 COPY api-backend/api-backend.csproj api-backend/
